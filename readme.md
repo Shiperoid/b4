@@ -7,5 +7,5 @@ make build_local linux arm64 ~/router/opt/share/b4
 watch iptables:
 
 ```bash
-make build_local linux arm64 ~/router/opt/share/b4
+watch -n1 'cat /proc/net/netfilter/nfnetlink_queue; iptables -t mangle -vnL'
 ```
