@@ -3,8 +3,11 @@ package nfq
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"net"
+	"os"
 	"sync"
+	"time"
 
 	"github.com/daniellavrushin/b4/config"
 	"github.com/daniellavrushin/b4/log"
@@ -13,33 +16,54 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+type flowState struct {
+	buf  []byte
+	last time.Time
+}
+
 type Worker struct {
 	cfg    *config.Config
 	ctx    context.Context
 	cancel context.CancelFunc
 	qs     []*nfqueue.Nfqueue
 	wg     sync.WaitGroup
+
+	mu    sync.Mutex
+	flows map[string]*flowState
+	ttl   time.Duration
+	limit int
 }
 
 func NewWorker(cfg *config.Config) *Worker {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Worker{cfg: cfg, ctx: ctx, cancel: cancel}
+	return &Worker{
+		cfg:    cfg,
+		ctx:    ctx,
+		cancel: cancel,
+		flows:  make(map[string]*flowState),
+		ttl:    10 * time.Second,
+		limit:  8192,
+	}
 }
 
-func (w *Worker) startOne(family uint8) error {
+func (w *Worker) Start() error {
+	log.Infof("Starting NFQueue worker on queue %d", w.cfg.QueueStartNum)
 	flags := nfqueue.NfQaCfgFlagFailOpen
 	if w.cfg.UseGSO {
 		flags |= nfqueue.NfQaCfgFlagGSO
+		log.Infof("GSO flag enabled")
 	}
 	if w.cfg.UseConntrack {
 		flags |= nfqueue.NfQaCfgFlagConntrack
+		log.Infof("Conntrack flag enabled")
 	}
 	c := nfqueue.Config{
 		NfQueue:      uint16(w.cfg.QueueStartNum),
 		MaxPacketLen: 0xffff,
+		MaxQueueLen:  4096,
 		Copymode:     nfqueue.NfQnlCopyPacket,
 		Flags:        uint32(flags),
-		AfFamily:     family,
+		AfFamily:     unix.AF_UNSPEC,
 	}
 	q, err := nfqueue.Open(&c)
 	if err != nil {
@@ -47,105 +71,130 @@ func (w *Worker) startOne(family uint8) error {
 	}
 	w.qs = append(w.qs, q)
 	w.wg.Add(1)
+	go w.gc()
+	w.wg.Add(1)
 	go func(qx *nfqueue.Nfqueue) {
 		defer w.wg.Done()
+		pid := os.Getpid()
+		log.Infof("NFQ bound pid=%d queue=%d", pid, w.cfg.QueueStartNum)
 		_ = qx.RegisterWithErrorFunc(w.ctx, func(a nfqueue.Attribute) int {
 			if a.PacketID == nil {
 				return 0
 			}
 			id := *a.PacketID
-			if a.Mark != nil && *a.Mark == uint32(w.cfg.Mark) {
-				_ = qx.SetVerdict(id, nfqueue.NfAccept)
-				return 0
-			}
 			if a.Payload == nil || len(*a.Payload) == 0 {
 				_ = qx.SetVerdict(id, nfqueue.NfAccept)
 				return 0
 			}
 			raw := *a.Payload
 			v := raw[0] >> 4
-			switch v {
-			case 4:
-				if len(raw) < 20 {
+			if v != 4 {
+				_ = qx.SetVerdict(id, nfqueue.NfAccept)
+				return 0
+			}
+			if len(raw) < 20 {
+				_ = qx.SetVerdict(id, nfqueue.NfAccept)
+				return 0
+			}
+			ihl := int(raw[0]&0x0f) * 4
+			if len(raw) < ihl {
+				_ = qx.SetVerdict(id, nfqueue.NfAccept)
+				return 0
+			}
+			proto := raw[9]
+			src := net.IP(raw[12:16])
+			dst := net.IP(raw[16:20])
+			if proto == 6 && len(raw) >= ihl+20 {
+				tcp := raw[ihl:]
+				if len(tcp) < 20 {
 					_ = qx.SetVerdict(id, nfqueue.NfAccept)
 					return 0
 				}
-				ihl := int(raw[0]&0x0f) * 4
-				if len(raw) < ihl {
+				datOff := int((tcp[12]>>4)&0x0f) * 4
+				if len(tcp) < datOff {
 					_ = qx.SetVerdict(id, nfqueue.NfAccept)
 					return 0
 				}
-				proto := raw[9]
-				src := net.IP(raw[12:16])
-				dst := net.IP(raw[16:20])
-				if proto == 6 && len(raw) >= ihl+20 {
-					tcp := raw[ihl:]
-					datOff := int((tcp[12]>>4)&0x0f) * 4
-					if len(tcp) >= datOff {
-						payload := tcp[datOff:]
-						dport := binary.BigEndian.Uint16(tcp[2:4])
-						if dport == 443 {
-							if host, ok := sni.ParseTLSClientHelloSNI(payload); ok && host != "" {
-								log.Infof("NFQ TLS SNI v4: %s %s:%d -> %s:%d", host, src.String(), binary.BigEndian.Uint16(tcp[0:2]), dst.String(), dport)
-							}
-						}
+				payload := tcp[datOff:]
+				sport := binary.BigEndian.Uint16(tcp[0:2])
+				dport := binary.BigEndian.Uint16(tcp[2:4])
+				if dport == 443 && len(payload) > 0 {
+					k := fmt.Sprintf("%s:%d>%s:%d", src.String(), sport, dst.String(), dport)
+					host, ok := w.feed(k, payload)
+					if ok && host != "" {
+						log.Infof("NFQ TLS SNI v4: %s %s:%d -> %s:%d", host, src.String(), sport, dst.String(), dport)
 					}
-				} else if proto == 17 && len(raw) >= ihl+8 {
-					udp := raw[ihl:]
+				}
+			} else if proto == 17 && len(raw) >= ihl+8 {
+				udp := raw[ihl:]
+				if len(udp) >= 8 {
+					payload := udp[8:]
+					sport := binary.BigEndian.Uint16(udp[0:2])
 					dport := binary.BigEndian.Uint16(udp[2:4])
-					if dport == 443 && len(udp) >= 8 {
-						payload := udp[8:]
-						if host, ok := sni.ParseQUICClientHelloSNI(payload); ok && host != "" {
-							log.Infof("NFQ QUIC SNI v4: %s %s:%d -> %s:%d", host, src.String(), binary.BigEndian.Uint16(udp[0:2]), dst.String(), dport)
-						}
-					}
-				}
-			case 6:
-				if len(raw) < 40 {
-					_ = qx.SetVerdict(id, nfqueue.NfAccept)
-					return 0
-				}
-				next := raw[6]
-				src := net.IP(raw[8:24])
-				dst := net.IP(raw[24:40])
-				l4 := raw[40:]
-				if next == 6 && len(l4) >= 20 {
-					datOff := int((l4[12]>>4)&0x0f) * 4
-					if len(l4) >= datOff {
-						payload := l4[datOff:]
-						dport := binary.BigEndian.Uint16(l4[2:4])
-						if dport == 443 {
-							if host, ok := sni.ParseTLSClientHelloSNI(payload); ok && host != "" {
-								log.Infof("NFQ TLS SNI v6: %s [%s]:%d -> [%s]:%d", host, src.String(), binary.BigEndian.Uint16(l4[0:2]), dst.String(), dport)
-							}
-						}
-					}
-				} else if next == 17 && len(l4) >= 8 {
-					dport := binary.BigEndian.Uint16(l4[2:4])
 					if dport == 443 {
-						payload := l4[8:]
 						if host, ok := sni.ParseQUICClientHelloSNI(payload); ok && host != "" {
-							log.Infof("NFQ QUIC SNI v6: %s [%s]:%d -> [%s]:%d", host, src.String(), binary.BigEndian.Uint16(l4[0:2]), dst.String(), dport)
+							log.Infof("NFQ QUIC SNI v4: %s %s:%d -> %s:%d", host, src.String(), sport, dst.String(), dport)
 						}
 					}
 				}
 			}
 			_ = qx.SetVerdict(id, nfqueue.NfAccept)
 			return 0
-		}, func(err error) int { return 0 })
+		}, func(err error) int {
+			log.Errorf("NFQ error: %v", err)
+			return 0
+		})
 		<-w.ctx.Done()
 	}(q)
 	return nil
 }
 
-func (w *Worker) Start() error {
-	if err := w.startOne(unix.AF_INET); err != nil {
-		return err
+func (w *Worker) feed(key string, chunk []byte) (string, bool) {
+	w.mu.Lock()
+	st := w.flows[key]
+	if st == nil {
+		st = &flowState{buf: nil, last: time.Now()}
+		w.flows[key] = st
 	}
-	if err := w.startOne(unix.AF_INET6); err != nil {
-		return err
+	if len(st.buf) < w.limit {
+		need := w.limit - len(st.buf)
+		if len(chunk) < need {
+			st.buf = append(st.buf, chunk...)
+		} else {
+			st.buf = append(st.buf, chunk[:need]...)
+		}
 	}
-	return nil
+	st.last = time.Now()
+	buf := append([]byte(nil), st.buf...)
+	w.mu.Unlock()
+	host, ok := sni.ParseTLSClientHelloSNI(buf)
+	if ok && host != "" {
+		w.mu.Lock()
+		delete(w.flows, key)
+		w.mu.Unlock()
+		return host, true
+	}
+	return "", false
+}
+
+func (w *Worker) gc() {
+	defer w.wg.Done()
+	t := time.NewTicker(2 * time.Second)
+	defer t.Stop()
+	for {
+		select {
+		case <-w.ctx.Done():
+			return
+		case now := <-t.C:
+			w.mu.Lock()
+			for k, st := range w.flows {
+				if now.Sub(st.last) > w.ttl {
+					delete(w.flows, k)
+				}
+			}
+			w.mu.Unlock()
+		}
+	}
 }
 
 func (w *Worker) Stop() {

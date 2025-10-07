@@ -203,7 +203,7 @@ func buildManifest(cfg *config.Config) Manifest {
 		ipts = []string{"iptables"}
 	}
 	queueNum := cfg.QueueStartNum
-	chainName := "YOUTUBEUNBLOCK"
+	chainName := "B4"
 	markAccept := "32768/32768"
 
 	var chains []Chain
