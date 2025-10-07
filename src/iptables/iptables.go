@@ -3,7 +3,6 @@ package iptables
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
@@ -55,14 +54,6 @@ func setSysctlOrProc(name, val string) {
 func getSysctlOrProc(name string) string {
 	out, _ := run("sh", "-c", "sysctl -n "+name+" 2>/dev/null || cat /proc/sys/"+strings.ReplaceAll(name, ".", "/"))
 	return strings.TrimSpace(out)
-}
-
-func qbSpec(start, end int) []string {
-	if end > start {
-		return []string{"-j", "NFQUEUE", "--queue-balance",
-			strconv.Itoa(start) + ":" + strconv.Itoa(end), "--queue-bypass"}
-	}
-	return []string{"-j", "NFQUEUE", "--queue-num", strconv.Itoa(start), "--queue-bypass"}
 }
 
 type Rule struct {
@@ -195,6 +186,11 @@ func hasBinary(name string) bool {
 	return err == nil
 }
 
+func loadKernelModules() {
+	_, _ = run("sh", "-c", "modprobe xt_connbytes --first-time >/dev/null 2>&1 || true")
+	_, _ = run("sh", "-c", "modprobe xt_NFQUEUE --first-time >/dev/null 2>&1 || true")
+}
+
 func buildManifest(cfg *config.Config) Manifest {
 	var ipts []string
 	if hasBinary("iptables") {
@@ -206,45 +202,29 @@ func buildManifest(cfg *config.Config) Manifest {
 	if len(ipts) == 0 {
 		ipts = []string{"iptables"}
 	}
-	start := cfg.QueueStartNum
-	end := cfg.QueueStartNum + cfg.Threads - 1
-	lanIf := "br0"
-	wanIf := "eth0"
-	markHex := fmt.Sprintf("0x%x/0xffffffff", cfg.Mark)
+	queueNum := cfg.QueueStartNum
+	chainName := "YOUTUBEUNBLOCK"
+	markAccept := "32768/32768"
 
 	var chains []Chain
 	var rules []Rule
 
 	for _, ipt := range ipts {
-		b4 := Chain{IPT: ipt, Table: "mangle", Name: "B4"}
-		chains = append(chains, b4)
+		yuch := Chain{IPT: ipt, Table: "mangle", Name: chainName}
+		chains = append(chains, yuch)
 
 		tcpRule := Rule{
-			IPT: ipt, Table: "mangle", Chain: "B4", Action: "A",
-			Spec: append([]string{"-p", "tcp", "--dport", "443", "-m", "mark", "!", "--mark", markHex, "-m", "connbytes", "--connbytes-dir", "original", "--connbytes-mode", "packets", "--connbytes", "0:19"}, qbSpec(start, end)...),
+			IPT: ipt, Table: "mangle", Chain: chainName, Action: "A",
+			Spec: []string{"-p", "tcp", "--dport", "443", "-m", "connbytes", "--connbytes-dir", "original", "--connbytes-mode", "packets", "--connbytes", "0:19", "-j", "NFQUEUE", "--queue-num", strconv.Itoa(queueNum), "--queue-bypass"},
 		}
 		udpRule := Rule{
-			IPT: ipt, Table: "mangle", Chain: "B4", Action: "A",
-			Spec: append([]string{"-p", "udp", "--dport", "443", "-m", "mark", "!", "--mark", markHex, "-m", "connbytes", "--connbytes-dir", "original", "--connbytes-mode", "packets", "--connbytes", "0:8"}, qbSpec(start, end)...),
+			IPT: ipt, Table: "mangle", Chain: chainName, Action: "A",
+			Spec: []string{"-p", "udp", "-m", "connbytes", "--connbytes-dir", "original", "--connbytes-mode", "packets", "--connbytes", "0:8", "-j", "NFQUEUE", "--queue-num", strconv.Itoa(queueNum), "--queue-bypass"},
 		}
+		jumpPostrouting := Rule{IPT: ipt, Table: "mangle", Chain: "POSTROUTING", Action: "A", Spec: []string{"-j", chainName}}
+		acceptOutputMark := Rule{IPT: ipt, Table: "mangle", Chain: "OUTPUT", Action: "I", Spec: []string{"-m", "mark", "--mark", markAccept, "-j", "ACCEPT"}}
 
-		jumpPrerouting := Rule{IPT: ipt, Table: "mangle", Chain: "PREROUTING", Action: "A", Spec: []string{"-i", lanIf, "-m", "mark", "!", "--mark", markHex, "-j", "B4"}}
-		jumpPostrouting := Rule{IPT: ipt, Table: "mangle", Chain: "POSTROUTING", Action: "A", Spec: []string{"-o", wanIf, "-m", "mark", "!", "--mark", markHex, "-j", "B4"}}
-		jumpOutputTCP := Rule{IPT: ipt, Table: "mangle", Chain: "OUTPUT", Action: "I", Spec: []string{"-p", "tcp", "--dport", "443", "-m", "mark", "!", "--mark", markHex, "-j", "B4"}}
-		jumpOutputUDP := Rule{IPT: ipt, Table: "mangle", Chain: "OUTPUT", Action: "I", Spec: []string{"-p", "udp", "--dport", "443", "-m", "mark", "!", "--mark", markHex, "-j", "B4"}}
-
-		if existsChain(ipt, "mangle", "DIVERT") {
-			divertReturnHTTPS := Rule{
-				IPT:    ipt,
-				Table:  "mangle",
-				Chain:  "DIVERT",
-				Action: "I",
-				Spec:   []string{"-p", "tcp", "--dport", "443", "-j", "RETURN"},
-			}
-			rules = append(rules, divertReturnHTTPS)
-		}
-
-		rules = append(rules, jumpPrerouting, jumpPostrouting, jumpOutputTCP, jumpOutputUDP, tcpRule, udpRule)
+		rules = append(rules, tcpRule, udpRule, jumpPostrouting, acceptOutputMark)
 	}
 
 	sysctls := []SysctlSetting{
@@ -255,30 +235,12 @@ func buildManifest(cfg *config.Config) Manifest {
 	return Manifest{Chains: chains, Rules: rules, Sysctls: sysctls}
 }
 
-func delAnyJumpToB4(ipt, chain string) {
-	out, _ := run(ipt, "-w", "-t", "mangle", "-S", chain)
-	for _, line := range strings.Split(out, "\n") {
-		line = strings.TrimSpace(line)
-		if !(strings.HasPrefix(line, "-A "+chain+" ") || strings.HasPrefix(line, "-I "+chain+" ")) {
-			continue
-		}
-		if !strings.Contains(line, "-j B4") {
-			continue
-		}
-		fields := strings.Fields(line)
-		if len(fields) < 3 {
-			continue
-		}
-		spec := fields[2:]
-		_, _ = run(append([]string{ipt, "-w", "-t", "mangle", "-D", chain}, spec...)...)
-	}
-}
-
 func AddRules(cfg *config.Config) error {
 	if cfg.SkipIpTables {
 		return nil
 	}
 	log.Infof("IPTABLES: adding rules")
+	loadKernelModules()
 	m := buildManifest(cfg)
 	return m.Apply()
 }
@@ -299,11 +261,6 @@ func ClearRules(cfg *config.Config) error {
 	}
 	m := buildManifest(cfg)
 	m.RemoveRules()
-	for _, ipt := range ipts {
-		delAnyJumpToB4(ipt, "PREROUTING")
-		delAnyJumpToB4(ipt, "POSTROUTING")
-		delAnyJumpToB4(ipt, "OUTPUT")
-	}
 	time.Sleep(30 * time.Millisecond)
 	m.RemoveChains()
 	m.RevertSysctls()

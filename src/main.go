@@ -2,16 +2,14 @@ package main
 
 import (
 	"bytes"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/daniellavrushin/b4/config"
 	"github.com/daniellavrushin/b4/iptables"
 	"github.com/daniellavrushin/b4/log"
-	"github.com/daniellavrushin/b4/sni"
+	"github.com/daniellavrushin/b4/nfq"
 )
 
 func main() {
@@ -31,59 +29,16 @@ func main() {
 		}
 	}
 
-	var matcher *sni.SuffixSet
-	if len(cfg.SNIDomains) > 0 {
-		matcher = sni.NewSuffixSet(cfg.SNIDomains)
-	}
-
-	var ifaces []string
-	if cfg.Interface == "" || cfg.Interface == "*" {
-		ifs, _ := net.Interfaces()
-		for _, inf := range ifs {
-			if inf.Flags&net.FlagUp == 0 {
-				continue
-			}
-			if inf.Flags&net.FlagLoopback != 0 {
-				continue
-			}
-			ifaces = append(ifaces, inf.Name)
-		}
-	} else {
-		ifaces = []string{cfg.Interface}
-	}
-
-	var sniffers []*sni.Sniffer
-	for _, name := range ifaces {
-		sn, err := sni.NewSniffer(sni.Config{
-			Iface:               name,
-			SnapLen:             96 * 1024,
-			FlowTTL:             10 * time.Second,
-			MaxClientHelloBytes: 8192,
-			Promisc:             true,
-			Matcher:             matcher,
-			OnTLSHost:           func(ft sni.FiveTuple, host string) {},
-			OnQUICHost:          func(ft sni.FiveTuple, host string) {},
-		})
-		if err != nil {
-			log.Errorf("AF_PACKET start failed on %s: %v", name, err)
-			continue
-		}
-		sn.Run()
-		sniffers = append(sniffers, sn)
-		log.Infof("AF_PACKET listening on %s", name)
-	}
-	if len(sniffers) == 0 {
-		log.Errorf("no interfaces to sniff")
+	w := nfq.NewWorker(&cfg)
+	if err := w.Start(); err != nil {
+		log.Errorf("nfqueue start failed: %v", err)
 		os.Exit(1)
 	}
+	defer w.Stop()
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	<-sig
-
-	for _, sn := range sniffers {
-		sn.Close()
-	}
 
 	if !cfg.SkipIpTables {
 		if err := iptables.ClearRules(&cfg); err != nil {
