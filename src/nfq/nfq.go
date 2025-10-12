@@ -122,9 +122,14 @@ func (w *Worker) Start(sharedCh chan nfqueue.Attribute) error {
 				if dport == 443 && len(payload) > 0 {
 					k := fmt.Sprintf("%s:%d>%s:%d", src.String(), sport, dst.String(), dport)
 					host, ok := w.feed(k, payload)
-					if ok && w.matcher.Match(host) {
+					if ok {
+						matched := w.matcher.Match(host)
 						onlyOnce := markFakeOnce(k, 20*time.Second)
-						log.Infof("TCP: %s %s:%d -> %s:%d", host, src.String(), sport, dst.String(), dport)
+						target := ""
+						if matched {
+							target = " TARGET"
+						}
+						log.Infof("SNI TCP%v: %s %s:%d -> %s:%d", target, host, src.String(), sport, dst.String(), dport)
 						w.dropAndInjectTCP(raw, dst, onlyOnce)
 						_ = q.SetVerdict(id, nfqueue.NfDrop)
 						return 0
@@ -171,8 +176,15 @@ func (w *Worker) Start(sharedCh chan nfqueue.Attribute) error {
 					}
 
 					if handle {
+
 						if host != "" {
-							log.Infof("UDP: %s %s:%d -> %s:%d", host, src.String(), sport, dst.String(), dport)
+
+							matched := w.matcher.Match(host)
+							target := ""
+							if matched {
+								target = " TARGET"
+							}
+							log.Infof("SNI UDP%v: %s %s:%d -> %s:%d", target, host, src.String(), sport, dst.String(), dport)
 						} else {
 							log.Infof("UDP: %s:%d -> %s:%d", src.String(), sport, dst.String(), dport)
 						}
