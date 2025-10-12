@@ -67,13 +67,17 @@ func runB4(cmd *cobra.Command, args []string) error {
 	if cfg.GeoSitePath != "" && len(cfg.GeoCategories) > 0 {
 		log.Infof("Loading domains from geodata for categories: %v", cfg.GeoCategories)
 		domains, err := cfg.LoadDomainsFromGeodata()
+		log.Infof("Loaded %d domains from geodata", len(domains))
 		if err != nil {
 			return fmt.Errorf("failed to load geodata domains: %w", err)
 		}
 
 		// Merge with existing SNI domains
 		cfg.SNIDomains = append(cfg.SNIDomains, domains...)
-		log.Infof("Loaded %d domains from geodata", len(domains))
+	}
+
+	if len(cfg.SNIDomains) > 0 {
+		log.Infof("Total SNI domains to match: %d", len(cfg.SNIDomains))
 	}
 
 	// Setup iptables rules

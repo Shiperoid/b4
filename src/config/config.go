@@ -106,7 +106,7 @@ func (c *Config) BindFlags(cmd *cobra.Command) {
 	cmd.Flags().UintVar(&c.Mark, "mark", c.Mark, "Packet mark value")
 	cmd.Flags().IntVar(&c.ConnBytesLimit, "connbytes-limit", c.ConnBytesLimit, "Connection bytes limit")
 	cmd.Flags().StringSliceVar(&c.SNIDomains, "sni-domains", c.SNIDomains, "List of SNI domains to match")
-	cmd.Flags().IntVar(&c.Seg2Delay, "seg2delay", 0, "Delay between segments in ms")
+	cmd.Flags().IntVar(&c.Seg2Delay, "seg2delay", c.Seg2Delay, "Delay between segments in ms")
 
 	// Geodata and site filtering
 	cmd.Flags().StringVar(&c.GeoSitePath, "geosite", c.GeoSitePath, "Path to geosite file (e.g., geosite.dat)")
@@ -115,13 +115,13 @@ func (c *Config) BindFlags(cmd *cobra.Command) {
 
 	// Fake SNI and TTL configuration
 	cmd.Flags().StringVar(&c.FragmentStrategy, "frag", "tcp", "Fragmentation strategy (tcp/ip/none)")
-	cmd.Flags().BoolVar(&c.FragSNIReverse, "frag-sni-reverse", true, "Reverse fragment order")
-	cmd.Flags().BoolVar(&c.FragMiddleSNI, "frag-middle-sni", true, "Fragment in middle of SNI")
-	cmd.Flags().IntVar(&c.FragSNIPosition, "frag-sni-pos", 1, "SNI fragment position")
+	cmd.Flags().BoolVar(&c.FragSNIReverse, "frag-sni-reverse", c.FragSNIReverse, "Reverse fragment order")
+	cmd.Flags().BoolVar(&c.FragMiddleSNI, "frag-middle-sni", c.FragMiddleSNI, "Fragment in middle of SNI")
+	cmd.Flags().IntVar(&c.FragSNIPosition, "frag-sni-pos", c.FragSNIPosition, "SNI fragment position")
 
-	cmd.Flags().StringVar(&c.FakeStrategy, "fake-strategy", "ttl", "Faking strategy (ttl/randseq/pastseq/tcp_check/md5sum)")
-	cmd.Flags().Uint8Var(&c.FakeTTL, "fake-ttl", 8, "TTL for fake packets")
-	cmd.Flags().Int32Var(&c.FakeSeqOffset, "fake-seq-offset", 10000, "Sequence offset for fake packets")
+	cmd.Flags().StringVar(&c.FakeStrategy, "fake-strategy", c.FakeStrategy, "Faking strategy (ttl/randseq/pastseq/tcp_check/md5sum)")
+	cmd.Flags().Uint8Var(&c.FakeTTL, "fake-ttl", c.FakeTTL, "TTL for fake packets")
+	cmd.Flags().Int32Var(&c.FakeSeqOffset, "fake-seq-offset", c.FakeSeqOffset, "Sequence offset for fake packets")
 	cmd.Flags().BoolVar(&c.FakeSNI, "fake-sni", c.FakeSNI, "Enable fake SNI packets")
 	cmd.Flags().IntVar(&c.FakeSNISeqLength, "fake-sni-len", c.FakeSNISeqLength, "Length of fake SNI sequence")
 	cmd.Flags().IntVar(&c.FakeSNIType, "fake-sni-type", c.FakeSNIType, "Type of fake SNI payload (0=random, 1=custom, 2=default)")

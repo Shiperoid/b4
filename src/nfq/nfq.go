@@ -97,7 +97,7 @@ func (w *Worker) Start() error {
 					host, ok := w.feed(k, payload)
 					if ok && w.matcher.Match(host) {
 						log.Infof("TCP: %s %s:%d -> %s:%d", host, src.String(), sport, dst.String(), dport)
-						go w.dropAndInjectTCP(raw, dst)
+						w.dropAndInjectTCP(raw, dst)
 						_ = q.SetVerdict(id, nfqueue.NfDrop)
 						return 0
 					}
@@ -231,23 +231,12 @@ func (w *Worker) dropAndInjectTCP(raw []byte, dst net.IP) {
 		return
 	}
 
-	// Send fake SNI packets first (with delays between them)
-	if w.cfg.FakeSNI {
-		for i := 0; i < w.cfg.FakeSNISeqLength; i++ {
-			fake := sock.BuildFakeSNIPacket(raw, w.cfg)
-			if fake != nil {
-				_ = w.sock.SendIPv4(fake, dst)
-				if i < w.cfg.FakeSNISeqLength-1 {
-					time.Sleep(1 * time.Millisecond)
-				}
-			}
-		}
+	if w.cfg.FakeSNI && w.cfg.FakeSNISeqLength > 0 {
+		w.sendFakeSNISequence(raw, dst)
 	}
 
-	// Fragment the real packet
 	switch w.cfg.FragmentStrategy {
 	case "tcp":
-		w.sendFakeSNISequence(raw, dst)
 		w.sendTCPFragments(raw, dst)
 	case "ip":
 		w.sendIPFragments(raw, dst)
@@ -312,51 +301,43 @@ func (w *Worker) sendTCPFragments(packet []byte, dst net.IP) {
 		return
 	}
 
-	// Determine split position
 	splitPos := w.cfg.FragSNIPosition
 	if splitPos <= 0 || splitPos >= payloadLen {
-		splitPos = 1 // Default: split after first byte
+		splitPos = 1
 	}
 
-	// If FragMiddleSNI is enabled, find SNI and split in middle
 	if w.cfg.FragMiddleSNI {
-		// Look for SNI pattern in payload
 		payload := packet[payloadStart:]
 		for i := 0; i < min(len(payload)-20, 100); i++ {
 			if i+4 < len(payload) && payload[i] == '.' {
-				// Check for common TLDs
 				if (payload[i+1] == 'c' && payload[i+2] == 'o' && payload[i+3] == 'm') ||
 					(payload[i+1] == 'o' && payload[i+2] == 'r' && payload[i+3] == 'g') {
-					splitPos = i + 2 // Split in middle of domain
+					splitPos = i + 2
 					break
 				}
 			}
 		}
 	}
 
-	// Create two segments
 	seg1Len := payloadStart + splitPos
 	seg1 := make([]byte, seg1Len)
 	copy(seg1, packet[:seg1Len])
 
 	seg2Len := payloadStart + (payloadLen - splitPos)
 	seg2 := make([]byte, seg2Len)
-	copy(seg2[:payloadStart], packet[:payloadStart])          // Copy headers
-	copy(seg2[payloadStart:], packet[payloadStart+splitPos:]) // Copy remaining payload
+	copy(seg2[:payloadStart], packet[:payloadStart])
+	copy(seg2[payloadStart:], packet[payloadStart+splitPos:])
 
-	// Fix segment 1
 	binary.BigEndian.PutUint16(seg1[2:4], uint16(seg1Len))
 	sock.FixIPv4Checksum(seg1[:ipHdrLen])
 	sock.FixTCPChecksum(seg1)
 
-	// Fix segment 2 - adjust sequence number
 	seq := binary.BigEndian.Uint32(seg2[ipHdrLen+4 : ipHdrLen+8])
 	binary.BigEndian.PutUint32(seg2[ipHdrLen+4:ipHdrLen+8], seq+uint32(splitPos))
 	binary.BigEndian.PutUint16(seg2[2:4], uint16(seg2Len))
 	sock.FixIPv4Checksum(seg2[:ipHdrLen])
 	sock.FixTCPChecksum(seg2)
 
-	// Send fragments with proper ordering and delay
 	if w.cfg.FragSNIReverse {
 		_ = w.sock.SendIPv4(seg2, dst)
 		if w.cfg.Seg2Delay > 0 {
@@ -380,35 +361,26 @@ func (w *Worker) sendIPFragments(packet []byte, dst net.IP) {
 	}
 
 	ipHdrLen := int((packet[0] & 0x0F) * 4)
-
-	// Align to 8-byte boundary for IP fragmentation
 	splitPos = (splitPos + 7) &^ 7
 	if splitPos >= len(packet) {
 		splitPos = len(packet) - 8
 	}
 
-	// Fragment 1
 	frag1 := make([]byte, splitPos)
 	copy(frag1, packet[:splitPos])
-
-	// Set MF flag
 	frag1[6] |= 0x20
 	binary.BigEndian.PutUint16(frag1[2:4], uint16(splitPos))
 	sock.FixIPv4Checksum(frag1[:ipHdrLen])
 
-	// Fragment 2
 	frag2Len := ipHdrLen + len(packet) - splitPos
 	frag2 := make([]byte, frag2Len)
 	copy(frag2, packet[:ipHdrLen])
 	copy(frag2[ipHdrLen:], packet[splitPos:])
-
-	// Set fragment offset
 	fragOff := uint16(splitPos-ipHdrLen) / 8
 	binary.BigEndian.PutUint16(frag2[6:8], fragOff)
 	binary.BigEndian.PutUint16(frag2[2:4], uint16(frag2Len))
 	sock.FixIPv4Checksum(frag2[:ipHdrLen])
-	log.Tracef("Fragmented IP packet into two fragments at pos=%d: frag1Len=%d, frag2Len=%d", splitPos, len(frag1), len(frag2))
-	// Send fragments
+
 	if w.cfg.FragSNIReverse {
 		_ = w.sock.SendIPv4(frag2, dst)
 		time.Sleep(time.Duration(w.cfg.Seg2Delay) * time.Millisecond)

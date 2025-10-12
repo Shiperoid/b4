@@ -247,6 +247,7 @@ func buildManifest(cfg *config.Config) Manifest {
 			Rule{IPT: ipt, Table: "mangle", Chain: "OUTPUT", Action: "I", Spec: []string{"-m", "mark", "--mark", markAccept, "-j", "ACCEPT"}},
 			Rule{IPT: ipt, Table: "mangle", Chain: "OUTPUT", Action: "A", Spec: []string{"-j", chainName}},
 		)
+
 	}
 
 	sysctls := []SysctlSetting{
@@ -264,7 +265,13 @@ func AddRules(cfg *config.Config) error {
 	log.Infof("IPTABLES: adding rules")
 	loadKernelModules()
 	m := buildManifest(cfg)
-	return m.Apply()
+	result := m.Apply()
+
+	if log.Level(log.CurLevel.Load()) >= log.LevelTrace {
+		iptables_trace, _ := run("sh", "-c", "cat /proc/net/netfilter/nfnetlink_queue && iptables -t mangle -vnL --line-numbers")
+		log.Tracef("Current iptables mangle table:\n%s", iptables_trace)
+	}
+	return result
 }
 
 func ClearRules(cfg *config.Config) error {

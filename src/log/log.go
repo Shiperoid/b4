@@ -22,7 +22,7 @@ const (
 	LevelDebug
 )
 
-var curLevel atomic.Int32
+var CurLevel atomic.Int32
 
 // multi is a simple fan-out writer (stderr + optional syslog).
 type multi struct {
@@ -57,7 +57,7 @@ func Init(stderr io.Writer, level Level, instaflush bool) {
 	}
 	base.ws = []io.Writer{stderr}
 	insta = instaflush
-	curLevel.Store(int32(level))
+	CurLevel.Store(int32(level))
 	rebuildLocked()
 }
 
@@ -83,7 +83,7 @@ func EnableSyslog(tag string) error {
 }
 
 // SetLevel changes the active level.
-func SetLevel(l Level) { curLevel.Store(int32(l)) }
+func SetLevel(l Level) { CurLevel.Store(int32(l)) }
 
 // SetInstaflush toggles line buffering. Switching to instaflush flushes any
 // pending buffered data immediately.
@@ -116,19 +116,19 @@ func Errorf(format string, a ...any) {
 }
 
 func Infof(format string, a ...any) {
-	if Level(curLevel.Load()) >= LevelInfo {
+	if Level(CurLevel.Load()) >= LevelInfo {
 		out("[INFO] "+format, a...)
 	}
 }
 
 func Tracef(format string, a ...any) {
-	if Level(curLevel.Load()) >= LevelTrace {
+	if Level(CurLevel.Load()) >= LevelTrace {
 		out("[TRACE] "+format, a...)
 	}
 }
 
 func Debugf(format string, a ...any) {
-	if Level(curLevel.Load()) >= LevelDebug {
+	if Level(CurLevel.Load()) >= LevelDebug {
 		out("[DEBUG] "+format, a...)
 	}
 }
