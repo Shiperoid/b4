@@ -50,6 +50,7 @@ var (
 
 // Init sets the base writer, level, and instaflush behavior.
 func Init(stderr io.Writer, level Level, instaflush bool) {
+
 	mu.Lock()
 	defer mu.Unlock()
 	if stderr == nil {

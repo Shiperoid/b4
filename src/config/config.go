@@ -44,6 +44,8 @@ type Config struct {
 	UDPDPortMin       int
 	UDPDPortMax       int
 	UDPFilterQUIC     string
+
+	WebPort int
 }
 
 type Logging struct {
@@ -91,6 +93,8 @@ var DefaultConfig = Config{
 	UDPDPortMin:       0,
 	UDPDPortMax:       0,
 	UDPFilterQUIC:     "parse",
+
+	WebPort: 0,
 
 	Logging: Logging{
 		Level:      log.LevelInfo,
@@ -142,6 +146,9 @@ func (c *Config) BindFlags(cmd *cobra.Command) {
 	// Logging configuration
 	cmd.Flags().BoolVarP(&c.Logging.Instaflush, "instaflush", "i", c.Logging.Instaflush, "Flush logs immediately")
 	cmd.Flags().BoolVar(&c.Logging.Syslog, "syslog", c.Logging.Syslog, "Enable syslog output")
+
+	cmd.Flags().IntVar(&c.WebPort, "web-port", c.WebPort, "Port for internal web server (0 disables)")
+
 }
 
 func (cfg *Config) ApplyLogLevel(level string) {

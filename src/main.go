@@ -3,11 +3,13 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/daniellavrushin/b4/config"
+	b4http "github.com/daniellavrushin/b4/http"
 	"github.com/daniellavrushin/b4/iptables"
 	"github.com/daniellavrushin/b4/log"
 	"github.com/daniellavrushin/b4/nfq"
@@ -62,6 +64,11 @@ func runB4(cmd *cobra.Command, args []string) error {
 
 	log.Infof("Starting B4 packet processor")
 	printConfigDefaults(&cfg)
+
+	// Start internal web server if configured
+	if _, err := b4http.StartServer(&cfg); err != nil {
+		return fmt.Errorf("failed to start web server: %w", err)
+	}
 
 	// Load domains from geodata if specified
 	if cfg.GeoSitePath != "" && len(cfg.GeoCategories) > 0 {
@@ -124,7 +131,8 @@ func runB4(cmd *cobra.Command, args []string) error {
 
 func initLogging(cfg *config.Config) error {
 	// Ensure logging is initialized with stderr output
-	log.Init(os.Stderr, log.Level(cfg.Logging.Level), cfg.Logging.Instaflush)
+	w := io.MultiWriter(os.Stderr, b4http.LogWriter())
+	log.Init(w, log.Level(cfg.Logging.Level), cfg.Logging.Instaflush)
 
 	// Log that initialization happened
 	fmt.Fprintf(os.Stderr, "[INIT] Logging initialized at level %d\n", cfg.Logging.Level)
@@ -184,4 +192,6 @@ func printConfigDefaults(cfg *config.Config) {
 	log.Debugf("    UDP DPort Min: %d", cfg.UDPDPortMin)
 	log.Debugf("    UDP DPort Max: %d", cfg.UDPDPortMax)
 	log.Debugf("    UDP Filter QUIC: %s", cfg.UDPFilterQUIC)
+
+	log.Debugf("  Web Port: %d", cfg.WebPort)
 }
