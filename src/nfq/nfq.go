@@ -121,6 +121,39 @@ func (w *Worker) Start(sharedCh chan nfqueue.Attribute) error {
 				dport := binary.BigEndian.Uint16(tcp[2:4])
 				if dport == 443 && len(payload) > 0 {
 					k := fmt.Sprintf("%s:%d>%s:%d", src.String(), sport, dst.String(), dport)
+
+					// Check if we already processed SNI for this flow
+					w.mu.Lock()
+					if st, exists := w.flows[k]; exists && st.sniFound {
+						// We already have the SNI for this flow, use it
+						host := st.sni
+						w.mu.Unlock()
+
+						matched := w.matcher.Match(host)
+						onlyOnce := markFakeOnce(k, 20*time.Second)
+						target := ""
+						if matched {
+							target = " TARGET"
+						}
+						// Only log if this is the first time we're processing after SNI extraction
+						if onlyOnce {
+							log.Infof("SNI TCP%v: %s %s:%d -> %s:%d", target, host, src.String(), sport, dst.String(), dport)
+							w.dropAndInjectTCP(raw, dst, onlyOnce)
+							_ = q.SetVerdict(id, nfqueue.NfDrop)
+							return 0
+						}
+						// For subsequent packets in the same flow, just pass through or drop
+						if matched {
+							w.dropAndInjectTCP(raw, dst, false)
+							_ = q.SetVerdict(id, nfqueue.NfDrop)
+						} else {
+							_ = q.SetVerdict(id, nfqueue.NfAccept)
+						}
+						return 0
+					}
+					w.mu.Unlock()
+
+					// Try to extract SNI from this packet
 					host, ok := w.feed(k, payload)
 					if ok {
 						matched := w.matcher.Match(host)
@@ -130,8 +163,12 @@ func (w *Worker) Start(sharedCh chan nfqueue.Attribute) error {
 							target = " TARGET"
 						}
 						log.Infof("SNI TCP%v: %s %s:%d -> %s:%d", target, host, src.String(), sport, dst.String(), dport)
-						w.dropAndInjectTCP(raw, dst, onlyOnce)
-						_ = q.SetVerdict(id, nfqueue.NfDrop)
+						if matched {
+							w.dropAndInjectTCP(raw, dst, onlyOnce)
+							_ = q.SetVerdict(id, nfqueue.NfDrop)
+						} else {
+							_ = q.SetVerdict(id, nfqueue.NfAccept)
+						}
 						return 0
 					}
 				}
@@ -311,6 +348,15 @@ func (w *Worker) feed(key string, chunk []byte) (string, bool) {
 		st = &flowState{buf: nil, last: time.Now()}
 		w.flows[key] = st
 	}
+
+	// If we already found SNI for this flow, return it
+	if st.sniFound {
+		sni := st.sni
+		w.mu.Unlock()
+		return sni, false // Return false because we didn't just find it
+	}
+
+	// Accumulate data up to the limit
 	if len(st.buf) < w.limit {
 		need := w.limit - len(st.buf)
 		if len(chunk) < need {
@@ -322,13 +368,20 @@ func (w *Worker) feed(key string, chunk []byte) (string, bool) {
 	st.last = time.Now()
 	buf := append([]byte(nil), st.buf...)
 	w.mu.Unlock()
+
+	// Try to parse SNI from accumulated buffer
 	host, ok := sni.ParseTLSClientHelloSNI(buf)
 	if ok && host != "" {
 		w.mu.Lock()
-		delete(w.flows, key)
+		// Store the SNI but keep the flow entry for future packets
+		st.sniFound = true
+		st.sni = host
+		// Clear the buffer to free memory
+		st.buf = nil
 		w.mu.Unlock()
 		return host, true
 	}
+
 	return "", false
 }
 
@@ -585,10 +638,6 @@ func locateSNI(payload []byte) (start, end int, ok bool) {
 	return 0, 0, false
 }
 
-func isClosedErr(err error) bool {
-	return errors.Is(err, os.ErrClosed) || errors.Is(err, net.ErrClosed) || errors.Is(err, syscall.EBADF)
-}
-
 func (w *Worker) Stop() {
 	if w.cancel != nil {
 		w.cancel()
@@ -606,6 +655,7 @@ func (w *Worker) Stop() {
 		w.sock.Close()
 	}
 }
+
 func (w *Worker) gc() {
 	defer w.wg.Done()
 	t := time.NewTicker(2 * time.Second)
@@ -617,8 +667,17 @@ func (w *Worker) gc() {
 		case now := <-t.C:
 			w.mu.Lock()
 			for k, st := range w.flows {
-				if now.Sub(st.last) > w.ttl {
-					delete(w.flows, k)
+				// Keep flows with found SNI for longer
+				// to handle subsequent packets in the same connection
+				if st.sniFound {
+					if now.Sub(st.last) > 30*time.Second {
+						delete(w.flows, k)
+					}
+				} else {
+					// For flows still accumulating, use the normal TTL
+					if now.Sub(st.last) > w.ttl {
+						delete(w.flows, k)
+					}
 				}
 			}
 			w.mu.Unlock()

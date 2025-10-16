@@ -12,8 +12,10 @@ import (
 )
 
 type flowState struct {
-	buf  []byte
-	last time.Time
+	buf      []byte
+	last     time.Time
+	sniFound bool
+	sni      string
 }
 
 type Worker struct {
