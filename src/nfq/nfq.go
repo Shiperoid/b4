@@ -30,7 +30,7 @@ func markFakeOnce(key string, ttl time.Duration) bool {
 	return true
 }
 
-func (w *Worker) Start(sharedCh chan nfqueue.Attribute) error {
+func (w *Worker) Start() error {
 	s, err := sock.NewSenderWithMark(int(w.cfg.Mark))
 	if err != nil {
 		return err
@@ -75,10 +75,6 @@ func (w *Worker) Start(sharedCh chan nfqueue.Attribute) error {
 			select {
 			case <-w.ctx.Done():
 				return 0
-			default:
-			}
-			select {
-			case sharedCh <- a:
 			default:
 			}
 
@@ -175,9 +171,8 @@ func (w *Worker) Start(sharedCh chan nfqueue.Attribute) error {
 					w.mu.Unlock()
 
 					// Try to extract SNI from this packet
-					host, ok := w.feed(k, payload)
-					if ok {
-						matched := w.matcher.Match(host)
+					host, matched, isNew := w.feed(k, payload)
+					if isNew {
 						onlyOnce := markFakeOnce(k, 20*time.Second)
 						target := ""
 						if matched {
@@ -367,7 +362,7 @@ func (w *Worker) dropAndInjectTCP(raw []byte, dst net.IP, injectFake bool) {
 	}
 }
 
-func (w *Worker) feed(key string, chunk []byte) (string, bool) {
+func (w *Worker) feed(key string, chunk []byte) (string, bool, bool) {
 	w.mu.Lock()
 	st := w.flows[key]
 	if st == nil {
@@ -378,8 +373,10 @@ func (w *Worker) feed(key string, chunk []byte) (string, bool) {
 	// If we already found SNI for this flow, return it
 	if st.sniFound {
 		sni := st.sni
+		verdict := st.verdict
+		st.last = time.Now() // Update last seen
 		w.mu.Unlock()
-		return sni, false // Return false because we didn't just find it
+		return sni, verdict, false // false = not newly found
 	}
 
 	// Accumulate data up to the limit
@@ -399,16 +396,16 @@ func (w *Worker) feed(key string, chunk []byte) (string, bool) {
 	host, ok := sni.ParseTLSClientHelloSNI(buf)
 	if ok && host != "" {
 		w.mu.Lock()
-		// Store the SNI but keep the flow entry for future packets
 		st.sniFound = true
 		st.sni = host
-		// Clear the buffer to free memory
-		st.buf = nil
+		st.verdict = w.matcher.Match(host)
+		st.verdictTime = time.Now()
+		st.buf = nil // Clear buffer immediately
 		w.mu.Unlock()
-		return host, true
+		return host, st.verdict, true // true = newly found
 	}
 
-	return "", false
+	return "", false, false
 }
 
 func (w *Worker) sendTCPFragments(packet []byte, dst net.IP) {
@@ -522,26 +519,30 @@ func (w *Worker) sendFakeSNISequence(original []byte, dst net.IP) {
 	}
 
 	fake := sock.BuildFakeSNIPacket(original, w.cfg)
+	if fake == nil {
+		return
+	}
+
 	ipHdrLen := int((fake[0] & 0x0F) * 4)
 	tcpHdrLen := int((fake[ipHdrLen+12] >> 4) * 4)
 
 	for i := 0; i < w.cfg.FakeSNISeqLength; i++ {
 		_ = w.sock.SendIPv4(fake, dst)
 
-		// Update for next iteration
 		if i+1 < w.cfg.FakeSNISeqLength {
-			// Increment IP ID
 			id := binary.BigEndian.Uint16(fake[4:6])
 			binary.BigEndian.PutUint16(fake[4:6], id+1)
 
-			// Adjust sequence number for non-past/rand strategies
+			// For non-past/rand strategies, update sequence number
 			if w.cfg.FakeStrategy != "pastseq" && w.cfg.FakeStrategy != "randseq" {
 				payloadLen := len(fake) - (ipHdrLen + tcpHdrLen)
 				seq := binary.BigEndian.Uint32(fake[ipHdrLen+4 : ipHdrLen+8])
 				binary.BigEndian.PutUint32(fake[ipHdrLen+4:ipHdrLen+8], seq+uint32(payloadLen))
-				sock.FixIPv4Checksum(fake[:ipHdrLen])
-				sock.FixTCPChecksum(fake)
 			}
+
+			// Recalculate checksums after modifications
+			sock.FixIPv4Checksum(fake[:ipHdrLen])
+			sock.FixTCPChecksum(fake)
 		}
 	}
 }
@@ -696,7 +697,7 @@ func (w *Worker) gc() {
 				// Keep flows with found SNI for longer
 				// to handle subsequent packets in the same connection
 				if st.sniFound {
-					if now.Sub(st.last) > 30*time.Second {
+					if now.Sub(st.last) > 5*time.Second {
 						delete(w.flows, k)
 					}
 				} else {

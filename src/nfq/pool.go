@@ -7,14 +7,7 @@ import (
 	"github.com/daniellavrushin/b4/config"
 	"github.com/daniellavrushin/b4/sni"
 	"github.com/daniellavrushin/b4/sock"
-	"github.com/florianl/go-nfqueue"
 )
-
-type Pool struct {
-	workers  []*Worker
-	packetCh chan nfqueue.Attribute
-	nfq      *nfqueue.Nfqueue
-}
 
 func NewWorkerWithQueue(cfg *config.Config, qnum uint16) *Worker {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -71,7 +64,7 @@ func NewPool(start uint16, threads int, cfg *config.Config) *Pool {
 
 func (p *Pool) Start() error {
 	for _, w := range p.workers {
-		if err := w.Start(p.packetCh); err != nil {
+		if err := w.Start(); err != nil {
 			for _, x := range p.workers {
 				x.Stop()
 			}
