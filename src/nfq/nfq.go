@@ -135,7 +135,16 @@ func (w *Worker) Start() error {
 
 					// Check if we already processed SNI for this flow
 					w.mu.Lock()
+
 					if st, exists := w.flows[k]; exists && st.sniFound {
+						log.Debugf("Flow %s: packet #%d, sniFound=%v", k, st.packetCount, st.sniFound)
+						st.packetCount++
+
+						if w.cfg.ConnBytesLimit > 0 && st.packetCount > w.cfg.ConnBytesLimit {
+							log.Debugf("Flow %s exceeded limit, accepting without processing", k)
+							_ = q.SetVerdict(id, nfqueue.NfAccept)
+							return 0
+						}
 						// We already have the SNI for this flow, use it
 						host := st.sni
 
@@ -366,8 +375,10 @@ func (w *Worker) feed(key string, chunk []byte) (string, bool, bool) {
 	w.mu.Lock()
 	st := w.flows[key]
 	if st == nil {
-		st = &flowState{buf: nil, last: time.Now()}
+		st = &flowState{buf: nil, last: time.Now(), packetCount: 1}
 		w.flows[key] = st
+	} else {
+		st.packetCount++
 	}
 
 	// If we already found SNI for this flow, return it

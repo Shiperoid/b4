@@ -88,24 +88,42 @@ func IPv4FragmentUDP(orig []byte, split int) ([][]byte, bool) {
 	if firstDataAligned >= len(udp) {
 		return nil, false
 	}
+
 	id := binary.BigEndian.Uint16(orig[4:6])
+
 	ip1 := make([]byte, 20+firstDataAligned)
 	copy(ip1, orig[:20])
 	binary.BigEndian.PutUint16(ip1[4:6], id)
-	ip1[6] = 0x20
-	ip1[7] = 0x00
+
+	// Set MF (More Fragments) flag - bit 13 (0x2000)
+	ip1[6] = 0x20 // MF flag set
+	ip1[7] = 0x00 // Offset 0
+
 	binary.BigEndian.PutUint16(ip1[2:4], uint16(20+firstDataAligned))
 	copy(ip1[20:], udp[:firstDataAligned])
 	FixIPv4Checksum(ip1[:20])
+
+	// Second fragment
 	ip2Data := udp[firstDataAligned:]
-	offsetUnits := firstDataAligned / 8
 	ip2 := make([]byte, 20+len(ip2Data))
 	copy(ip2, orig[:20])
 	binary.BigEndian.PutUint16(ip2[4:6], id)
-	ip2[6] = byte(offsetUnits >> 5)
-	ip2[7] = byte((offsetUnits << 3) & 0xf8)
+
+	// Calculate fragment offset in 8-byte units
+	offsetUnits := uint16(firstDataAligned / 8)
+
+	// Fragment offset is 13 bits (bits 3-15), flags are first 3 bits
+	fragField := offsetUnits & 0x1FFF // 13-bit offset
+	// No MF flag for last fragment (unless original had MF)
+	origFragField := binary.BigEndian.Uint16(orig[6:8])
+	if origFragField&0x2000 != 0 { // Preserve original MF if set
+		fragField |= 0x2000
+	}
+
+	binary.BigEndian.PutUint16(ip2[6:8], fragField)
 	binary.BigEndian.PutUint16(ip2[2:4], uint16(20+len(ip2Data)))
 	copy(ip2[20:], ip2Data)
 	FixIPv4Checksum(ip2[:20])
+
 	return [][]byte{ip2, ip1}, true
 }

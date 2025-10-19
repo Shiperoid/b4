@@ -23,6 +23,7 @@ type flowState struct {
 	sni         string
 	verdict     bool
 	verdictTime time.Time
+	packetCount int
 }
 
 type Worker struct {
