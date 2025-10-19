@@ -84,8 +84,3 @@ func registerAPIEndpoints(mux *stdhttp.ServeMux, cfg *config.Config) {
 func LogWriter() io.Writer {
 	return ws.LogWriter()
 }
-
-func Shutdown() {
-	// Shutdown the log hub
-	ws.Shutdown()
-}

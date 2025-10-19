@@ -35,33 +35,7 @@ func udpChecksumIPv4(pkt []byte) {
 	binary.BigEndian.PutUint16(pkt[udpo+6:udpo+8], c)
 }
 
-func ApplyUDPFailingStrategy(packet []byte, strategy string, ttl uint8) {
-	if len(packet) < 20 {
-		return
-	}
-
-	ihl := int((packet[0] & 0x0f) << 2)
-	if len(packet) < ihl+8 {
-		return
-	}
-
-	switch strategy {
-	case "ttl":
-		packet[8] = ttl // Set IP TTL
-		// Clear fragment flags for UDP
-		packet[6] = 0
-		packet[7] = 0
-		FixIPv4Checksum(packet[:ihl])
-	case "checksum":
-		// Corrupt UDP checksum
-		packet[ihl+6] += 1
-		packet[ihl+7] += 1
-	case "none":
-		// Do nothing
-	}
-}
-
-func BuildFakeUDPFromOriginal(orig []byte, fakeLen int, ttl uint8, strategy string) ([]byte, bool) {
+func BuildFakeUDPFromOriginal(orig []byte, fakeLen int, ttl uint8) ([]byte, bool) {
 	if len(orig) < 20 || orig[0]>>4 != 4 {
 		return nil, false
 	}
@@ -69,40 +43,20 @@ func BuildFakeUDPFromOriginal(orig []byte, fakeLen int, ttl uint8, strategy stri
 	if len(orig) < ihl+8 {
 		return nil, false
 	}
-
 	out := make([]byte, 20+8+fakeLen)
 	copy(out, orig[:20])
-
-	// Apply strategy-specific changes
-	if strategy == "ttl" {
-		out[8] = ttl
-		out[6] = 0 // Clear fragment flags
-		out[7] = 0
-	} else {
-		out[8] = 64 // Default TTL
-	}
-
+	out[8] = ttl
 	id := binary.BigEndian.Uint16(out[4:6])
 	binary.BigEndian.PutUint16(out[4:6], id+1)
-
+	out[6], out[7] = 0, 0
 	binary.BigEndian.PutUint16(out[2:4], uint16(20+8+fakeLen))
 	copy(out[20:], orig[ihl:ihl+8])
 	binary.BigEndian.PutUint16(out[20+4:20+6], uint16(8+fakeLen))
-
-	// Fill with random data instead of zeros for better DPI evasion
 	for i := 0; i < fakeLen; i++ {
-		out[28+i] = byte(i & 0xFF)
+		out[28+i] = 0
 	}
-
 	FixIPv4Checksum(out[:20])
 	udpChecksumIPv4(out)
-
-	if strategy == "checksum" {
-		// Corrupt checksum after calculation
-		out[20+6] ^= 0xFF
-		out[20+7] ^= 0xFF
-	}
-
 	return out, true
 }
 
@@ -134,42 +88,24 @@ func IPv4FragmentUDP(orig []byte, split int) ([][]byte, bool) {
 	if firstDataAligned >= len(udp) {
 		return nil, false
 	}
-
 	id := binary.BigEndian.Uint16(orig[4:6])
-
 	ip1 := make([]byte, 20+firstDataAligned)
 	copy(ip1, orig[:20])
 	binary.BigEndian.PutUint16(ip1[4:6], id)
-
-	// Set MF (More Fragments) flag - bit 13 (0x2000)
-	ip1[6] = 0x20 // MF flag set
-	ip1[7] = 0x00 // Offset 0
-
+	ip1[6] = 0x20
+	ip1[7] = 0x00
 	binary.BigEndian.PutUint16(ip1[2:4], uint16(20+firstDataAligned))
 	copy(ip1[20:], udp[:firstDataAligned])
 	FixIPv4Checksum(ip1[:20])
-
-	// Second fragment
 	ip2Data := udp[firstDataAligned:]
+	offsetUnits := firstDataAligned / 8
 	ip2 := make([]byte, 20+len(ip2Data))
 	copy(ip2, orig[:20])
 	binary.BigEndian.PutUint16(ip2[4:6], id)
-
-	// Calculate fragment offset in 8-byte units
-	offsetUnits := uint16(firstDataAligned / 8)
-
-	// Fragment offset is 13 bits (bits 3-15), flags are first 3 bits
-	fragField := offsetUnits & 0x1FFF // 13-bit offset
-	// No MF flag for last fragment (unless original had MF)
-	origFragField := binary.BigEndian.Uint16(orig[6:8])
-	if origFragField&0x2000 != 0 { // Preserve original MF if set
-		fragField |= 0x2000
-	}
-
-	binary.BigEndian.PutUint16(ip2[6:8], fragField)
+	ip2[6] = byte(offsetUnits >> 5)
+	ip2[7] = byte((offsetUnits << 3) & 0xf8)
 	binary.BigEndian.PutUint16(ip2[2:4], uint16(20+len(ip2Data)))
 	copy(ip2[20:], ip2Data)
 	FixIPv4Checksum(ip2[:20])
-
 	return [][]byte{ip2, ip1}, true
 }

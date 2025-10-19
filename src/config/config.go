@@ -33,7 +33,6 @@ type Config struct {
 	Seg2Delay      int      `json:"seg2delay" bson:"seg2delay"`
 
 	FragmentStrategy string
-	FragSNIFaked     bool
 	FragSNIReverse   bool
 	FragMiddleSNI    bool
 	FragSNIPosition  int
@@ -53,7 +52,6 @@ type Config struct {
 	UDPDPortMin       int
 	UDPDPortMax       int
 	UDPFilterQUIC     string
-	UDPStunFilter     bool
 
 	WebServer WebServer `json:"web_server" bson:"web_server"`
 }
@@ -91,7 +89,6 @@ var DefaultConfig = Config{
 	FragmentStrategy: "tcp",
 	FragSNIReverse:   true,
 	FragMiddleSNI:    true,
-	FragSNIFaked:     true,
 	FragSNIPosition:  1,
 
 	FakeSNI:           true,
@@ -108,7 +105,7 @@ var DefaultConfig = Config{
 	UDPFakingStrategy: "none",
 	UDPDPortMin:       0,
 	UDPDPortMax:       0,
-	UDPFilterQUIC:     "disabled",
+	UDPFilterQUIC:     "parse",
 
 	WebServer: WebServer{
 		Port:      0,
@@ -215,7 +212,6 @@ func (c *Config) BindFlags(cmd *cobra.Command) {
 	cmd.Flags().IntVar(&c.UDPDPortMin, "udp-dport-min", c.UDPDPortMin, "Minimum UDP destination port to handle")
 	cmd.Flags().IntVar(&c.UDPDPortMax, "udp-dport-max", c.UDPDPortMax, "Maximum UDP destination port to handle")
 	cmd.Flags().StringVar(&c.UDPFilterQUIC, "udp-filter-quic", c.UDPFilterQUIC, "QUIC filtering mode (disabled|all|parse)")
-	cmd.Flags().BoolVar(&c.UDPStunFilter, "udp-stun-filter", false, "Enable STUN protocol filtering for UDP packets (default: false)")
 
 	// Feature flags
 	cmd.Flags().BoolVar(&c.UseGSO, "gso", c.UseGSO, "Enable Generic Segmentation Offload")
