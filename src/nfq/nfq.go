@@ -173,7 +173,9 @@ func (w *Worker) Start() error {
 						matched := w.matcher.Match(host)
 						onlyOnce := markFakeOnce(k, 20*time.Second)
 						target := ""
-
+						if matched {
+							target = labelTarget
+						}
 						// Mark this flow as processed
 						w.mu.Lock()
 						if st, exists := w.flows[k]; exists {
@@ -186,9 +188,9 @@ func (w *Worker) Start() error {
 						metrics.RecordConnection("TCP", host, fmt.Sprintf("%s:%d", src, sport), fmt.Sprintf("%s:%d", dst, dport), matched)
 						metrics.RecordPacket(uint64(len(raw)))
 
+						log.Infof("SNI TCP%v: %s %s:%d -> %s:%d", target, host, src.String(), sport, dst.String(), dport)
+
 						if matched {
-							target = labelTarget
-							log.Infof("SNI TCP%v: %s %s:%d -> %s:%d", target, host, src.String(), sport, dst.String(), dport)
 							w.dropAndInjectTCP(raw, dst, onlyOnce)
 							_ = q.SetVerdict(id, nfqueue.NfDrop)
 						} else {

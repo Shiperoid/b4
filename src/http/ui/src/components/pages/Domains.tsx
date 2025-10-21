@@ -56,12 +56,40 @@ function parseLogLine(line: string): ParsedLog | null {
   };
 }
 
+const STORAGE_KEY = "b4_domains_lines";
+const MAX_STORED_LINES = 1000;
+
 export default function Domains() {
-  const [lines, setLines] = React.useState<string[]>([]);
+  // Load persisted lines from localStorage on mount
+  const [lines, setLines] = React.useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+    } catch (e) {
+      console.error("Failed to load persisted domains:", e);
+    }
+    return [];
+  });
+
   const [paused, setPaused] = React.useState(false);
   const [filter, setFilter] = React.useState("");
   const [autoScroll, setAutoScroll] = React.useState(true);
   const tableRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Persist lines to localStorage whenever they change
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(lines.slice(-MAX_STORED_LINES))
+      );
+    } catch (e) {
+      console.error("Failed to persist domains:", e);
+    }
+  }, [lines]);
 
   React.useEffect(() => {
     const ws = new WebSocket(
@@ -252,7 +280,10 @@ export default function Domains() {
             />
             <IconButton
               color="inherit"
-              onClick={() => setLines([])}
+              onClick={() => {
+                setLines([]);
+                localStorage.removeItem(STORAGE_KEY);
+              }}
               sx={{
                 color: "text.secondary",
                 "&:hover": {
@@ -402,11 +433,15 @@ export default function Domains() {
                       <Chip
                         label={log.protocol}
                         size="small"
+                        icon={
+                          log.protocol === "TCP" ? (
+                            <TcpIcon color="primary" />
+                          ) : (
+                            <UdpIcon color="secondary" />
+                          )
+                        }
                         sx={{
-                          bgcolor:
-                            log.protocol === "TCP"
-                              ? colors.accent.primary
-                              : colors.accent.secondary,
+                          bgcolor: colors.accent.primary,
                           color:
                             log.protocol === "TCP"
                               ? colors.primary
