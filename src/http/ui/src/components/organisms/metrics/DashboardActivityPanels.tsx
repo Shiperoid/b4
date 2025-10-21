@@ -12,6 +12,8 @@ import {
 } from "@mui/material";
 import { formatNumber } from "../../../utils";
 import { colors } from "../../../Theme";
+import TcpIcon from "@mui/icons-material/SyncAlt";
+import UdpIcon from "@mui/icons-material/TrendingFlat";
 
 interface Connection {
   timestamp: string;
@@ -63,10 +65,7 @@ export const DashboardActivityPanels: React.FC<
                           variant="body2"
                           sx={{ color: colors.text.primary }}
                         >
-                          {index + 1}.{" "}
-                          {domain.length > 30
-                            ? domain.substring(0, 30) + "..."
-                            : domain}
+                          {index + 1}. {domain}
                         </Typography>
                         <Chip
                           label={formatNumber(count)}
@@ -115,11 +114,15 @@ export const DashboardActivityPanels: React.FC<
                       <Chip
                         label={conn.protocol}
                         size="small"
+                        icon={
+                          conn.protocol === "TCP" ? (
+                            <TcpIcon color="primary" />
+                          ) : (
+                            <UdpIcon color="secondary" />
+                          )
+                        }
                         sx={{
-                          bgcolor:
-                            conn.protocol === "TCP"
-                              ? colors.accent.primary
-                              : colors.accent.secondary,
+                          bgcolor: colors.accent.primary,
                           color:
                             conn.protocol === "TCP"
                               ? colors.primary
