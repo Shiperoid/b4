@@ -120,18 +120,25 @@ var DefaultConfig = Config{
 }
 
 func (c *Config) SaveToFile(path string) error {
+
+	if path == "" {
+		log.Tracef("config path is not defined")
+		return nil
+	}
+
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return log.Errorf("failed to marshal config: %v", err)
 	}
 
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+
 	if err != nil {
 		return log.Errorf("failed to create config file: %v", err)
 	}
 	defer file.Close()
 
-	err = os.WriteFile(path, data, 0644)
+	_, err = file.Write(data)
 	if err != nil {
 		return log.Errorf("failed to write config file: %v", err)
 	}
@@ -141,7 +148,8 @@ func (c *Config) SaveToFile(path string) error {
 func (c *Config) LoadFromFile(path string) error {
 
 	if path == "" {
-		return log.Errorf("config path is not specified")
+		log.Tracef("config path is not defined")
+		return nil
 	}
 
 	info, err := os.Stat(path)

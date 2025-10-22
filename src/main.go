@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sort"
 	"sync"
 	"syscall"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/daniellavrushin/b4/log"
 	"github.com/daniellavrushin/b4/nfq"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -78,7 +80,7 @@ func runB4(cmd *cobra.Command, args []string) error {
 		return log.Errorf("invalid configuration: %w", err)
 	}
 
-	printConfigDefaults(&cfg)
+	printConfigDefaults(cmd)
 
 	// Initialize metrics collector early
 	metrics := handler.GetMetricsCollector()
@@ -299,51 +301,20 @@ func initLogging(cfg *config.Config) error {
 	return nil
 }
 
-func printConfigDefaults(cfg *config.Config) {
-	log.Debugf("Configuration:")
-	log.Debugf("  Queue number: %d", cfg.QueueStartNum)
-	log.Debugf("  Threads: %d", cfg.Threads)
-	log.Debugf("  Mark: %d (0x%x)", cfg.Mark, cfg.Mark)
-	log.Debugf("  ConnBytes limit: %d", cfg.ConnBytesLimit)
-	log.Debugf("  GSO: %v", cfg.UseGSO)
-	log.Debugf("  Conntrack: %v", cfg.UseConntrack)
-	log.Debugf("  Skip iptables: %v", cfg.SkipIpTables)
-	if cfg.GeoSitePath != "" {
-		log.Debugf("  Geo Site path: %s", cfg.GeoSitePath)
-	}
-	if cfg.GeoIpPath != "" {
-		log.Debugf("  Geo IP path: %s", cfg.GeoIpPath)
-	}
-	if len(cfg.GeoCategories) > 0 {
-		log.Debugf("  Geo Categories: %v", cfg.GeoCategories)
-	}
-	if len(cfg.SNIDomains) > 0 {
-		log.Debugf("  SNI Domains: %v", cfg.SNIDomains)
-	}
-	log.Debugf("  Logging level: %d", cfg.Logging.Level)
-	log.Debugf("  Logging instaflush: %v", cfg.Logging.Instaflush)
-	log.Debugf("  Logging syslog: %v", cfg.Logging.Syslog)
+func printConfigDefaults(cmd *cobra.Command) {
+	var all []*pflag.Flag
+	cmd.InheritedFlags().VisitAll(func(f *pflag.Flag) { all = append(all, f) })
+	cmd.Flags().VisitAll(func(f *pflag.Flag) { all = append(all, f) })
+	sort.Slice(all, func(i, j int) bool { return all[i].Name < all[j].Name })
 
-	log.Debugf("  Fragment Strategy: %s", cfg.FragmentStrategy)
-	log.Debugf("  Fragment SNI Reverse: %v", cfg.FragSNIReverse)
-	log.Debugf("  Fragment Middle SNI: %v", cfg.FragMiddleSNI)
-	log.Debugf("  Fragment SNI Position: %d", cfg.FragSNIPosition)
-
-	log.Debugf("  Fake SNI: %v", cfg.FakeSNI)
-	log.Debugf("    Fake TTL: %d", cfg.FakeTTL)
-	log.Debugf("    Fake Strategy: %s", cfg.FakeStrategy)
-	log.Debugf("    Fake Seq Offset: %d", cfg.FakeSeqOffset)
-	log.Debugf("    Fake SNI Type: %d", cfg.FakeSNIType)
-	log.Debugf("    Fake Custom Payload: %s", cfg.FakeCustomPayload)
-
-	log.Debugf("  UDP Mode: %s", cfg.UDPMode)
-	log.Debugf("    UDP Fake Len: %d", cfg.UDPFakeLen)
-	log.Debugf("    UDP Fake Seq Length: %d", cfg.UDPFakeSeqLength)
-	log.Debugf("    UDP Faking Strategy: %s", cfg.UDPFakingStrategy)
-	log.Debugf("    UDP DPort Min: %d", cfg.UDPDPortMin)
-	log.Debugf("    UDP DPort Max: %d", cfg.UDPDPortMax)
-	log.Debugf("    UDP Filter QUIC: %s", cfg.UDPFilterQUIC)
-
-	log.Debugf("  Web Server:")
-	log.Debugf("    Port: %d", cfg.WebServer.Port)
+	log.Infof("Effective CLI flags:")
+	line := ""
+	for _, f := range all {
+		if line == "" {
+			line = fmt.Sprintf("--%s=%s", f.Name, f.Value.String())
+		} else {
+			line += " " + fmt.Sprintf("--%s=%s", f.Name, f.Value.String())
+		}
+	}
+	log.Infof("  %s", line)
 }
