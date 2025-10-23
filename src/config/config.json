@@ -2,7 +2,7 @@
   "queue_start_num": 537,
   "threads": 4,
   "web_server": {
-    "port": 0
+    "port": 7000
   },
   "logging": {
     "level": 1,

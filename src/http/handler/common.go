@@ -6,6 +6,6 @@ var (
 	globalPool *nfq.Pool
 )
 
-func ConfigSetNFQPool(pool *nfq.Pool) {
+func SetNFQPool(pool *nfq.Pool) {
 	globalPool = pool
 }

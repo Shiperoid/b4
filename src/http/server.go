@@ -27,7 +27,7 @@ func StartServer(cfg *config.Config, pool *nfq.Pool) (*stdhttp.Server, error) {
 	mux := stdhttp.NewServeMux()
 
 	// Register WebSocket endpoints
-	handler.ConfigSetNFQPool(pool)
+	handler.SetNFQPool(pool)
 	registerWebSocketEndpoints(mux)
 
 	// Register REST API endpoints
