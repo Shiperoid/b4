@@ -7,3 +7,7 @@ import (
 type API struct {
 	cfg *config.Config
 }
+
+type GeositeResponse struct {
+	Tags []string `json:"tags"`
+}

@@ -17,6 +17,7 @@ import (
 	"github.com/daniellavrushin/b4/metrics"
 	"github.com/daniellavrushin/b4/sni"
 	"github.com/daniellavrushin/b4/sock"
+	"github.com/daniellavrushin/b4/stun"
 	"github.com/florianl/go-nfqueue"
 )
 
@@ -215,6 +216,13 @@ func (w *Worker) Start() error {
 					payload := udp[8:]
 					sport := binary.BigEndian.Uint16(udp[0:2])
 					dport := binary.BigEndian.Uint16(udp[2:4])
+
+					if cfg.UDP.FilterSTUN && stun.IsSTUNMessage(payload) {
+						// Log at TRACE level to avoid spam (STUN is very frequent)
+						log.Tracef("STUN %s:%d -> %s:%d", src.String(), sport, dst.String(), dport)
+						_ = q.SetVerdict(id, nfqueue.NfAccept)
+						return 0
+					}
 
 					host := ""
 					if h, ok := sni.ParseQUICClientHelloSNI(payload); ok {

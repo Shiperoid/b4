@@ -79,6 +79,7 @@ func registerWebSocketEndpoints(mux *stdhttp.ServeMux) {
 func registerAPIEndpoints(mux *stdhttp.ServeMux, cfg *config.Config) {
 	handler.RegisterConfigApi(mux, cfg)
 	handler.RegisterMetricsApi(mux, cfg)
+	handler.RegisterGeositeApi(mux, cfg)
 
 	log.Infof("REST API endpoints registered")
 }

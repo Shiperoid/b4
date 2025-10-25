@@ -10,7 +10,6 @@ import (
 	"github.com/daniellavrushin/b4/geodat"
 	"github.com/daniellavrushin/b4/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 var (
@@ -62,6 +61,7 @@ type UDPConfig struct {
 	DPortMin       int    `json:"dport_min" bson:"dport_min"`
 	DPortMax       int    `json:"dport_max" bson:"dport_max"`
 	FilterQUIC     string `json:"filter_quic" bson:"filter_quic"`
+	FilterSTUN     bool   `json:"filter_stun" bson:"filter_stun"`
 }
 
 type DomainsConfig struct {
@@ -132,6 +132,7 @@ var DefaultConfig = Config{
 		DPortMin:       0,
 		DPortMax:       0,
 		FilterQUIC:     "disabled",
+		FilterSTUN:     true,
 	},
 
 	WebServer: WebServer{
@@ -248,6 +249,7 @@ func (c *Config) BindFlags(cmd *cobra.Command) {
 	cmd.Flags().IntVar(&c.UDP.DPortMin, "udp-dport-min", c.UDP.DPortMin, "Minimum UDP destination port to handle")
 	cmd.Flags().IntVar(&c.UDP.DPortMax, "udp-dport-max", c.UDP.DPortMax, "Maximum UDP destination port to handle")
 	cmd.Flags().StringVar(&c.UDP.FilterQUIC, "udp-filter-quic", c.UDP.FilterQUIC, "QUIC filtering mode (disabled|all|parse)")
+	cmd.Flags().BoolVar(&c.UDP.FilterSTUN, "udp-filter-stun", c.UDP.FilterSTUN, "STUN filtering mode (disabled|all|parse)")
 
 	// Feature flags
 	cmd.Flags().BoolVar(&c.UseGSO, "gso", c.UseGSO, "Enable Generic Segmentation Offload")
@@ -278,46 +280,6 @@ func (cfg *Config) ApplyLogLevel(level string) {
 	default:
 		cfg.Logging.Level = log.LevelInfo
 	}
-}
-
-func (cfg *Config) ApplyCliOverrides(cmd *cobra.Command) map[string]interface{} {
-	overrides := make(map[string]interface{})
-
-	cmd.Flags().Visit(func(f *pflag.Flag) {
-		// Store the value of each flag that was explicitly set
-		switch f.Value.Type() {
-		case "int":
-			if val, err := cmd.Flags().GetInt(f.Name); err == nil {
-				overrides[f.Name] = val
-			}
-		case "uint":
-			if val, err := cmd.Flags().GetUint(f.Name); err == nil {
-				overrides[f.Name] = val
-			}
-		case "uint8":
-			if val, err := cmd.Flags().GetUint8(f.Name); err == nil {
-				overrides[f.Name] = val
-			}
-		case "int32":
-			if val, err := cmd.Flags().GetInt32(f.Name); err == nil {
-				overrides[f.Name] = val
-			}
-		case "bool":
-			if val, err := cmd.Flags().GetBool(f.Name); err == nil {
-				overrides[f.Name] = val
-			}
-		case "string":
-			if val, err := cmd.Flags().GetString(f.Name); err == nil {
-				overrides[f.Name] = val
-			}
-		case "stringSlice":
-			if val, err := cmd.Flags().GetStringSlice(f.Name); err == nil {
-				overrides[f.Name] = val
-			}
-		}
-	})
-
-	return overrides
 }
 
 func (c *Config) Validate() error {

@@ -4,12 +4,12 @@ package geodat
 import (
 	"bufio"
 	"encoding/binary"
-	"fmt"
 	"io"
 	"os"
 	"sort"
 	"strings"
 
+	"github.com/daniellavrushin/b4/log"
 	"github.com/urlesistiana/v2dat/v2data"
 	"google.golang.org/protobuf/proto"
 )
@@ -39,7 +39,7 @@ func UnpackGeoSite(args *UnpackArgs) error {
 	}
 	for tag, domains := range entries {
 		if err := save(tag, domains); err != nil {
-			return fmt.Errorf("failed to save %s: %w", tag, err)
+			return log.Errorf("failed to save %s: %w", tag, err)
 		}
 	}
 	return nil
@@ -47,16 +47,16 @@ func UnpackGeoSite(args *UnpackArgs) error {
 
 func readCountryCode(msg []byte) (string, error) {
 	if len(msg) == 0 || msg[0] != 0x0A {
-		return "", fmt.Errorf("bad key")
+		return "", log.Errorf("bad key")
 	}
 	l, n := binary.Uvarint(msg[1:])
 	if n <= 0 {
-		return "", fmt.Errorf("bad varint")
+		return "", log.Errorf("bad varint")
 	}
 	start := 1 + n
 	end := start + int(l)
 	if end > len(msg) {
-		return "", fmt.Errorf("string truncated")
+		return "", log.Errorf("string truncated")
 	}
 	return strings.ToLower(string(msg[start:end])), nil
 }
@@ -83,7 +83,7 @@ func streamGeoSite(file string, filters []string, save func(string, []*v2data.Do
 			return err
 		}
 		if tagByte != 0x0A {
-			return fmt.Errorf("unexpected wire tag %02X", tagByte)
+			return log.Errorf("unexpected wire tag %02X", tagByte)
 		}
 		length, err := binary.ReadUvarint(r)
 		if err != nil {
@@ -115,10 +115,12 @@ func streamGeoSite(file string, filters []string, save func(string, []*v2data.Do
 	return nil
 }
 
-func ListGeoSiteTags(filePath string) error {
+func ListGeoSiteTags(filePath string) ([]string, error) {
+
+	log.Tracef("Listing geo site tags from %s", filePath)
 	f, err := os.Open(filePath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer f.Close()
 
@@ -130,22 +132,22 @@ func ListGeoSiteTags(filePath string) error {
 			break
 		}
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if b != 0x0A {
-			return fmt.Errorf("unexpected wire tag %02X", b)
+			return nil, log.Errorf("unexpected wire tag %02X", b)
 		}
 		l, err := binary.ReadUvarint(r)
 		if err != nil {
-			return err
+			return nil, log.Errorf("failed to read varint: %w", err)
 		}
 		msg := make([]byte, l)
 		if _, err := io.ReadFull(r, msg); err != nil {
-			return err
+			return nil, err
 		}
 		tag, err := readCountryCode(msg)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		set[tag] = struct{}{}
 	}
@@ -155,10 +157,8 @@ func ListGeoSiteTags(filePath string) error {
 		tags = append(tags, t)
 	}
 	sort.Strings(tags)
-	for _, t := range tags {
-		fmt.Println(t)
-	}
-	return nil
+
+	return tags, nil
 }
 
 func convertV2DomainToText(dom []*v2data.Domain, w io.Writer) error {
@@ -180,14 +180,4 @@ func convertV2DomainToText(dom []*v2data.Domain, w io.Writer) error {
 	}
 	_, err := io.WriteString(w, b.String())
 	return err
-}
-
-func convertV2DomainToTextFile(domain []*v2data.Domain, file string) error {
-	f, err := os.Create(file)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	return convertV2DomainToText(domain, f)
 }
