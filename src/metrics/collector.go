@@ -9,51 +9,34 @@ import (
 
 // MetricsCollector collects and stores metrics for the dashboard
 type MetricsCollector struct {
-	mu sync.RWMutex
+	TotalConnections    uint64
+	ActiveFlows         uint64
+	PacketsProcessed    uint64
+	BytesProcessed      uint64
+	TCPConnections      uint64
+	UDPConnections      uint64
+	TargetedConnections uint64
+	lastConnCount       uint64
+	lastPacketCount     uint64
+	CurrentCPS          float64
+	CurrentPPS          float64
+	CPUUsage            float64
 
-	// Counters
-	TotalConnections    uint64 `json:"total_connections"`
-	ActiveFlows         uint64 `json:"active_flows"`
-	PacketsProcessed    uint64 `json:"packets_processed"`
-	BytesProcessed      uint64 `json:"bytes_processed"`
-	TCPConnections      uint64 `json:"tcp_connections"`
-	UDPConnections      uint64 `json:"udp_connections"`
-	TargetedConnections uint64 `json:"targeted_connections"`
-
-	// Time series data (last 60 data points, 1 per second)
-	ConnectionRate []TimeSeriesPoint `json:"connection_rate"`
-	PacketRate     []TimeSeriesPoint `json:"packet_rate"`
-
-	// Top domains
-	TopDomains map[string]uint64 `json:"top_domains"`
-
-	// Protocol distribution
-	ProtocolDist map[string]uint64 `json:"protocol_dist"`
-
-	// Geographic distribution (if geoip enabled)
-	GeoDist map[string]uint64 `json:"geo_dist"`
-
-	// System info
-	StartTime      time.Time      `json:"start_time"`
-	Uptime         string         `json:"uptime"`
-	CPUUsage       float64        `json:"cpu_usage"`
-	MemoryUsage    MemoryStats    `json:"memory_usage"`
-	WorkerStatus   []WorkerHealth `json:"worker_status"`
-	NFQueueStatus  string         `json:"nfqueue_status"`
-	IPTablesStatus string         `json:"iptables_status"`
-
-	// Recent activity
-	RecentConnections []ConnectionLog `json:"recent_connections"`
-	RecentEvents      []SystemEvent   `json:"recent_events"`
-
-	// Real-time rates
-	CurrentCPS float64 `json:"current_cps"` // Connections per second
-	CurrentPPS float64 `json:"current_pps"` // Packets per second
-
-	// Internal tracking
-	lastUpdate      time.Time
-	lastConnCount   uint64
-	lastPacketCount uint64
+	mu                sync.RWMutex
+	TopDomains        map[string]uint64
+	ProtocolDist      map[string]uint64
+	GeoDist           map[string]uint64
+	ConnectionRate    []TimeSeriesPoint
+	PacketRate        []TimeSeriesPoint
+	StartTime         time.Time
+	Uptime            string
+	MemoryUsage       MemoryStats
+	WorkerStatus      []WorkerHealth
+	NFQueueStatus     string
+	IPTablesStatus    string
+	RecentConnections []ConnectionLog
+	RecentEvents      []SystemEvent
+	lastUpdate        time.Time
 }
 
 type TimeSeriesPoint struct {

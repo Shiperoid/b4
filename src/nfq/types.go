@@ -24,6 +24,7 @@ type flowState struct {
 }
 
 type Worker struct {
+	packetsProcessed uint64
 	cfg              atomic.Value
 	qnum             uint16
 	ctx              context.Context
@@ -36,5 +37,4 @@ type Worker struct {
 	limit            int
 	matcher          atomic.Value
 	sock             *sock.Sender
-	packetsProcessed uint64
 }
