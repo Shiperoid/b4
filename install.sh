@@ -999,7 +999,8 @@ print_web_interface_info() {
     # Print local/LAN access
     if [ -n "$lan_ip" ]; then
         print_info "Local network access (LAN):"
-        printf "  ${GREEN}http://%s:%s${NC}\n" "$lan_ip" "$web_port"
+        printf "        ${GREEN}http://%s:%s${NC}\n" "$lan_ip" "$web_port"
+        printf "        (remember to start the service first)\n"
         echo ""
     fi
 
@@ -1016,7 +1017,7 @@ print_web_interface_info() {
     # Print external access if different from LAN
     if [ -n "$external_ip" ] && [ "$external_ip" != "$lan_ip" ]; then
         print_info "External access (WAN, if port ${web_port} is forwarded):"
-        printf "  ${GREEN}http://%s:%s${NC}\n" "$external_ip" "$web_port"
+        printf "        ${GREEN}http://%s:%s${NC}\n" "$external_ip" "$web_port"
         print_warning "Note: Ensure port ${web_port} is open in your firewall"
     fi
 
