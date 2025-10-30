@@ -621,7 +621,7 @@ install_b4() {
     # Backup existing binary if it exists
     if [ -f "${INSTALL_DIR}/${BINARY_NAME}" ]; then
         print_info "Backing up existing binary..."
-        mv "${INSTALL_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}.backup.${timestamp}"
+        mv "${INSTALL_DIR}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}.backup.*"
     fi
 
     # Install the new binary
