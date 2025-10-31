@@ -10,7 +10,7 @@ import {
   Chip,
   Divider,
 } from "@mui/material";
-import { formatNumber } from "../../../utils";
+import { formatNumber } from "../../../utils/common";
 import { colors } from "../../../Theme";
 import TcpIcon from "@mui/icons-material/SyncAlt";
 import UdpIcon from "@mui/icons-material/TrendingFlat";

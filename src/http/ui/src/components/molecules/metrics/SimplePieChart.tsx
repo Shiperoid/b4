@@ -2,7 +2,7 @@
 import React from "react";
 import { Box, Typography } from "@mui/material";
 import { colors } from "../../../Theme";
-import { formatNumber } from "../../../utils";
+import { formatNumber } from "../../../utils/common";
 
 interface SimplePieChartProps {
   data: Record<string, number>;

@@ -17,7 +17,7 @@ import {
   loadPersistedLines,
   persistLines,
   clearPersistedLines,
-} from "./Domains";
+} from "../../utils/domains";
 import { colors } from "../../Theme";
 
 export default function Domains() {

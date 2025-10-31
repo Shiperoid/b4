@@ -14,6 +14,7 @@ import {
   ListItemIcon,
   Radio,
   Stack,
+  Box,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DomainIcon from "@mui/icons-material/Language";
@@ -47,13 +48,31 @@ export const DomainAddModal: React.FC<DomainAddModalProps> = ({
       PaperProps={{
         sx: {
           bgcolor: colors.background.paper,
-          border: `1px solid ${colors.border.default}`,
+          border: `2px solid ${colors.border.default}`,
+          borderRadius: 4,
         },
       }}
     >
-      <DialogTitle sx={{ borderBottom: `1px solid ${colors.border.light}` }}>
-        <Stack direction="row" spacing={1} alignItems="center">
-          <DomainIcon sx={{ color: colors.primary }} />
+      <DialogTitle
+        sx={{
+          bgcolor: colors.background.dark,
+          color: colors.text.primary,
+          borderBottom: `1px solid ${colors.border.default}`,
+        }}
+      >
+        <Stack direction="row" alignItems="center" spacing={2}>
+          <Box
+            sx={{
+              p: 1,
+              borderRadius: 2,
+              bgcolor: colors.accent.secondary,
+              color: colors.secondary,
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            <DomainIcon />
+          </Box>
           <Typography>Add Domain to Manual List</Typography>
         </Stack>
       </DialogTitle>
@@ -115,6 +134,7 @@ export const DomainAddModal: React.FC<DomainAddModalProps> = ({
         <Button onClick={onClose} color="inherit">
           Cancel
         </Button>
+        <Box sx={{ flex: 1 }} />
         <Button
           onClick={onAdd}
           variant="contained"

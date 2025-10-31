@@ -7,7 +7,7 @@ import {
   Memory as MemoryIcon,
 } from "@mui/icons-material";
 import { MetricCard } from "../../atoms/metrics/MetricCard";
-import { formatBytes, formatNumber } from "../../../utils";
+import { formatBytes, formatNumber } from "../../../utils/common";
 import { colors } from "../../../Theme";
 
 interface DashboardMetricsGridProps {

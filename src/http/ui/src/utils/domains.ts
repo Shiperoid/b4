@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { ParsedLog, SortColumn } from "../organisms/domains/Table";
-import { SortDirection } from "../atoms/common/SortableTableCell";
+import { ParsedLog, SortColumn } from "../components/organisms/domains/Table";
+import { SortDirection } from "../components/atoms/common/SortableTableCell";
 
 // Parse log line from string
 export function parseLogLine(line: string): ParsedLog | null {

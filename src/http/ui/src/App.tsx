@@ -33,7 +33,7 @@ import Domains from "./components/pages/Domains";
 import Settings from "./components/pages/Settings";
 import { theme, colors } from "./Theme";
 import Logo from "./components/molecules/Logo";
-import Version from "./components/molecules/Version";
+import Version from "./components/organisms/version/Version";
 
 const DRAWER_WIDTH = 240;
 

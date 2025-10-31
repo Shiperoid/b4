@@ -44,7 +44,7 @@ import B4Config from "../../models/Config";
 import { colors } from "../../Theme";
 
 import { RestartAlt as RestartIcon } from "@mui/icons-material";
-import { RestartDialog } from "../molecules/RestartDialog";
+import { RestartDialog } from "../organisms/settings/RestartDialog";
 
 // Tab panel component
 interface TabPanelProps {
