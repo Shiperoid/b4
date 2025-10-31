@@ -246,7 +246,6 @@ func buildManifest(cfg *config.Config) (Manifest, error) {
 			Rule{IPT: ipt, Table: "mangle", Chain: chainName, Action: "A", Spec: udpSpec},
 			Rule{IPT: ipt, Table: "mangle", Chain: "POSTROUTING", Action: "I", Spec: []string{"-j", chainName}},
 			Rule{IPT: ipt, Table: "mangle", Chain: "OUTPUT", Action: "I", Spec: []string{"-m", "mark", "--mark", markAccept, "-j", "ACCEPT"}},
-			Rule{IPT: ipt, Table: "mangle", Chain: "OUTPUT", Action: "A", Spec: []string{"-j", chainName}},
 		)
 
 	}

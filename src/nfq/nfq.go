@@ -78,6 +78,12 @@ func (w *Worker) Start() error {
 		_ = q.RegisterWithErrorFunc(w.ctx, func(a nfqueue.Attribute) int {
 			cfg := w.getConfig()
 			matcher := w.getMatcher()
+			id := *a.PacketID
+
+			if a.Mark != nil && *a.Mark == uint32(cfg.Mark) {
+				_ = q.SetVerdict(id, nfqueue.NfAccept)
+				return 0
+			}
 
 			select {
 			case <-w.ctx.Done():
@@ -90,7 +96,6 @@ func (w *Worker) Start() error {
 			if a.PacketID == nil || a.Payload == nil || len(*a.Payload) == 0 {
 				return 0
 			}
-			id := *a.PacketID
 			raw := *a.Payload
 
 			v := raw[0] >> 4

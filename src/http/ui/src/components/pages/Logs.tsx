@@ -11,7 +11,7 @@ import {
   TextField,
   Chip,
 } from "@mui/material";
-import RefreshIcon from "@mui/icons-material/Refresh";
+import RefreshIcon from "@mui/icons-material/DeleteForever";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 
 export default function Logs() {

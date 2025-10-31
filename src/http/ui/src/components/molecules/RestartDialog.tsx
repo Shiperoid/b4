@@ -81,12 +81,12 @@ export const RestartDialog: React.FC<RestartDialogProps> = ({
         return (
           <>
             <DialogContent>
-              <DialogContentText>
+              <DialogContentText sx={{ mt: 2, mb: 2 }}>
                 This will restart the B4 service. The web interface will be
                 temporarily unavailable during the restart (approximately 5-10
                 seconds).
               </DialogContentText>
-              <Alert severity="info" sx={{ mt: 2 }}>
+              <Alert severity="info">
                 Your current configuration will be preserved.
               </Alert>
             </DialogContent>
