@@ -107,6 +107,15 @@ jobs:
           name: b4-${{ env.VERSION }}
           path: ${{ steps.assets.outputs.files }}
 
+      - name: Read Changelog (Latest Version Only)
+        id: read_changelog
+        run: |
+          echo "Extracting latest changelog entry..."
+          CHANGELOG=$(awk '/^## \[/{if (found++) exit} found {print}' changelog.md)
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: create or update release
         uses: softprops/action-gh-release@v2
         with:
@@ -115,3 +124,4 @@ jobs:
           draft: ${{ inputs.draft }}
           prerelease: ${{ inputs.prerelease }}
           files: ${{ steps.assets.outputs.files }}
+          body: ${{ steps.read_changelog.outputs.changelog }}
