@@ -738,23 +738,6 @@ stop() {
     fi
 }
 
-update() {
-    echo "Updating b4 service..."
-    stop
-    sleep 2
-    wget -O ~/b4install.sh https://raw.githubusercontent.com/DanielLavrushin/b4/main/install.sh
-    
-    geosite_src=$(jq -r '.domains.geosite_url // empty' "$CONFIG_FILE" 2>/dev/null)
-    geosite_dst=$(jq -r '.domains.geosite_path // empty' "$CONFIG_FILE" 2>/dev/null)
-
-    chmod +x ~/b4install.sh --geosite-src="$geosite_src" --geosite-dst="$geosite_dst"
-    sh ~/b4install.sh -q
-
-    start
-    echo "b4 service updated"
-}
-
-
 kernel_mod_load() {
 	KERNEL=$(uname -r)
 
@@ -784,9 +767,6 @@ case "$1" in
         stop
         sleep 1
         start
-        ;;
-    update)
-        update
         ;;
     *)
         echo "Usage: $0 {start|stop|restart}"

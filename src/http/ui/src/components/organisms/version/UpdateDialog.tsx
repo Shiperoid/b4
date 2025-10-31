@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -11,15 +11,20 @@ import {
   Divider,
   Chip,
   Stack,
+  LinearProgress,
+  Alert,
 } from "@mui/material";
 import {
   NewReleases as NewReleasesIcon,
   Close as CloseIcon,
   OpenInNew as OpenInNewIcon,
   Description as DescriptionIcon,
+  CloudDownload as CloudDownloadIcon,
+  CheckCircle as CheckCircleIcon,
 } from "@mui/icons-material";
 import { colors } from "../../../Theme";
 import ReactMarkdown from "react-markdown";
+import { useSystemUpdate } from "../../../hooks/useSystemUpdate";
 
 interface UpdateModalProps {
   open: boolean;
@@ -42,6 +47,13 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
   releaseUrl,
   publishedAt,
 }) => {
+  const { performUpdate, waitForReconnection, loading, error } =
+    useSystemUpdate();
+  const [updateStatus, setUpdateStatus] = useState<
+    "idle" | "updating" | "reconnecting" | "success" | "error"
+  >("idle");
+  const [updateMessage, setUpdateMessage] = useState("");
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
@@ -51,10 +63,49 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
     });
   };
 
+  const handleUpdate = async () => {
+    setUpdateStatus("updating");
+    setUpdateMessage("Initiating update...");
+
+    const result = await performUpdate(latestVersion);
+    if (!result || !result.success) {
+      setUpdateStatus("error");
+      setUpdateMessage(
+        result?.message || error || "Failed to initiate update."
+      );
+      return;
+    }
+
+    setUpdateMessage("Update in progress. Waiting for service to restart...");
+    setUpdateStatus("reconnecting");
+
+    // Wait for service to come back online
+    const reconnected = await waitForReconnection();
+
+    if (reconnected) {
+      setUpdateStatus("success");
+      setUpdateMessage("Update completed successfully! Refreshing...");
+
+      // Reload the page after successful update to get new version
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } else {
+      setUpdateStatus("error");
+      setUpdateMessage(
+        "Update may have completed but service did not restart. Please check manually."
+      );
+    }
+  };
+
+  const isUpdating =
+    updateStatus === "updating" || updateStatus === "reconnecting";
+  const showUpdateProgress = updateStatus !== "idle";
+
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={isUpdating ? undefined : onClose}
       maxWidth="md"
       fullWidth
       PaperProps={{
@@ -116,6 +167,41 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
       </DialogTitle>
 
       <DialogContent sx={{ mt: 2 }}>
+        {showUpdateProgress && (
+          <Box sx={{ mb: 3 }}>
+            <Alert
+              severity={
+                updateStatus === "success"
+                  ? "success"
+                  : updateStatus === "error"
+                  ? "error"
+                  : "info"
+              }
+              icon={
+                updateStatus === "success" ? (
+                  <CheckCircleIcon />
+                ) : updateStatus === "error" ? (
+                  <CloseIcon />
+                ) : (
+                  <CloudDownloadIcon />
+                )
+              }
+              sx={{
+                bgcolor:
+                  updateStatus === "success"
+                    ? colors.accent.secondary
+                    : updateStatus === "error"
+                    ? colors.accent.primary
+                    : colors.accent.tertiary,
+                color: colors.text.primary,
+              }}
+            >
+              {updateMessage}
+            </Alert>
+            {isUpdating && <LinearProgress sx={{ mt: 2 }} />}
+          </Box>
+        )}
+
         <Box
           sx={{
             maxHeight: 400,
@@ -204,6 +290,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
             href="https://github.com/DanielLavrushin/b4/blob/main/changelog.md"
             target="_blank"
             rel="noopener noreferrer"
+            disabled={isUpdating}
             sx={{
               borderColor: colors.border.default,
               color: colors.text.primary,
@@ -221,6 +308,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
             href={releaseUrl}
             target="_blank"
             rel="noopener noreferrer"
+            disabled={isUpdating}
             sx={{
               borderColor: colors.border.default,
               color: colors.text.primary,
@@ -244,6 +332,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
         <Button
           onClick={onDismiss}
           startIcon={<CloseIcon />}
+          disabled={isUpdating}
           sx={{
             color: colors.text.secondary,
             "&:hover": {
@@ -254,18 +343,55 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
           Don't Show Again for This Version
         </Button>
         <Box sx={{ flex: 1 }} />
-        <Button
-          onClick={onClose}
-          variant="contained"
-          sx={{
-            bgcolor: colors.primary,
-            "&:hover": {
+
+        {updateStatus === "idle" && (
+          <>
+            <Button
+              onClick={onClose}
+              variant="outlined"
+              disabled={isUpdating}
+              sx={{
+                borderColor: colors.border.default,
+                color: colors.text.primary,
+                "&:hover": {
+                  borderColor: colors.secondary,
+                  bgcolor: colors.accent.secondaryHover,
+                },
+              }}
+            >
+              Remind Me Later
+            </Button>
+            <Button
+              onClick={handleUpdate}
+              variant="contained"
+              startIcon={<CloudDownloadIcon />}
+              disabled={isUpdating}
+              sx={{
+                bgcolor: colors.primary,
+                "&:hover": {
+                  bgcolor: colors.secondary,
+                },
+              }}
+            >
+              Update Now
+            </Button>
+          </>
+        )}
+
+        {updateStatus === "success" && (
+          <Button
+            variant="contained"
+            onClick={() => window.location.reload()}
+            sx={{
               bgcolor: colors.secondary,
-            },
-          }}
-        >
-          Remind Me Later
-        </Button>
+              "&:hover": {
+                bgcolor: colors.primary,
+              },
+            }}
+          >
+            Reload Page
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

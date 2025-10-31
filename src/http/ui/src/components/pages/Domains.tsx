@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Container, Paper, Snackbar, Alert } from "@mui/material";
 import { DomainsControlBar } from "../../components/molecules/domains/ControlBar";
-import { DomainAddModal } from "../../components/molecules/domains/AddModal";
+import { DomainAddModal } from "../organisms/domains/AddModal";
 import {
   DomainsTable,
   SortColumn,

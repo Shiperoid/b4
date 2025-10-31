@@ -9,6 +9,13 @@ import (
 	"github.com/daniellavrushin/b4/nfq"
 )
 
+// These variables are set at build time via ldflags
+var (
+	Version = "dev"
+	Commit  = "unknown"
+	Date    = "unknown"
+)
+
 var (
 	globalPool *nfq.Pool
 )
@@ -49,6 +56,5 @@ func (api *API) RegisterEndpoints(mux *http.ServeMux, cfg *config.Config) {
 	api.RegisterConfigApi()
 	api.RegisterMetricsApi()
 	api.RegisterGeositeApi()
-	api.RegisterVersionApi()
 	api.RegisterSystemApi()
 }

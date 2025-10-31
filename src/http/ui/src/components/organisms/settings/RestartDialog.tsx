@@ -152,15 +152,15 @@ export const RestartDialog: React.FC<RestartDialogProps> = ({
               >
                 Cancel
               </Button>
+              <Box sx={{ flex: 1 }} />
               <Button
                 onClick={handleRestart}
                 variant="contained"
                 startIcon={<RestartIcon />}
                 sx={{
-                  bgcolor: colors.secondary,
-                  color: colors.background.default,
+                  bgcolor: colors.primary,
                   "&:hover": {
-                    bgcolor: colors.primary,
+                    bgcolor: colors.secondary,
                   },
                 }}
               >

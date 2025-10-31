@@ -14,6 +14,8 @@ import (
 func (api *API) RegisterSystemApi() {
 	api.mux.HandleFunc("/api/system/restart", api.handleRestart)
 	api.mux.HandleFunc("/api/system/info", api.handleSystemInfo)
+	api.mux.HandleFunc("/api/version", api.handleVersion)
+	api.mux.HandleFunc("/api/system/update", api.handleUpdate)
 }
 
 // detectServiceManager determines which service manager is managing B4
@@ -37,20 +39,6 @@ func detectServiceManager() string {
 
 	// Check if running as a standalone process (no service manager)
 	return "standalone"
-}
-
-type RestartResponse struct {
-	Success        bool   `json:"success"`
-	Message        string `json:"message"`
-	ServiceManager string `json:"service_manager"`
-	RestartCommand string `json:"restart_command,omitempty"`
-}
-
-type SystemInfo struct {
-	ServiceManager string `json:"service_manager"`
-	OS             string `json:"os"`
-	Arch           string `json:"arch"`
-	CanRestart     bool   `json:"can_restart"`
 }
 
 func (api *API) handleSystemInfo(w http.ResponseWriter, r *http.Request) {
@@ -149,6 +137,119 @@ func (api *API) handleRestart(w http.ResponseWriter, r *http.Request) {
 				log.Errorf("Restart command failed: %v\nOutput: %s", err, string(output))
 			} else {
 				log.Infof("Restart command executed successfully")
+			}
+		}
+	}()
+}
+
+func (api *API) handleVersion(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	versionInfo := VersionInfo{
+		Version:   Version,
+		Commit:    Commit,
+		BuildDate: Date,
+	}
+	setJsonHeader(w)
+	enc := json.NewEncoder(w)
+	_ = enc.Encode(versionInfo)
+}
+
+func (api *API) handleUpdate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req UpdateRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	serviceManager := detectServiceManager()
+	log.Infof("Update requested via web UI (service manager: %s, version: %s)", serviceManager, req.Version)
+
+	var response UpdateResponse
+	response.ServiceManager = serviceManager
+
+	// Check if we can perform updates
+	if serviceManager == "standalone" {
+		response.Success = false
+		response.Message = "Cannot update: B4 is not running as a service. Please update manually."
+		setJsonHeader(w)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	// Prepare update command based on service manager
+	var updateCmd string
+	switch serviceManager {
+	case "entware":
+		log.Infof("Preparing update command for Entware service manager")
+		// Use the built-in update command in the init script
+		updateCmd = "/opt/etc/init.d/S99b4 update"
+		response.UpdateCommand = updateCmd
+
+	case "systemd", "init":
+		log.Infof("Preparing update command for service manager: %s", serviceManager)
+		// For systemd and standard init, we'll download and run the installer
+		// The installer will handle stopping/starting the service
+		updateCmd = "wget -O /tmp/b4install.sh https://raw.githubusercontent.com/DanielLavrushin/b4/main/install.sh && chmod +x /tmp/b4install.sh && /tmp/b4install.sh -q"
+		response.UpdateCommand = updateCmd
+
+	default:
+		response.Success = false
+		response.Message = "Unknown service manager"
+		setJsonHeader(w)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
+	}
+
+	response.Success = true
+	response.Message = "Update initiated. The service will restart automatically."
+
+	// Send response immediately before triggering update
+	setJsonHeader(w)
+	json.NewEncoder(w).Encode(response)
+
+	// Flush the response to ensure it's sent
+	if f, ok := w.(http.Flusher); ok {
+		f.Flush()
+	}
+
+	// Trigger update in a goroutine with a small delay
+	// This allows the HTTP response to be sent before the service stops
+	go func() {
+		time.Sleep(500 * time.Millisecond)
+		log.Infof("Executing update command: %s", updateCmd)
+
+		var cmd *exec.Cmd
+		switch serviceManager {
+		case "entware":
+			cmd = exec.Command("/opt/etc/init.d/S99b4", "update")
+		case "systemd", "init":
+			// Use sh to execute the compound command
+			cmd = exec.Command("sh", "-c", updateCmd)
+		}
+
+		if cmd != nil {
+			// Set up command to run independently
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+
+			// Start the command but don't wait for it
+			// The update process will kill this process anyway
+			if err := cmd.Start(); err != nil {
+				log.Errorf("Update command failed to start: %v", err)
+			} else {
+				log.Infof("Update command started successfully (PID: %d)", cmd.Process.Pid)
+				// Don't wait for the command - let it run independently
 			}
 		}
 	}()
