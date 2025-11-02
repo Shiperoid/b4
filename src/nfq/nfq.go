@@ -430,21 +430,10 @@ func (w *Worker) feed(key string, chunk []byte) (string, bool) {
 	if st.sniFound && st.sni != "" {
 		sni := st.sni
 		w.mu.Unlock()
-		return sni, false // Return false because we didn't just find it
+		return sni, false
 	}
 
-	// Try to parse SNI from this chunk FIRST before accumulating
-	if len(st.buf) == 0 && len(chunk) > 0 {
-		if host, ok := sni.ParseTLSClientHelloSNI(chunk); ok && host != "" {
-			st.sniFound = true
-			st.sni = host
-			st.buf = nil // Clear buffer to free memory
-			w.mu.Unlock()
-			return host, true
-		}
-	}
-
-	// Accumulate data up to the limit
+	// ALWAYS accumulate data first
 	if len(st.buf) < w.limit {
 		need := w.limit - len(st.buf)
 		if len(chunk) < need {
@@ -462,7 +451,7 @@ func (w *Worker) feed(key string, chunk []byte) (string, bool) {
 	host, ok := sni.ParseTLSClientHelloSNI(buf)
 	if ok && host != "" {
 		w.mu.Lock()
-		st.sniFound = true // Store the SNI but keep the flow entry for future packets
+		st.sniFound = true
 		st.sni = host
 		st.buf = nil // Clear the buffer to free memory
 		w.mu.Unlock()
@@ -824,9 +813,9 @@ func (w *Worker) gc(cfg *config.Config) {
 			w.mu.Lock()
 			for k, st := range w.flows {
 				// Remove flows that have been processed and idle
-				if st.sniProcessed && now.Sub(st.last) > 5*time.Second {
+				if st.sniProcessed && now.Sub(st.last) > 10*time.Second {
 					delete(w.flows, k)
-				} else if !st.sniProcessed && now.Sub(st.last) > 2*time.Second {
+				} else if !st.sniProcessed && now.Sub(st.last) > 30*time.Second {
 					// Remove incomplete flows faster
 					delete(w.flows, k)
 				}

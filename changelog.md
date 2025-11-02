@@ -1,5 +1,10 @@
 # B4 - Bye Bye Big Bro
 
+## [1.9.2] - 2025-11-02
+
+- IMPROVED: Increase TTL and buffer limit for flow state management.
+- IMPROVED: enhance SNI character validation.
+
 ## [1.9.1] - 2025-11-02
 
 - FIXED: Return back missing `geosite path` field to the settings.

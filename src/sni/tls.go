@@ -18,12 +18,21 @@ func (e parseErr) Error() string { return string(e) }
 
 var errNotHello = parseErr("not a ClientHello")
 
-// isValidSNIChar checks if a byte is valid in an SNI hostname
 func isValidSNIChar(b byte) bool {
-	return (b >= 'a' && b <= 'z') ||
+	// Allow basic ASCII
+	if (b >= 'a' && b <= 'z') ||
 		(b >= 'A' && b <= 'Z') ||
 		(b >= '0' && b <= '9') ||
-		b == '-' || b == '.' || b == '_'
+		b == '-' || b == '.' || b == '_' {
+		return true
+	}
+
+	// Allow high-bit characters for international domains
+	if b >= 128 {
+		return true
+	}
+
+	return false
 }
 
 // validateSNI checks if the SNI string contains only valid characters
