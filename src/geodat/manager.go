@@ -83,6 +83,23 @@ func (gm *GeodataManager) LoadCategories(categories []string) ([]string, map[str
 		return nil, nil, log.Errorf("geosite path not configured")
 	}
 
+	// Create a set of requested categories for easy lookup
+	requestedCategories := make(map[string]bool)
+	for _, cat := range categories {
+		requestedCategories[cat] = true
+	}
+
+	// Remove categories from cache that are no longer requested
+	gm.mu.Lock()
+	for cachedCategory := range gm.categoryDomains {
+		if !requestedCategories[cachedCategory] {
+			delete(gm.categoryDomains, cachedCategory)
+			delete(gm.categoryCounts, cachedCategory)
+			log.Tracef("Removed category %s from cache (no longer selected)", cachedCategory)
+		}
+	}
+	gm.mu.Unlock()
+
 	allDomains := []string{}
 	categoryStats := make(map[string]int)
 

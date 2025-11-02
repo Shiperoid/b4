@@ -35,11 +35,16 @@ func (a *API) handleConfig(w http.ResponseWriter, r *http.Request) {
 func (a *API) getConfig(w http.ResponseWriter) {
 	setJsonHeader(w)
 
-	// Get category breakdown from geodata manager (uses cached counts)
-	categoryBreakdown := a.geodataManager.GetCachedCategoryBreakdown()
+	categoryBreakdown := make(map[string]int)
 	totalGeositeDomains := 0
-	for _, count := range categoryBreakdown {
-		totalGeositeDomains += count
+
+	if len(a.cfg.Domains.GeoSiteCategories) > 0 {
+
+		counts, _ := a.geodataManager.GetCategoryCounts(a.cfg.Domains.GeoSiteCategories)
+		categoryBreakdown = counts
+		for _, count := range categoryBreakdown {
+			totalGeositeDomains += count
+		}
 	}
 
 	// Create response with stats

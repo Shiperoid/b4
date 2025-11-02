@@ -78,9 +78,9 @@ const SettingAutocomplete: React.FC<SettingAutocompleteProps> = ({
                   </>
                 ),
                 sx: {
-                  bgcolor: colors.background.paper,
+                  bgcolor: colors.background.dark,
                   "&:hover": {
-                    bgcolor: colors.background.paper,
+                    borderColor: colors.primary,
                   },
                 },
               },
@@ -94,7 +94,7 @@ const SettingAutocomplete: React.FC<SettingAutocompleteProps> = ({
                   borderColor: colors.border.default,
                 },
                 "&.Mui-focused fieldset": {
-                  borderColor: colors.primary,
+                  borderColor: colors.secondary,
                 },
               },
               "& .MuiInputLabel-root": {

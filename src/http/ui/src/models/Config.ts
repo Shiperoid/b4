@@ -45,6 +45,8 @@ export interface IDomainConfig {
   geoip_path: string;
   geosite_categories: string[];
   geoip_categories: string[];
+  block_domains: string[];
+  block_geosite_categories: string[];
 }
 
 export interface IDomainStatistics {
@@ -129,6 +131,8 @@ export default class B4Config implements IB4Config {
     geoip_path: "",
     geosite_categories: [],
     geoip_categories: [],
+    block_domains: [],
+    block_geosite_categories: [],
   };
 
   udp: IUdpConfig = {

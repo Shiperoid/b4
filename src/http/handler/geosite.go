@@ -68,7 +68,6 @@ func (a *API) addGeositeDomain(w http.ResponseWriter, r *http.Request) {
 	a.cfg.Domains.SNIDomains = make([]string, len(a.manualDomains))
 	copy(a.cfg.Domains.SNIDomains, a.manualDomains)
 
-	// Load all geosite domains for the matcher
 	var allGeositeDomains []string
 	if a.cfg.Domains.GeoSitePath != "" && len(a.cfg.Domains.GeoSiteCategories) > 0 {
 		var err error
