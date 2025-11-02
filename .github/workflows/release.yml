@@ -26,57 +26,65 @@ env:
   BINARY_NAME: b4
 
 jobs:
-  test:
-    name: Run Tests
+  build-ui:
+    name: Build UI
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Go
-        uses: actions/setup-go@v5
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
         with:
-          go-version-file: src/go.mod
-          cache-dependency-path: src/go.sum
+          version: 10.18.2
+          run_install: false
 
-      - name: Run tests
-        run: |
-          cd src
-          go test -v ./...
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: |
+            ./src/http/ui/pnpm-lock.yaml
 
-      - name: Run vet
+      - name: Build web UI
+        working-directory: src/http/ui
         run: |
-          cd src
-          go vet ./...
+          pnpm install --frozen-lockfile
+          VITE_APP_VERSION=${{ env.VERSION }} pnpm build
+
+      - name: Upload UI artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-build
+          path: src/http/ui/dist
+          retention-days: 1
 
   build-linux:
     name: Build Linux ${{ matrix.arch }}
-    needs: test
+    needs: build-ui
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # Primary architectures
-          - { arch: amd64 }
-          - { arch: arm64 }
-          - { arch: 386 }
-
-          # ARM variants
-          - { arch: armv7 }
-          - { arch: armv6 }
-          - { arch: armv5 }
-
-          # Other architectures
-          - { arch: riscv64 }
-          - { arch: ppc64le }
-          - { arch: s390x }
-          - { arch: mips }
-          - { arch: mipsle }
-          - { arch: mips64 }
-          - { arch: mips64le }
-          - { arch: ppc64 }
-          - { arch: loong64 }
+        arch:
+          [
+            386,
+            amd64,
+            arm64,
+            armv5,
+            armv6,
+            armv7,
+            loong64,
+            mips,
+            mipsle,
+            mips64,
+            mips64le,
+            ppc64,
+            ppc64le,
+            riscv64,
+            s390x,
+          ]
 
     steps:
       - name: Checkout code
@@ -86,22 +94,22 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: src/go.mod
-          cache-dependency-path: src/go.sum
+
+      - name: Download UI artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ui-build
+          path: src/http/ui/dist
 
       - name: Build using Makefile
         run: |
           make linux-${{ matrix.arch }} VERSION=${{ env.VERSION }}
 
-      - name: Prepare artifacts
-        run: |
-          mkdir -p artifacts
-          cp out/assets/* artifacts/
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}-linux-${{ matrix.arch }}
-          path: artifacts/*
+          path: out/assets/*
           retention-days: 1
 
   release:
@@ -130,15 +138,11 @@ jobs:
           # Generate combined checksum files
           sha256sum *.tar.gz > SHA256SUMS
 
-          # Create file list
-          echo "Release contents:" > file-list.txt
-          ls -lh *.tar.gz >> file-list.txt
-
           # Display what we're releasing
           echo "📦 Release artifacts:"
           ls -la
 
-      - name: Read Changelog (Latest Version Only)
+      - name: Read Changelog
         id: read_changelog
         run: |
           echo "Extracting latest changelog entry..."
