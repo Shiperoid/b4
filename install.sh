@@ -359,19 +359,11 @@ get_latest_version() {
 verify_checksum() {
     file="$1"
     checksum_url="$2"
-    checksum_type="$3" # "sha256" or "md5"
 
-    checksum_file="${file}.${checksum_type}"
-
-    # Get display name for checksum type (POSIX compliant)
-    case "$checksum_type" in
-    sha256) checksum_display="SHA256" ;;
-    md5) checksum_display="MD5" ;;
-    *) checksum_display="$checksum_type" ;;
-    esac
+    checksum_file="${file}.sha256"
 
     # Try to download checksum file
-    print_info "Downloading ${checksum_display} checksum..."
+    print_info "Downloading SHA256 checksum..."
     if command_exists wget; then
         if ! wget -q -O "$checksum_file" "$checksum_url" 2>/dev/null; then
             return 1
@@ -400,31 +392,20 @@ verify_checksum() {
     fi
 
     # Calculate actual checksum
-    if [ "$checksum_type" = "sha256" ]; then
-        if ! command_exists sha256sum; then
-            print_warning "sha256sum not found, skipping SHA256 verification"
-            rm -f "$checksum_file"
-            return 1
-        fi
-        actual_checksum=$(sha256sum "$file" | awk '{print $1}')
-    elif [ "$checksum_type" = "md5" ]; then
-        if ! command_exists md5sum; then
-            print_warning "md5sum not found, skipping MD5 verification"
-            rm -f "$checksum_file"
-            return 1
-        fi
-        actual_checksum=$(md5sum "$file" | awk '{print $1}')
-    else
+    if ! command_exists sha256sum; then
+        print_warning "sha256sum not found, skipping SHA256 verification"
+        rm -f "$checksum_file"
         return 1
     fi
+    actual_checksum=$(sha256sum "$file" | awk '{print $1}')
 
     # Compare checksums
     if [ "$expected_checksum" = "$actual_checksum" ]; then
-        print_success "${checksum_display} checksum verified: $actual_checksum"
+        print_success "SHA256 checksum verified: $actual_checksum"
         rm -f "$checksum_file"
         return 0
     else
-        print_error "${checksum_display} checksum mismatch!"
+        print_error "SHA256 checksum mismatch!"
         print_error "Expected: $expected_checksum"
         print_error "Got:      $actual_checksum"
         print_error "File may be corrupted or tampered with!"
@@ -460,43 +441,26 @@ download_file() {
         }
     fi
 
-    # Construct checksum URLs
+    # Construct checksum URL
     file_name="${BINARY_NAME}-linux-${arch}.tar.gz"
     sha256_url="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${version}/${file_name}.sha256"
-    md5_url="https://github.com/${REPO_OWNER}/${REPO_NAME}/releases/download/${version}/${file_name}.md5"
 
-    # Try to verify checksums (try SHA256 first, then MD5)
-    checksum_verified=0
-
-    if verify_checksum "$output" "$sha256_url" "sha256"; then
-        checksum_verified=1
+    # Try to verify SHA256 checksum
+    if verify_checksum "$output" "$sha256_url"; then
+        return 0
     elif [ $? -eq 2 ]; then
         # Checksum mismatch (not just missing)
         print_error "Download verification failed!"
         return 1
-    fi
-
-    if [ $checksum_verified -eq 0 ]; then
-        if verify_checksum "$output" "$md5_url" "md5"; then
-            checksum_verified=1
-        elif [ $? -eq 2 ]; then
-            # Checksum mismatch (not just missing)
-            print_error "Download verification failed!"
-            return 1
-        fi
-    fi
-
-    if [ $checksum_verified -eq 0 ]; then
-        print_warning "No checksums found in release - unable to verify download integrity"
+    else
+        # Checksum file not found
+        print_warning "No checksum file found in release - unable to verify download integrity"
         print_warning "Please verify manually if this is a security concern"
 
         # Still calculate and display local checksum for manual verification
         if command_exists sha256sum; then
             local_hash=$(sha256sum "$output" | awk '{print $1}')
             print_info "Local SHA256: $local_hash"
-        elif command_exists md5sum; then
-            local_hash=$(md5sum "$output" | awk '{print $1}')
-            print_info "Local MD5: $local_hash"
         fi
     fi
 
