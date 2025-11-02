@@ -693,11 +693,21 @@ create_openwrt_init() {
         mkdir -p /opt/etc/init.d 2>/dev/null && INIT_DIR="/opt/etc/init.d"
     fi
 
-    # Only proceed if we found a writable init directory and opkg exists
-    if [ -n "$INIT_DIR" ] && which opkg >/dev/null 2>&1; then
+    # Only proceed if we found a writable init directory
+    if [ -n "$INIT_DIR" ]; then
         print_info "Creating init script in $INIT_DIR..."
 
-        cat >"${INIT_DIR}/S99b4" <<'EOF'
+        if [ "$INIT_DIR" = "/etc/init.d" ]; then
+            INIT_SCRIPT_NAME="b4"
+        else
+            INIT_SCRIPT_NAME="S99b4"
+        fi
+
+        INIT_FULL_PATH="${INIT_DIR}/${INIT_SCRIPT_NAME}"
+
+        rm -f "${INIT_DIR}/S99b4" 2>/dev/null || true # remove legacy script
+
+        cat >"${INIT_FULL_PATH}" <<'EOF'
 #!/bin/sh
 
 # B4 DPI Bypass Service Init Script
@@ -775,17 +785,13 @@ case "$1" in
 esac
 EOF
 
-        chmod +x "${INIT_DIR}/S99b4"
-        print_success "Init script created at ${INIT_DIR}/S99b4"
+        chmod +x "${INIT_FULL_PATH}"
+        print_success "Init script created at ${INIT_FULL_PATH}"
         print_info "You can manage it with:"
-        print_info "  ${INIT_DIR}/S99b4 start"
-        print_info "  ${INIT_DIR}/S99b4 stop"
-        print_info "  ${INIT_DIR}/S99b4 restart"
+        print_info "  ${INIT_FULL_PATH} start"
+        print_info "  ${INIT_FULL_PATH} stop"
+        print_info "  ${INIT_FULL_PATH} restart"
 
-        # For Entware systems, remind about rc.unslung
-        if [ "$INIT_DIR" = "/opt/etc/init.d" ]; then
-            print_info "To start on boot, the script will run automatically via Entware"
-        fi
     else
         print_warning "Could not create init script - no writable init directory found"
     fi
@@ -1149,16 +1155,6 @@ main_install() {
         print_info "To see all B4 options:"
         print_info "  ${INSTALL_DIR}/${BINARY_NAME} --help"
 
-        echo ""
-        print_info "To start B4 now:"
-        if [ -n "$INIT_DIR" ]; then
-            print_info "  ${INIT_DIR}/S99b4 start         # For OpenWRT/Entware systems"
-        fi
-        if [ -d "/etc/systemd/system" ]; then
-            print_info "  systemctl start b4              # For systemd systems"
-        fi
-        echo ""
-
         # Check PATH
         if ! echo "$PATH" | grep -q "$INSTALL_DIR"; then
             print_warning "Note: $INSTALL_DIR is not in your PATH"
@@ -1167,6 +1163,27 @@ main_install() {
         fi
 
         print_web_interface_info
+
+        echo ""
+        print_success "Installation finished successfully!"
+        echo ""
+        printf "${CYAN}Start B4 service now? (Y/n): ${NC}"
+        read answer
+        case "$answer" in
+        [nN] | [nN][oO])
+            print_info "Service not started. Start manually when ready."
+            ;;
+        *)
+            if [ -f "/opt/etc/init.d/S99b4" ]; then
+                /opt/etc/init.d/S99b4 restart
+            elif [ -f "/etc/init.d/b4" ]; then
+                /etc/init.d/b4 restart
+            elif [ -f "/etc/systemd/system/b4.service" ]; then
+                systemctl restart b4
+            fi
+            ;;
+        esac
+        echo ""
 
         echo "======================================="
         echo "       Installation Complete!"
