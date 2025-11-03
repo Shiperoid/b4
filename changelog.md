@@ -1,5 +1,9 @@
 # B4 - Bye Bye Big Bro
 
+## [1.10.1] - 2025-11-03
+
+- IMPROVED: Intermittent connection failures where blocked sites would randomly fail to load in certain browsers (`Safari`, `Firefox`, `Chrome`). Connections _should_ now be more stable and reliable across all browsers by optimizing packet fragmentation strategy.
+
 ## [1.10.0] - 2025-11-02
 
 - ADDED: Automatic `iptables`/`nftables` rules restoration. B4 now automatically detects this and restores itself without requiring a manual restart.

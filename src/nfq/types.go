@@ -15,13 +15,12 @@ type Pool struct {
 }
 
 type flowState struct {
-	buf             []byte
-	last            time.Time
-	sniFound        bool
-	sniProcessed    bool
-	sni             string
-	packetCount     int
-	fragPacketCount int
+	buf          []byte
+	last         time.Time
+	sniFound     bool
+	sniProcessed bool
+	sni          string
+	packetCount  int
 }
 
 type Worker struct {

@@ -169,29 +169,8 @@ func (w *Worker) Start() error {
 					st.packetCount++
 					st.last = time.Now()
 
-					// If SNI was already processed and matched
-					if st.sniProcessed && st.sniFound {
-						if st.fragPacketCount < 3 {
-							st.fragPacketCount++
-							w.mu.Unlock()
-
-							// Continue fragmenting but no fake SNI
-							if v == 4 {
-								w.dropAndInjectTCP(cfg, raw, dst, false)
-							} else {
-								w.dropAndInjectTCPv6(cfg, raw, dst, false)
-							}
-							_ = q.SetVerdict(id, nfqueue.NfDrop)
-							return 0
-						}
-						// After fragmenting enough packets, just accept
-						w.mu.Unlock()
-						_ = q.SetVerdict(id, nfqueue.NfAccept)
-						return 0
-					}
-
-					// If SNI was processed but not matched, accept
-					if st.sniProcessed && !st.sniFound {
+					if st.sniProcessed {
+						// Just accept all subsequent packets
 						w.mu.Unlock()
 						_ = q.SetVerdict(id, nfqueue.NfAccept)
 						return 0
@@ -222,7 +201,6 @@ func (w *Worker) Start() error {
 						if st, exists := w.flows[k]; exists {
 							st.sniProcessed = true
 							st.sniFound = matched
-							st.fragPacketCount = 0 // Initialize fragment counter
 						}
 						w.mu.Unlock()
 
