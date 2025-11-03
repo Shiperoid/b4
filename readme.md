@@ -39,6 +39,8 @@ wget -O ~/b4install.sh https://raw.githubusercontent.com/DanielLavrushin/b4/main
 
 ```bash
 
+./b4install.sh # perform installation of the B4 application
+
 ./b4install.sh -h # print help
 
 # Show system information
