@@ -57,4 +57,5 @@ func (api *API) RegisterEndpoints(mux *http.ServeMux, cfg *config.Config) {
 	api.RegisterMetricsApi()
 	api.RegisterGeositeApi()
 	api.RegisterSystemApi()
+	api.RegisterCheckApi()
 }

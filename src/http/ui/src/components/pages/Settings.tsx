@@ -30,6 +30,7 @@ import {
   Storage as StorageIcon,
   Description as LogIcon,
   Warning as WarningIcon,
+  Science as TestIcon,
 } from "@mui/icons-material";
 
 import { NetworkSettings } from "../organisms/settings/Network";
@@ -39,6 +40,7 @@ import { DomainSettings } from "../organisms/settings/Domain";
 import { FragmentationSettings } from "../organisms/settings/Fragmentation";
 import { FakingSettings } from "../organisms/settings/Faking";
 import { UDPSettings } from "../organisms/settings/Udp";
+import { CheckerSettings } from "../organisms/settings/Checker";
 
 import B4Config from "../../models/Config";
 import { colors } from "../../Theme";
@@ -105,6 +107,14 @@ const SETTING_CATEGORIES = [
   },
   {
     id: 4,
+    path: "checker",
+    label: "Testing",
+    icon: <TestIcon />,
+    description: "DPI bypass testing configuration",
+    requiresRestart: false,
+  },
+  {
+    id: 5,
     path: "logging",
     label: "Logging",
     icon: <LogIcon />,
@@ -190,8 +200,12 @@ export default function Settings() {
         JSON.stringify(config.faking) !== JSON.stringify(originalConfig.faking),
       // Protocols
       3: JSON.stringify(config.udp) !== JSON.stringify(originalConfig.udp),
-      // Logging
+      // Testing
       4:
+        JSON.stringify(config.checker) !==
+        JSON.stringify(originalConfig.checker),
+      // Logging
+      5:
         JSON.stringify(config.logging) !==
         JSON.stringify(originalConfig.logging),
     };
@@ -499,8 +513,13 @@ export default function Settings() {
           <UDPSettings config={config} onChange={handleChange} />
         </TabPanel>
 
-        {/* Logging Settings */}
+        {/* Checker Settings */}
         <TabPanel value={validTab} index={4}>
+          <CheckerSettings config={config} onChange={handleChange} />
+        </TabPanel>
+
+        {/* Logging Settings */}
+        <TabPanel value={validTab} index={5}>
           <LoggingSettings config={config} onChange={handleChange} />
         </TabPanel>
       </Box>

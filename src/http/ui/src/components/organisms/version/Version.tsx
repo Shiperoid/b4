@@ -7,7 +7,7 @@ import { UpdateModal } from "./UpdateDialog";
 import {
   useGitHubRelease,
   dismissVersion,
-} from "../../../hooks/UseGitHubRelease";
+} from "../../../hooks/useGitHubRelease";
 
 export default function Version() {
   const [updateModalOpen, setUpdateModalOpen] = useState(false);

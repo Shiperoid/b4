@@ -71,7 +71,6 @@ func ParseTLSClientHelloSNI(b []byte) (string, bool) {
 			continue
 		}
 
-		// Handle truncated records like youtubeUnblock does
 		if i+5+recLen > len(b) {
 			recLen = len(b) - i - 5
 			if recLen <= 0 {

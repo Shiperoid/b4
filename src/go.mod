@@ -15,6 +15,7 @@ require (
 require (
 	github.com/florianl/go-nfqueue v1.3.2
 	github.com/google/gopacket v1.1.19
+	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.10

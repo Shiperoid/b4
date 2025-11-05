@@ -2,7 +2,8 @@
 
 ## [1.1x.x] - 2025-11-xx
 
--IMPROVED: Enhance `flowState` struct to track `SNI` detection and processing status.
+- ADDED: DPI Bypass Test feature to verify circumvention effectiveness. Tests configured domains and measures download speeds to ensure `B4` is working correctly. Visit `/test` page to run the tests and `/settings/checker` for test settings (define here domains to test etc).
+- IMPROVED: Enhance `flowState` struct to track `SNI` detection and processing status.
 
 ## [1.10.1] - 2025-11-03
 

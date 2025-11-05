@@ -386,7 +386,7 @@ export const DomainSettings: React.FC<DomainSettingsProps> = ({
                           handleAddBypassDomain();
                         }
                       }}
-                      helperText="e.g., youtube.com, *.google.com"
+                      helperText="e.g., youtube.com, google.com"
                       placeholder="example.com"
                     />
                     <IconButton
@@ -402,43 +402,43 @@ export const DomainSettings: React.FC<DomainSettingsProps> = ({
                       <AddIcon />
                     </IconButton>
                   </Box>
-                  <Box
-                    sx={{
-                      mt: 2,
-                      display: "flex",
-                      flexWrap: "wrap",
-                      gap: 1,
-                      maxHeight: 200,
-                      overflowY: "auto",
-                      p: 1,
-                      border:
-                        config.domains.sni_domains.length > 0
-                          ? `1px solid ${colors.border.default}`
-                          : "none",
-                      borderRadius: 1,
-                    }}
-                  >
-                    {config.domains.sni_domains.length === 0 ? (
-                      <Typography variant="body2" color="text.secondary">
-                        No bypass domains added
-                      </Typography>
-                    ) : (
-                      config.domains.sni_domains.map((domain) => (
-                        <Chip
-                          key={domain}
-                          label={domain}
-                          onDelete={() => handleRemoveBypassDomain(domain)}
-                          size="small"
-                          sx={{
-                            bgcolor: colors.accent.primary,
-                            color: colors.secondary,
-                            "& .MuiChip-deleteIcon": {
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Active manually added domains
+                    </Typography>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 1,
+                        p: 1,
+                        border: `1px solid ${colors.border.default}`,
+                        borderRadius: 1,
+                        bgcolor: colors.background.paper,
+                      }}
+                    >
+                      {config.domains.sni_domains.length === 0 ? (
+                        <Typography variant="body2" color="text.secondary">
+                          No bypass domains added
+                        </Typography>
+                      ) : (
+                        config.domains.sni_domains.map((domain) => (
+                          <Chip
+                            key={domain}
+                            label={domain}
+                            onDelete={() => handleRemoveBypassDomain(domain)}
+                            size="small"
+                            sx={{
+                              bgcolor: colors.accent.primary,
                               color: colors.secondary,
-                            },
-                          }}
-                        />
-                      ))
-                    )}
+                              "& .MuiChip-deleteIcon": {
+                                color: colors.secondary,
+                              },
+                            }}
+                          />
+                        ))
+                      )}
+                    </Box>
                   </Box>
                 </Box>
               </Grid>
@@ -477,7 +477,7 @@ export const DomainSettings: React.FC<DomainSettingsProps> = ({
                         )}
 
                       {config.domains.geosite_categories.length > 0 && (
-                        <Box sx={{ mt: 3 }}>
+                        <Box sx={{ mt: 2 }}>
                           <Typography variant="subtitle2" gutterBottom>
                             Active Bypass Categories
                           </Typography>
@@ -486,7 +486,7 @@ export const DomainSettings: React.FC<DomainSettingsProps> = ({
                               display: "flex",
                               flexWrap: "wrap",
                               gap: 1,
-                              p: 2,
+                              p: 1,
                               border: `1px solid ${colors.border.default}`,
                               borderRadius: 1,
                               bgcolor: colors.background.paper,
@@ -495,13 +495,13 @@ export const DomainSettings: React.FC<DomainSettingsProps> = ({
                             {config.domains.geosite_categories.map(
                               (category) => (
                                 <Chip
+                                  size="small"
                                   key={category}
                                   label={
                                     <Box
                                       sx={{
                                         display: "flex",
                                         alignItems: "center",
-                                        gap: 0.5,
                                       }}
                                     >
                                       <span>{category}</span>
@@ -514,8 +514,8 @@ export const DomainSettings: React.FC<DomainSettingsProps> = ({
                                           sx={{
                                             cursor: "pointer",
                                             bgcolor: "action.selected",
-                                            px: 0.5,
-                                            borderRadius: 0.5,
+                                            px: 1,
+                                            borderRadius: 1,
                                           }}
                                           onClick={(e) => {
                                             e.stopPropagation();

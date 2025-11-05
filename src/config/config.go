@@ -30,6 +30,8 @@ type Config struct {
 
 	WebServer WebServer    `json:"web_server" bson:"web_server"`
 	Tables    TablesConfig `json:"tables" bson:"tables"`
+
+	Checker CheckerConfig `json:"checker" bson:"checker"`
 }
 
 type TablesConfig struct {
@@ -77,6 +79,12 @@ type DomainsConfig struct {
 type WebServer struct {
 	Port      int  `json:"port" bson:"port"`
 	IsEnabled bool `json:"-" bson:"-"`
+}
+
+type CheckerConfig struct {
+	TimeoutSeconds int      `json:"timeout" bson:"timeout"`
+	Domains        []string `json:"domains" bson:"domains"`
+	MaxConcurrent  int      `json:"max_concurrent" bson:"max_concurrent"`
 }
 
 type Logging struct {
@@ -152,6 +160,12 @@ var DefaultConfig = Config{
 		Level:      log.LevelInfo,
 		Instaflush: true,
 		Syslog:     false,
+	},
+
+	Checker: CheckerConfig{
+		TimeoutSeconds: 15,
+		MaxConcurrent:  4,
+		Domains:        []string{},
 	},
 }
 

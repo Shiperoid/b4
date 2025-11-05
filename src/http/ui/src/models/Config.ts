@@ -91,6 +91,13 @@ export interface IB4Config {
   domains: IDomainConfig;
   fragmentation: IFragmentation;
   udp: IUdpConfig;
+  checker: ICheckerConfig;
+}
+
+export interface ICheckerConfig {
+  timeout: number;
+  max_concurrent: number;
+  domains: string[];
 }
 
 export default class B4Config implements IB4Config {
@@ -145,5 +152,11 @@ export default class B4Config implements IB4Config {
     dport_max: 0,
     filter_quic: "parse",
     conn_bytes_limit: 8,
+  };
+
+  checker: ICheckerConfig = {
+    timeout: 15,
+    max_concurrent: 4,
+    domains: [],
   };
 }

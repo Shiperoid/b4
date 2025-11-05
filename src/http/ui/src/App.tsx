@@ -27,10 +27,12 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import LanguageIcon from "@mui/icons-material/Language";
 import SpeedIcon from "@mui/icons-material/Speed";
 import AssessmentIcon from "@mui/icons-material/Assessment";
+import ScienceIcon from "@mui/icons-material/Science";
 import Dashboard from "./components/pages/Dashboard";
 import Logs from "./components/pages/Logs";
 import Domains from "./components/pages/Domains";
 import Settings from "./components/pages/Settings";
+import Test from "./components/pages/Checker";
 import { theme, colors } from "./Theme";
 import Logo from "./components/molecules/Logo";
 import Version from "./components/organisms/version/Version";
@@ -46,6 +48,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { path: "/dashboard", label: "Dashboard", icon: <SpeedIcon /> },
   { path: "/domains", label: "Domains", icon: <LanguageIcon /> },
+  { path: "/test", label: "Test", icon: <ScienceIcon /> },
   { path: "/logs", label: "Logs", icon: <AssessmentIcon /> },
   { path: "/settings", label: "Settings", icon: <SettingsIcon /> },
 ];
@@ -60,6 +63,7 @@ export default function App() {
     const path = location.pathname;
     if (path.startsWith("/dashboard")) return "System Dashboard";
     if (path.startsWith("/domains")) return "Domain Connections";
+    if (path.startsWith("/test")) return "DPI Bypass Test";
     if (path.startsWith("/logs")) return "Log Viewer";
     if (path.startsWith("/settings")) return "Settings";
     return "B4";
@@ -159,6 +163,7 @@ export default function App() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/domains" element={<Domains />} />
+            <Route path="/test" element={<Test />} />
             <Route path="/logs" element={<Logs />} />
             <Route path="/settings/*" element={<Settings />} />
             {/* Catch all route - redirect to dashboard */}
