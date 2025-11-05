@@ -66,12 +66,20 @@ export default function Logs() {
   }, [lines, filter]);
 
   const handleHotkeysDown = (e: KeyboardEvent) => {
+    // Ignore shortcuts when typing in input fields
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === "INPUT" ||
+      target.tagName === "TEXTAREA" ||
+      target.isContentEditable
+    ) {
+      return;
+    }
+
     if ((e.ctrlKey && e.key === "x") || e.key === "Delete") {
-      // Ctrl+X to clear logs
       e.preventDefault();
       setLines([]);
     } else if (e.key === "p" || e.key === "Pause") {
-      // P or Pause to toggle pause
       e.preventDefault();
       setPaused((prev) => !prev);
     }

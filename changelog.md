@@ -1,10 +1,13 @@
 # B4 - Bye Bye Big Bro
 
-## [1.11.0] - 2025-11-xx
+## [1.11.0] - 2025-11-05
 
-- ADDED: DPI Bypass Test feature to verify circumvention effectiveness. Tests configured domains and measures download speeds to ensure `B4` is working correctly. Visit `/test` page to run the tests and `/settings/checker` for test settings (define here domains to test etc).
-- IMPROVED: Enhance `flowState` struct to track `SNI` detection and processing status.
-- FIXED: restart service from the UI handling for different service managers (`Entware`/`OpenWRT`/`systemctl`).
+- ADDED: DPI Bypass Test feature to verify that circumvention is working. The feature tests configured domains and measures download speeds to ensure B4 is functioning correctly. Visit the `/test` page to run tests and `/settings/checker` to configure test settings (define which domains to test, etc.).
+- ADDED: New feature to reset B4 settings to their defaults. The reset button is located in the `Core` tab on the `Settings` page.
+- CHANGED: Moved `RESTART B4 BUTTON` to the `Core` tab on the Settings page (under the `Core Controls` section).
+- IMPROVED: Enhanced `flowState` struct to track `SNI` detection and processing status.
+- FIXED: Service restart functionality in the UI for different service managers (`Entware`/`OpenWRT`/`systemctl`).
+- FIXED: Pause shortcut (pressing down the `P` key on the domains and logs pages) interfering with search input.
 
 ## [1.10.1] - 2025-11-03
 

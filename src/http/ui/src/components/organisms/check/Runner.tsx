@@ -14,12 +14,12 @@ import {
   PlayArrow as StartIcon,
   Stop as StopIcon,
   Refresh as RefreshIcon,
-  Speed as SpeedIcon,
+  // Speed as SpeedIcon,
 } from "@mui/icons-material";
 import { colors } from "../../../Theme";
 import { TestResultCard } from "../../molecules/check/ResultCard";
 import { TestStatus } from "../../atoms/check/Badge";
-import { useLoadConfig } from "../../../hooks/useConfig";
+import { useConfigLoad } from "../../../hooks/useConfig";
 
 interface TestResult {
   domain: string;
@@ -65,7 +65,7 @@ export const TestRunner: React.FC<TestRunnerProps> = ({
   const [testId, setTestId] = useState<string | null>(null);
   const [suite, setSuite] = useState<TestSuite | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { config } = useLoadConfig();
+  const { config } = useConfigLoad();
 
   // Poll for test status
   useEffect(() => {

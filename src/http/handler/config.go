@@ -19,6 +19,7 @@ func (api *API) RegisterConfigApi() {
 	}
 
 	api.mux.HandleFunc("/api/config", api.handleConfig)
+	api.mux.HandleFunc("/api/config/reset", api.resetConfig)
 }
 
 func (a *API) handleConfig(w http.ResponseWriter, r *http.Request) {
@@ -165,6 +166,65 @@ func (a *API) updateConfig(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	enc := json.NewEncoder(w)
 	_ = enc.Encode(response)
+}
+
+// src/http/handler/config.go - Add this function
+func (a *API) resetConfig(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	log.Infof("Config reset requested")
+
+	// Get default config
+	defaultCfg := config.DefaultConfig
+
+	// Preserve domains and checker from current config
+	defaultCfg.Domains = a.cfg.Domains
+	defaultCfg.Checker = a.cfg.Checker
+	defaultCfg.ConfigPath = a.cfg.ConfigPath
+	defaultCfg.WebServer.IsEnabled = a.cfg.WebServer.IsEnabled
+
+	// Update main config
+	a.updateMainConfig(&defaultCfg)
+
+	// Load geosite domains if configured
+	var allGeositeDomains []string
+	if a.cfg.Domains.GeoSitePath != "" && len(a.cfg.Domains.GeoSiteCategories) > 0 {
+		var err error
+		allGeositeDomains, _, err = a.geodataManager.LoadCategories(a.cfg.Domains.GeoSiteCategories)
+		if err != nil {
+			log.Errorf("Failed to load geosite domains after reset: %v", err)
+		}
+	}
+
+	// Combine all domains for the matcher
+	allDomainsForMatcher := make([]string, 0, len(a.manualDomains)+len(allGeositeDomains))
+	allDomainsForMatcher = append(allDomainsForMatcher, a.manualDomains...)
+	allDomainsForMatcher = append(allDomainsForMatcher, allGeositeDomains...)
+
+	// Update NFQ pool
+	if globalPool != nil {
+		globalPool.UpdateConfig(a.cfg, allDomainsForMatcher)
+		log.Infof("Config reset and pushed to all workers")
+	}
+
+	// Save to file
+	if a.cfg.ConfigPath != "" {
+		if err := a.cfg.SaveToFile(a.cfg.ConfigPath); err != nil {
+			log.Errorf("Failed to save reset config: %v", err)
+		} else {
+			log.Infof("Reset config saved to %s", a.cfg.ConfigPath)
+		}
+	}
+
+	setJsonHeader(w)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Configuration reset to defaults (domains and checker preserved)",
+	})
 }
 
 func (a *API) updateMainConfig(newCfg *config.Config) {

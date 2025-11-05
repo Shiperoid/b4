@@ -1,5 +1,4 @@
-import React from "react";
-import { Container, Box, Alert, Stack, Link } from "@mui/material";
+import { Container, Alert, Stack } from "@mui/material";
 import { TestRunner } from "../organisms/check/Runner";
 import { colors } from "../../Theme";
 import { Link as RouterLink } from "react-router-dom";

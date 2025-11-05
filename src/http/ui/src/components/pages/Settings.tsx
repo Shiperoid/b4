@@ -20,6 +20,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Grid,
 } from "@mui/material";
 import {
   Save as SaveIcon,
@@ -41,12 +42,10 @@ import { FragmentationSettings } from "../organisms/settings/Fragmentation";
 import { FakingSettings } from "../organisms/settings/Faking";
 import { UDPSettings } from "../organisms/settings/Udp";
 import { CheckerSettings } from "../organisms/settings/Checker";
+import { ControlSettings } from "../organisms/settings/Control";
 
 import B4Config from "../../models/Config";
 import { colors } from "../../Theme";
-
-import { RestartAlt as RestartIcon } from "@mui/icons-material";
-import { RestartDialog } from "../organisms/settings/RestartDialog";
 
 // Tab panel component
 interface TabPanelProps {
@@ -129,7 +128,6 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
-  const [showRestartDialog, setShowRestartDialog] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -392,23 +390,7 @@ export default function Settings() {
               >
                 Reload
               </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<RestartIcon />}
-                onClick={() => setShowRestartDialog(true)}
-                disabled={saving}
-                sx={{
-                  borderColor: colors.secondary,
-                  color: colors.secondary,
-                  "&:hover": {
-                    borderColor: colors.primary,
-                    bgcolor: colors.accent.primaryHover,
-                  },
-                }}
-              >
-                Restart Service
-              </Button>
+
               <Button
                 size="small"
                 variant="contained"
@@ -484,15 +466,26 @@ export default function Settings() {
       <Box sx={{ flex: 1, overflow: "auto", pb: 2 }}>
         {/* Core Settings */}
         <TabPanel value={validTab} index={0}>
-          <Stack spacing={3}>
-            {categoryHasChanges[0] && (
-              <Alert severity="warning" icon={<WarningIcon />}>
-                Core settings require B4 restart to take effect
-              </Alert>
-            )}
-            <NetworkSettings config={config} onChange={handleChange} />
-            <FeatureSettings config={config} onChange={handleChange} />
-          </Stack>
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, md: 12 }}>
+              {categoryHasChanges[0] && (
+                <Alert severity="warning" icon={<WarningIcon />}>
+                  Core settings require B4 restart to take effect
+                </Alert>
+              )}
+              <NetworkSettings config={config} onChange={handleChange} />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <ControlSettings
+                config={config}
+                onChange={handleChange}
+                loadConfig={loadConfig}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <FeatureSettings config={config} onChange={handleChange} />
+            </Grid>
+          </Grid>
         </TabPanel>
 
         {/* Domain Settings */}
@@ -556,12 +549,6 @@ export default function Settings() {
           {snackbar.message}
         </Alert>
       </Snackbar>
-
-      {/* Restart Dialog */}
-      <RestartDialog
-        open={showRestartDialog}
-        onClose={() => setShowRestartDialog(false)}
-      />
     </Container>
   );
 }
