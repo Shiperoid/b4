@@ -1,9 +1,10 @@
 # B4 - Bye Bye Big Bro
 
-## [1.1x.x] - 2025-11-xx
+## [1.11.0] - 2025-11-xx
 
 - ADDED: DPI Bypass Test feature to verify circumvention effectiveness. Tests configured domains and measures download speeds to ensure `B4` is working correctly. Visit `/test` page to run the tests and `/settings/checker` for test settings (define here domains to test etc).
 - IMPROVED: Enhance `flowState` struct to track `SNI` detection and processing status.
+- FIXED: restart service from the UI handling for different service managers (`Entware`/`OpenWRT`/`systemctl`).
 
 ## [1.10.1] - 2025-11-03
 

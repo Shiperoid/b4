@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"syscall"
 	"time"
 
 	"github.com/daniellavrushin/b4/log"
@@ -125,18 +126,27 @@ func (api *API) handleRestart(w http.ResponseWriter, r *http.Request) {
 		switch serviceManager {
 		case "systemd":
 			cmd = exec.Command("systemctl", "restart", "b4")
-		case "entware":
-			cmd = exec.Command("/opt/etc/init.d/S99b4", "restart")
-		case "init":
-			cmd = exec.Command("/etc/init.d/b4", "restart")
+		case "entware", "init":
+			cmd = exec.Command("sh", "-c", response.RestartCommand+" > /dev/null 2>&1 &")
+			cmd.SysProcAttr = &syscall.SysProcAttr{
+				Setsid: true,
+			}
 		}
 
 		if cmd != nil {
-			output, err := cmd.CombinedOutput()
-			if err != nil {
-				log.Errorf("Restart command failed: %v\nOutput: %s", err, string(output))
+			if serviceManager == "systemd" {
+				output, err := cmd.CombinedOutput()
+				if err != nil {
+					log.Errorf("Restart command failed: %v\nOutput: %s", err, string(output))
+				} else {
+					log.Infof("Restart command executed successfully")
+				}
 			} else {
-				log.Infof("Restart command executed successfully")
+				if err := cmd.Start(); err != nil {
+					log.Errorf("Failed to start restart command: %v", err)
+				} else {
+					log.Infof("Restart command initiated")
+				}
 			}
 		}
 	}()
