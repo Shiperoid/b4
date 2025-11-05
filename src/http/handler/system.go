@@ -224,12 +224,19 @@ func (api *API) handleUpdate(w http.ResponseWriter, r *http.Request) {
 		log.Infof("Installer downloaded, starting update process...")
 		log.Infof("Service will stop now - this is expected")
 
-		cmd := exec.Command(installerPath, "--update", "--quiet")
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			Setsid: true,
+		// Use systemd-run to execute in separate scope for systemd systems
+		var cmd *exec.Cmd
+		if serviceManager == "systemd" {
+			cmd = exec.Command("systemd-run", "--scope", "--unit=b4-update",
+				installerPath, "--update", "--quiet")
+		} else {
+			// For non-systemd, use nohup
+			cmd = exec.Command("nohup", installerPath, "--update", "--quiet")
+			cmd.SysProcAttr = &syscall.SysProcAttr{
+				Setsid: true,
+			}
 		}
 
-		// Redirect all I/O - don't defer close, let the script own the files
 		devNull, _ := os.Open("/dev/null")
 		logFile, _ := os.OpenFile("/tmp/b4_update.log", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 
@@ -247,8 +254,6 @@ func (api *API) handleUpdate(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			log.Infof("Update process started (PID: %d)", cmd.Process.Pid)
-			// Don't close files - script owns them now
-			// Don't wait - fully detach
 		}
 	}()
 }
