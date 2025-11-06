@@ -128,72 +128,8 @@ sudo b4 --queue-num 100 --threads 4 --web-port 8080
 
 ### Configuration File
 
-Create `/etc/b4/b4.json`
+Usually a configuration file is located in `/etc/b4/b4.json` and is created automatically when missing.
 (the file can be redefined by passing the `--config=` argument):
-
-```json
-{
-  "queue_start_num": 537,
-  "mark": 32768,
-  "threads": 4,
-  "conn_bytes_limit": 19,
-  "seg2delay": 0,
-  "ipv4": true,
-  "ipv6": false,
-
-  "domains": {
-    "geosite_path": "/etc/b4/geosite.dat",
-    "geoip_path": "",
-    "sni_domains": [],
-    "geosite_categories": ["youtube", "netflix"],
-    "geoip_categories": []
-  },
-
-  "fragmentation": {
-    "strategy": "tcp",
-    "sni_reverse": true,
-    "middle_sni": true,
-    "sni_position": 1
-  },
-
-  "faking": {
-    "sni": true,
-    "ttl": 8,
-    "strategy": "pastseq",
-    "seq_offset": 10000,
-    "sni_seq_length": 1,
-    "sni_type": 2,
-    "custom_payload": ""
-  },
-
-  "udp": {
-    "mode": "fake",
-    "fake_seq_length": 6,
-    "fake_len": 64,
-    "faking_strategy": "none",
-    "dport_min": 0,
-    "dport_max": 0,
-    "filter_quic": "parse",
-    "filter_stun": true,
-    "conn_bytes_limit": 8
-  },
-
-  "web_server": {
-    "port": 7000
-  },
-
-  "logging": {
-    "level": "info",
-    "instaflush": true,
-    "syslog": false
-  },
-
-  "tables": {
-    "monitor_interval": 10,
-    "skip_setup": false
-  }
-}
-```
 
 Load with custom configuration:
 
@@ -272,15 +208,6 @@ sudo b4 --config /home/username/b4custom.json
 
 The web interface is accessible at `http://device-ip:7000` (default port, can be changed in the `config` file).
 
-**Features:**
-
-- Real-time metrics (connections, packets, bandwidth)
-- Live log streaming with filtering
-- Connection history with protocol and SNI information
-- Domain management (add/remove domains on-the-fly)
-- Configuration management
-- System health monitoring
-
 ## Geosite Integration
 
 B4 supports [v2ray/xray `geosite.dat`](https://github.com/v2fly/domain-list-community) files from various sources:
@@ -307,40 +234,6 @@ sudo b4 --geosite /etc/b4/geosite.dat --geosite-categories youtube,netflix,faceb
 
 ## Building and Development
 
-### Build Requirements
-
-- Go 1.25 or later
-- Node.js 22+ and pnpm (for web UI)
-- Make
-
-### Build Commands
-
-```bash
-# Build for current platform
-make build
-
-# Build for all platforms
-make build-all
-
-# Build for specific platform
-make linux-amd64
-make linux-arm64
-make linux-armv7
-
-# Clean build artifacts
-make clean
-
-# Run with sudo (development)
-make run
-
-# Install to /usr/local/bin
-make install
-```
-
-## Contributing
-
-Contributions are accepted through GitHub pull requests.
-
 ### Development Setup
 
 ```bash
@@ -356,6 +249,42 @@ make build
 sudo ./out/b4 --verbose debug
 ```
 
+### Build Requirements
+
+- Go 1.25 or later
+- Node.js 22+ and pnpm (for web UI)
+- Make
+
+### Build Commands
+
+First, build the UI (as the binary will require to have some assets in place before building it)
+```bash
+cd src/http/ui
+pnpm install
+pnpm build
+```
+
+Now, you can build the binary
+```bash
+# Build for current platform
+make build
+
+# Build for all platforms
+make build-all
+
+# Build for specific platform
+make amd64
+make arm64
+make armv7
+
+# Clean build artifacts
+make clean
+```
+
+## Contributing
+
+Contributions are accepted through GitHub pull requests.
+
 ## Credits
 
 This project incorporates research and techniques from:
@@ -367,17 +296,4 @@ This project incorporates research and techniques from:
 ## License
 
 This project is provided for educational purposes. Users are responsible for compliance with applicable laws and regulations.
-
-**Use Cases:**
-
-- Bypassing internet censorship in restricted regions
-- Protecting privacy from network surveillance
-- Research and education on network protocols
-
-**Not Intended For:**
-
-- Illegal activities
-- Unauthorized network access
-- Violation of terms of service
-
 The authors are not responsible for misuse of this software.
