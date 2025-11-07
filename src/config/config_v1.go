@@ -18,13 +18,13 @@ type ConfigV1 struct {
 	IPv4Enabled    bool    `json:"ipv4" bson:"ipv4"`
 	IPv6Enabled    bool    `json:"ipv6" bson:"ipv6"`
 
-	Domains       DomainsConfig `json:"domains" bson:"domains"`
-	Fragmentation Fragmentation `json:"fragmentation" bson:"fragmentation"`
-	Faking        Faking        `json:"faking" bson:"faking"`
-	UDP           UDPConfig     `json:"udp" bson:"udp"`
+	Domains       DomainsConfig       `json:"domains" bson:"domains"`
+	Fragmentation FragmentationConfig `json:"fragmentation" bson:"fragmentation"`
+	Faking        FakingConfig        `json:"faking" bson:"faking"`
+	UDP           UDPConfig           `json:"udp" bson:"udp"`
 
-	WebServer WebServer    `json:"web_server" bson:"web_server"`
-	Tables    TablesConfig `json:"tables" bson:"tables"`
+	WebServer WebServerConfig `json:"web_server" bson:"web_server"`
+	Tables    TablesConfig    `json:"tables" bson:"tables"`
 
 	Checker CheckerConfig `json:"checker" bson:"checker"`
 }
@@ -47,14 +47,14 @@ var DefaultConfigV1 = ConfigV1{
 		GeoIpCategories:   []string{},
 	},
 
-	Fragmentation: Fragmentation{
+	Fragmentation: FragmentationConfig{
 		Strategy:    "tcp",
 		SNIReverse:  true,
 		MiddleSNI:   true,
 		SNIPosition: 1,
 	},
 
-	Faking: Faking{
+	Faking: FakingConfig{
 		SNI:           true,
 		TTL:           8,
 		SNISeqLength:  1,
@@ -81,7 +81,7 @@ var DefaultConfigV1 = ConfigV1{
 		SkipSetup:       false,
 	},
 
-	WebServer: WebServer{
+	WebServer: WebServerConfig{
 		Port:      7000,
 		IsEnabled: true,
 	},

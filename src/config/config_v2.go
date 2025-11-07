@@ -52,14 +52,14 @@ var DefaultConfig = Config{
 			ConnBytesLimit: 8,
 		},
 
-		Fragmentation: Fragmentation{
+		Fragmentation: FragmentationConfig{
 			Strategy:    "tcp",
 			SNIReverse:  true,
 			MiddleSNI:   true,
 			SNIPosition: 1,
 		},
 
-		Faking: Faking{
+		Faking: FakingConfig{
 			SNI:           true,
 			TTL:           8,
 			SNISeqLength:  1,
@@ -84,7 +84,7 @@ var DefaultConfig = Config{
 			SkipSetup:       false,
 		},
 
-		WebServer: WebServer{
+		WebServer: WebServerConfig{
 			Port:      7000,
 			IsEnabled: true,
 		},
