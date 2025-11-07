@@ -59,7 +59,7 @@ export default function App() {
   const [drawerOpen, setDrawerOpen] = useState<boolean>(true);
   const navigate = useNavigate();
   const location = useLocation();
-  const { logs } = useWebSocket();
+  const { domains } = useWebSocket();
 
   const getPageTitle = () => {
     const path = location.pathname;
@@ -99,31 +99,44 @@ export default function App() {
           </Toolbar>
           <Divider sx={{ borderColor: colors.border.default }} />
           <List>
-            {navItems.map((item) => (
-              <ListItem key={item.path} disablePadding>
-                <ListItemButton
-                  selected={isNavItemSelected(item.path)}
-                  onClick={() => navigate(item.path)}
-                  sx={{
-                    "&.Mui-selected": {
-                      backgroundColor: colors.accent.primary,
-                      "&:hover": {
-                        backgroundColor: colors.accent.primaryHover,
+            {navItems.map((item) => {
+              let badgeCount = 0;
+              if (item.path === "/domains" && domains.length > 0) {
+                badgeCount = domains.length;
+              }
+
+              return (
+                <ListItem key={item.path} disablePadding>
+                  <ListItemButton
+                    selected={isNavItemSelected(item.path)}
+                    onClick={() => navigate(item.path)}
+                    sx={{
+                      "&.Mui-selected": {
+                        backgroundColor: colors.accent.primary,
+                        "&:hover": {
+                          backgroundColor: colors.accent.primaryHover,
+                        },
                       },
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ color: "inherit" }}>
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText primary={item.label}>
-                    <Badge badgeContent={logs.length} color="secondary">
-                      <AssessmentIcon />
-                    </Badge>
-                  </ListItemText>
-                </ListItemButton>
-              </ListItem>
-            ))}
+                    }}
+                  >
+                    <ListItemIcon sx={{ color: "inherit" }}>
+                      {badgeCount > 0 ? (
+                        <Badge
+                          badgeContent={badgeCount}
+                          color="secondary"
+                          max={999}
+                        >
+                          {item.icon}
+                        </Badge>
+                      ) : (
+                        item.icon
+                      )}
+                    </ListItemIcon>
+                    <ListItemText primary={item.label} />
+                  </ListItemButton>
+                </ListItem>
+              );
+            })}
           </List>
           <Box sx={{ flexGrow: 1 }} />
           <Version />
