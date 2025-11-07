@@ -29,7 +29,6 @@ func (api *API) handleStartCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set defaults
 	if req.Timeout <= 0 {
 		req.Timeout = time.Duration(chckCfg.TimeoutSeconds) * time.Second
 	}
@@ -37,7 +36,6 @@ func (api *API) handleStartCheck(w http.ResponseWriter, r *http.Request) {
 		req.MaxConcurrent = chckCfg.MaxConcurrent
 	}
 
-	// Select domains
 	seen := make(map[string]bool)
 	domains := []string{}
 
@@ -54,7 +52,6 @@ func (api *API) handleStartCheck(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Create check suite
 	config := checker.CheckConfig{
 		CheckURL:      req.CheckURL,
 		Timeout:       req.Timeout,
@@ -63,10 +60,7 @@ func (api *API) handleStartCheck(w http.ResponseWriter, r *http.Request) {
 
 	suite := checker.NewCheckSuite(config)
 
-	// Run tests asynchronously
 	go suite.Run(domains)
-
-	log.Infof("Started check suite %s with %d domains", suite.Id, len(domains))
 
 	response := StartCheckResponse{
 		Id:          suite.Id,
