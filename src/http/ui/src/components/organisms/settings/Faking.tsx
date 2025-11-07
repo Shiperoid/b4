@@ -5,6 +5,7 @@ import SettingSection from "@molecules/common/B4Section";
 import SettingSelect from "@atoms/common/B4Select";
 import SettingTextField from "@atoms/common/B4TextField";
 import SettingSwitch from "@atoms/common/B4Switch";
+import B4Slider from "@atoms/common/B4Slider";
 import { B4Config, FakingPayloadType } from "@models/Config";
 
 interface FakingSettingsProps {
@@ -70,13 +71,13 @@ export const FakingSettings: React.FC<FakingSettingsProps> = ({
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SettingTextField
+          <B4Slider
             label="Fake TTL"
-            type="number"
             value={config.bypass.faking.ttl}
-            onChange={(e) =>
-              onChange("bypass.faking.ttl", Number(e.target.value))
-            }
+            onChange={(value) => onChange("bypass.faking.ttl", value)}
+            min={1}
+            max={64}
+            step={1}
             helperText="TTL for fake packets"
             disabled={!config.bypass.faking.sni}
           />
@@ -94,13 +95,15 @@ export const FakingSettings: React.FC<FakingSettingsProps> = ({
           />
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
-          <SettingTextField
+          <B4Slider
             label="SNI Sequence Length"
-            type="number"
             value={config.bypass.faking.sni_seq_length}
-            onChange={(e) =>
-              onChange("bypass.faking.sni_seq_length", Number(e.target.value))
+            onChange={(value) =>
+              onChange("bypass.faking.sni_seq_length", value)
             }
+            min={1}
+            max={20}
+            step={1}
             helperText="Length of fake SNI sequence"
             disabled={!config.bypass.faking.sni}
           />

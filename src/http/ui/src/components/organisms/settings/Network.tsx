@@ -2,6 +2,7 @@ import { Domain as DomainIcon } from "@mui/icons-material";
 import B4Section from "@molecules/common/B4Section";
 import { B4FormGroup } from "@molecules/common/B4FormGroup";
 import B4TextField from "@atoms/common/B4TextField";
+import B4Slider from "@atoms/common/B4Slider";
 import { B4Config } from "@models/Config";
 
 interface NetworkSettingsProps {
@@ -26,33 +27,35 @@ export const NetworkSettings: React.FC<NetworkSettingsProps> = ({
         onChange={(e) => onChange("queue.start_num", Number(e.target.value))}
         helperText="Netfilter queue number (0-65535)"
       />
-      <B4TextField
+      <B4Slider
         label="Worker Threads"
-        type="number"
         value={config.queue.threads}
-        onChange={(e) => onChange("queue.threads", Number(e.target.value))}
-        helperText="Number of worker threads (minimum 1)"
+        onChange={(value) => onChange("queue.threads", value)}
+        min={1}
+        max={16}
+        step={1}
+        helperText="Number of worker threads"
       />
     </B4FormGroup>
 
     <B4FormGroup label="Connection Limits" columns={2}>
-      <B4TextField
+      <B4Slider
         label="TCP Connection Bytes Limit"
-        type="number"
         value={config.bypass.tcp.conn_bytes_limit}
-        onChange={(e) =>
-          onChange("bypass.tcp.conn_bytes_limit", Number(e.target.value))
-        }
-        helperText="Connection bytes limit for TCP (default 19)"
+        onChange={(value) => onChange("bypass.tcp.conn_bytes_limit", value)}
+        min={1}
+        max={100}
+        step={1}
+        helperText="Connection bytes limit for TCP"
       />
-      <B4TextField
+      <B4Slider
         label="UDP Connection Bytes Limit"
-        type="number"
         value={config.bypass.udp.conn_bytes_limit}
-        onChange={(e) =>
-          onChange("bypass.udp.conn_bytes_limit", Number(e.target.value))
-        }
-        helperText="Connection bytes limit for UDP (default 8)"
+        onChange={(value) => onChange("bypass.udp.conn_bytes_limit", value)}
+        min={1}
+        max={50}
+        step={1}
+        helperText="Connection bytes limit for UDP"
       />
     </B4FormGroup>
   </B4Section>

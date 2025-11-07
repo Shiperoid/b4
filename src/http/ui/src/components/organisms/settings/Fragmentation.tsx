@@ -3,8 +3,8 @@ import { Grid } from "@mui/material";
 import { CallSplit as CallSplitIcon } from "@mui/icons-material";
 import SettingSection from "@molecules/common/B4Section";
 import SettingSelect from "@atoms/common/B4Select";
-import SettingTextField from "@atoms/common/B4TextField";
 import SettingSwitch from "@atoms/common/B4Switch";
+import B4Slider from "@atoms/common/B4Slider";
 import { B4Config, FragmentationStrategy } from "@models/Config";
 
 interface FragmentationSettingsProps {
@@ -44,13 +44,15 @@ export const FragmentationSettings: React.FC<FragmentationSettingsProps> = ({
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <SettingTextField
+          <B4Slider
             label="SNI Fragment Position"
-            type="number"
             value={config.bypass.fragmentation.sni_position}
-            onChange={(e) =>
-              onChange("fragmentation.sni_position", Number(e.target.value))
+            onChange={(value) =>
+              onChange("bypass.fragmentation.sni_position", value)
             }
+            min={0}
+            max={10}
+            step={1}
             helperText="Position where to fragment SNI"
           />
         </Grid>

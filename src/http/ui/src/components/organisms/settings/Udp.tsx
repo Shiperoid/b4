@@ -4,6 +4,7 @@ import { Dns as DnsIcon } from "@mui/icons-material";
 import SettingSection from "@molecules/common/B4Section";
 import SettingSelect from "@atoms/common/B4Select";
 import SettingTextField from "@atoms/common/B4TextField";
+import B4Slider from "@atoms/common/B4Slider";
 import { B4Config } from "@models/Config";
 
 interface UDPSettingsProps {
@@ -73,24 +74,25 @@ export const UDPSettings: React.FC<UDPSettingsProps> = ({
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <SettingTextField
+          <B4Slider
             label="Fake Packet Size"
-            type="number"
             value={config.bypass.udp.fake_len}
-            onChange={(e) =>
-              onChange("bypass.udp.fake_len", Number(e.target.value))
-            }
-            helperText="Size of fake UDP packets in bytes"
+            onChange={(value) => onChange("bypass.udp.fake_len", value)}
+            min={32}
+            max={1500}
+            step={8}
+            valueSuffix=" bytes"
+            helperText="Size of fake UDP packets"
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
-          <SettingTextField
+          <B4Slider
             label="Fake Sequence Length"
-            type="number"
             value={config.bypass.udp.fake_seq_length}
-            onChange={(e) =>
-              onChange("bypass.udp.fake_seq_length", Number(e.target.value))
-            }
+            onChange={(value) => onChange("bypass.udp.fake_seq_length", value)}
+            min={1}
+            max={20}
+            step={1}
             helperText="Number of fake packets to send"
           />
         </Grid>

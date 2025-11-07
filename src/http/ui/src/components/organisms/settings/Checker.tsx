@@ -7,6 +7,7 @@ import {
 } from "@mui/icons-material";
 import SettingSection from "@molecules/common/B4Section";
 import SettingTextField from "@atoms/common/B4TextField";
+import B4Slider from "@atoms/common/B4Slider";
 import { colors } from "@design";
 import { B4Config } from "@models/Config";
 
@@ -49,25 +50,28 @@ export const CheckerSettings: React.FC<CheckerSettingsProps> = ({
     >
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, lg: 6 }}>
-          <SettingTextField
+          <B4Slider
             label="Max Concurrent Tests"
-            type="number"
             value={config.system.checker.max_concurrent}
-            onChange={(e) =>
-              onChange("system.checker.max_concurrent", Number(e.target.value))
+            onChange={(value) =>
+              onChange("system.checker.max_concurrent", value)
             }
+            min={1}
+            max={20}
+            step={1}
             helperText="Maximum number of concurrent tests"
           />
         </Grid>
         <Grid size={{ xs: 12, lg: 6 }}>
-          <SettingTextField
-            label="Test Timeout (seconds)"
-            type="number"
+          <B4Slider
+            label="Test Timeout"
             value={config.system.checker.timeout}
-            onChange={(e) =>
-              onChange("system.checker.timeout", Number(e.target.value))
-            }
-            helperText="Domain request timeout in seconds"
+            onChange={(value) => onChange("system.checker.timeout", value)}
+            min={1}
+            max={120}
+            step={1}
+            valueSuffix=" sec"
+            helperText="Domain request timeout"
           />
         </Grid>
         <Grid size={{ sm: 12, md: 6 }}>
