@@ -33,6 +33,24 @@ interface UpdateModalProps {
   publishedAt: string;
 }
 
+const H2Typography = React.forwardRef<
+  HTMLHeadingElement,
+  React.ComponentProps<typeof Typography>
+>(function H2Typography(props, ref) {
+  return (
+    <Typography
+      component="h2"
+      variant="subtitle2"
+      sx={{
+        fontWeight: 800,
+        textTransform: "uppercase",
+      }}
+      ref={ref}
+      {...props}
+    />
+  );
+});
+
 export const UpdateModal: React.FC<UpdateModalProps> = ({
   open,
   onClose,
@@ -229,23 +247,7 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({
               },
             }}
           >
-            <ReactMarkdown
-              components={{
-                h2(props) {
-                  const { node, ref, ...rest } = props;
-                  return (
-                    <Typography
-                      variant="subtitle2"
-                      sx={{
-                        fontWeight: 800,
-                        textTransform: "uppercase",
-                      }}
-                      {...rest}
-                    />
-                  );
-                },
-              }}
-            >
+            <ReactMarkdown components={{ h2: H2Typography }}>
               {releaseNotes}
             </ReactMarkdown>
           </Box>
