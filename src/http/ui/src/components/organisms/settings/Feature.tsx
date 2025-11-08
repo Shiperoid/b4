@@ -36,7 +36,7 @@ export const FeatureSettings: React.FC<FeatureSettingsProps> = ({
           description="Enable IPv6 support"
         />
       </B4FormGroup>
-      <B4FormGroup label="Tables Features" columns={2}>
+      <B4FormGroup label="Firewall Features" columns={2}>
         <SettingSwitch
           label="Skip IPTables/NFTables Setup"
           checked={config.system.tables.skip_setup}
@@ -46,7 +46,7 @@ export const FeatureSettings: React.FC<FeatureSettingsProps> = ({
           description="Skip automatic IPTables/NFTables rules configuration"
         />
         <B4Slider
-          label="Tables Monitor Interval in seconds (default 10s)"
+          label="Firewall Monitor Interval in seconds (default 10s)"
           value={config.system.tables.monitor_interval}
           onChange={(value: number) =>
             onChange("system.tables.monitor_interval", value)
@@ -54,7 +54,7 @@ export const FeatureSettings: React.FC<FeatureSettingsProps> = ({
           min={0}
           max={120}
           step={5}
-          helperText="Interval for monitoring B4 iptables/nftables rules to be restored"
+          helperText="Interval for monitoring B4 iptables/nftables rules"
         />
         {config.system.tables.monitor_interval <= 0 && (
           <Alert severity="warning">
