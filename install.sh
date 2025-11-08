@@ -1521,6 +1521,9 @@ detect_firewall_backend() {
 
 # System information display function
 show_system_info() {
+
+    set_system_paths
+
     echo ""
     echo "======================================="
     echo "       B4 System Information"
