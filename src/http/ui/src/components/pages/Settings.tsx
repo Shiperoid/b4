@@ -441,7 +441,9 @@ export default function Settings() {
               },
             }}
           >
-            {SETTING_CATEGORIES.sort((a, b) => a.id - b.id).map((category) => (
+            {SETTING_CATEGORIES.sort(
+              (a, b) => (a.id as number) - (b.id as number)
+            ).map((category) => (
               <Tab
                 key={category.id}
                 label={

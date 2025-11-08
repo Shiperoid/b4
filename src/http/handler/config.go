@@ -73,6 +73,7 @@ func (a *API) updateConfig(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	newConfig.ConfigPath = a.cfg.ConfigPath
 
 	a.geodataManager.UpdatePaths(newConfig.System.Geo.GeoSitePath, newConfig.System.Geo.GeoIpPath)
 
@@ -101,7 +102,8 @@ func (a *API) updateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	categoryBreakdown, _ := a.geodataManager.GetCategoryCounts(utils.FilterUniqueStrings(categories))
-
+	newConfig.SaveToFile(newConfig.ConfigPath)
+	*a.cfg = newConfig
 	response := map[string]interface{}{
 		"success": true,
 		"message": "Configuration updated successfully",

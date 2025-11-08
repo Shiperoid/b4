@@ -1,14 +1,5 @@
 import React, { useState } from "react";
-import {
-  Box,
-  Grid,
-  Stack,
-  Button,
-  Tabs,
-  Tab,
-  Container,
-  Paper,
-} from "@mui/material";
+import { Box, Grid, Stack, Button, Tabs, Tab, Paper } from "@mui/material";
 import {
   Settings as SettingsIcon,
   Security as SecurityIcon,
@@ -17,16 +8,14 @@ import {
   Language as DomainIcon,
   Layers as LayersIcon,
 } from "@mui/icons-material";
-import { v4 as uuidv4 } from "uuid";
 
-import B4Section from "@molecules/common/B4Section";
 import { B4Dialog } from "@molecules/common/B4Dialog";
 import B4TextField from "@atoms/common/B4TextField";
 import B4Select from "@atoms/common/B4Select";
 import B4Slider from "@atoms/common/B4Slider";
 import B4Switch from "@atoms/common/B4Switch";
 
-import { colors, button_primary, button_secondary, spacing } from "@design";
+import { colors, button_primary, button_secondary } from "@design";
 import { B4SetConfig, SystemConfig } from "@models/Config";
 
 import { DomainSettings } from "@organisms/settings/Domain";

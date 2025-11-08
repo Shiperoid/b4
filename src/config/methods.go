@@ -144,6 +144,14 @@ func (cfg *Config) ApplyLogLevel(level string) {
 func (c *Config) Validate() error {
 	c.System.WebServer.IsEnabled = c.System.WebServer.Port > 0 && c.System.WebServer.Port <= 65535
 
+	if c.MainSet == nil && len(c.Sets) > 0 {
+		c.MainSet = c.Sets[0]
+	}
+
+	if c.MainSet == nil {
+		return fmt.Errorf("main set configuration is missing")
+	}
+
 	if len(c.MainSet.Domains.GeoSiteCategories) > 0 && c.System.Geo.GeoSitePath == "" {
 		return fmt.Errorf("--geosite must be specified when using --geo-categories")
 	}
