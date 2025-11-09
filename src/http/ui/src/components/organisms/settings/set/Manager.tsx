@@ -35,8 +35,22 @@ import { SetEditor } from "./Editor";
 import { colors, radius, button_secondary } from "@design";
 import { B4Config, B4SetConfig } from "@models/Config";
 
+export interface TargetStatistics {
+  // Bypass stats
+  manual_domains: number;
+  geosite_domains: number;
+  total_domains: number;
+  category_breakdown?: Record<string, number>;
+  geosite_available: boolean;
+  // Block stats
+  block_manual_domains?: number;
+  block_geosite_domains?: number;
+  block_total_domains?: number;
+  block_category_breakdown?: Record<string, number>;
+}
+
 interface SetsManagerProps {
-  config: B4Config;
+  config: B4Config & { domain_stats?: TargetStatistics };
   onChange: (
     field: string,
     value: boolean | string | number | B4SetConfig[]
@@ -424,8 +438,9 @@ export const SetsManager: React.FC<SetsManagerProps> = ({
       <SetEditor
         open={editDialog.open}
         settings={config.system}
-        set={editDialog.set}
+        set={editDialog.set!}
         isNew={editDialog.isNew}
+        stats={config?.domain_stats}
         onClose={() => setEditDialog({ open: false, set: null, isNew: false })}
         onSave={handleSaveSet}
       />

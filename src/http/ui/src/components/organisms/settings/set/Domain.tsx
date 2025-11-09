@@ -32,25 +32,13 @@ import SettingAutocomplete from "@atoms/common/B4Autocomplete";
 import { colors, button_primary } from "@design";
 import { B4Dialog } from "@molecules/common/B4Dialog";
 import { B4SetConfig, GeoConfig } from "@models/Config";
+import { TargetStatistics } from "@organisms/settings/set/Manager";
 
 interface DomainSettingsProps {
-  config: B4SetConfig & { domain_stats?: DomainStatistics };
+  config: B4SetConfig;
   geo: GeoConfig;
+  stats?: TargetStatistics;
   onChange: (field: string, value: string | string[]) => void;
-}
-
-interface DomainStatistics {
-  // Bypass stats
-  manual_domains: number;
-  geosite_domains: number;
-  total_domains: number;
-  category_breakdown?: Record<string, number>;
-  geosite_available: boolean;
-  // Block stats
-  block_manual_domains?: number;
-  block_geosite_domains?: number;
-  block_total_domains?: number;
-  block_category_breakdown?: Record<string, number>;
 }
 
 interface CategoryPreview {
@@ -85,6 +73,7 @@ export const DomainSettings: React.FC<DomainSettingsProps> = ({
   config,
   onChange,
   geo,
+  stats,
 }) => {
   const [tabValue, setTabValue] = useState(0);
   const [newBypassDomain, setNewBypassDomain] = useState("");
@@ -213,7 +202,6 @@ export const DomainSettings: React.FC<DomainSettingsProps> = ({
     }
   };
 
-  const stats = config.domain_stats;
   const blockDomains = config.domains.block_domains || [];
   const blockCategories = config.domains.block_geosite_categories || [];
 

@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { Box, Stack, Button, Tabs, Tab, Paper } from "@mui/material";
 import {
-  Settings as SettingsIcon,
-  Security as SecurityIcon,
-  Dns as DnsIcon,
+  AirlineStops as TcpIcon,
+  Deblur as FakingIcon,
+  MultipleStop as UdpIcon,
   CallSplit as FragIcon,
   Language as DomainIcon,
   Layers as LayersIcon,
@@ -20,11 +20,13 @@ import { TcpSettings } from "./Tcp";
 import { UdpSettings } from "./Udp";
 import { FragmentationSettings } from "./Fragmentation";
 import { FakingSettings } from "./Faking";
+import { TargetStatistics } from "@organisms/settings/set/Manager";
 
 export interface SetEditorProps {
   open: boolean;
   settings: SystemConfig;
-  set: B4SetConfig | null;
+  set: B4SetConfig;
+  stats?: TargetStatistics;
   isNew: boolean;
   onClose: () => void;
   onSave: (set: B4SetConfig) => void;
@@ -35,6 +37,7 @@ export const SetEditor: React.FC<SetEditorProps> = ({
   set: initialSet,
   isNew,
   settings,
+  stats,
   onClose,
   onSave,
 }) => {
@@ -127,11 +130,11 @@ export const SetEditor: React.FC<SetEditorProps> = ({
             },
           }}
         >
-          <Tab label="Domains" icon={<DomainIcon />} />
-          <Tab label="TCP" icon={<SettingsIcon />} />
-          <Tab label="UDP" icon={<DnsIcon />} />
+          <Tab label="Targets" icon={<DomainIcon />} />
+          <Tab label="TCP" icon={<TcpIcon />} />
+          <Tab label="UDP" icon={<UdpIcon />} />
           <Tab label="Fragmentation" icon={<FragIcon />} />
-          <Tab label="Faking" icon={<SecurityIcon />} />
+          <Tab label="Faking" icon={<FakingIcon />} />
         </Tabs>
       </Paper>
       <Box>
@@ -169,6 +172,7 @@ export const SetEditor: React.FC<SetEditorProps> = ({
             <DomainSettings
               geo={settings.geo}
               config={editedSet}
+              stats={stats}
               onChange={handleChange}
             />
           </Stack>

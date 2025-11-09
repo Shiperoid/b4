@@ -521,7 +521,7 @@ export default function Settings() {
             >
               Cancel
             </Button>
-            <Box sx={{ flex: 1 }} />{" "}
+            <Box sx={{ flex: 1 }} />
             <Button
               onClick={resetChanges}
               variant="contained"

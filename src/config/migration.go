@@ -38,19 +38,18 @@ func (c *Config) migrateFromV1(old *ConfigV1) {
 
 	// Domains
 	c.Sets = []*SetConfig{
-		{
-			Name: "default",
-			Domains: DomainsConfig{
-				SNIDomains:        old.Domains.SNIDomains,
-				GeoSiteCategories: old.Domains.GeoSiteCategories,
-				GeoIpCategories:   old.Domains.GeoIpCategories,
-			},
-			Fragmentation: old.Fragmentation,
-			Faking:        old.Faking,
-			UDP:           old.UDP,
-			TCP:           TCPConfig{ConnBytesLimit: old.ConnBytesLimit, Seg2Delay: old.Seg2Delay},
-		},
+		&DefaultSetConfig,
 	}
+
+	c.Sets[0].Domains.GeoSiteCategories = old.Domains.GeoSiteCategories
+	c.Sets[0].Domains.GeoIpCategories = old.Domains.GeoIpCategories
+	c.Sets[0].Domains.SNIDomains = old.Domains.SNIDomains
+	c.Sets[0].TCP.ConnBytesLimit = old.ConnBytesLimit
+	c.Sets[0].TCP.Seg2Delay = old.Seg2Delay
+	c.Sets[0].UDP = old.UDP
+	c.Sets[0].Fragmentation = old.Fragmentation
+	c.Sets[0].Faking = old.Faking
+
 	c.MainSet = c.Sets[0]
 
 	// System settings
