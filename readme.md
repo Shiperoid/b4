@@ -117,7 +117,7 @@ Contributions are accepted through GitHub pull requests.
 
 ## Credits
 
-This project incorporates research and techniques from:
+Based on research from:
 
 - [youtubeUnblock](https://github.com/Waujito/youtubeUnblock) - C-based DPI bypass
 - [GoodbyeDPI](https://github.com/ValdikSS/GoodbyeDPI) - Windows DPI circumvention
