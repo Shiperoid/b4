@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	labelTarget = " TARGET"
+	labelTarget = " default"
 )
 
 func (w *Worker) Start() error {
@@ -152,9 +152,9 @@ func (w *Worker) Start() error {
 
 					if ok {
 						matched, st := matcher.Match(host) // Now returns (bool, *config.SetConfig)
-						target := ""
+						target := "-"
 						if matched {
-							target = labelTarget
+							target = set.Name
 							set = st
 						}
 
@@ -162,7 +162,7 @@ func (w *Worker) Start() error {
 						metrics.RecordConnection("TCP", host, fmt.Sprintf("%s:%d", src, sport), fmt.Sprintf("%s:%d", dst, dport), matched)
 						metrics.RecordPacket(uint64(len(raw)))
 
-						log.Infof("SNI TCP%v: %s %s:%d -> %s:%d", target, host, src.String(), sport, dst.String(), dport)
+						log.Infof("TCP|%v: %s %s:%d -> %s:%d", target, host, src.String(), sport, dst.String(), dport)
 
 						if matched {
 
@@ -202,12 +202,12 @@ func (w *Worker) Start() error {
 					if h, ok := sni.ParseQUICClientHelloSNI(payload); ok {
 						host = h
 						matched, st := matcher.Match(host)
-						target := ""
+						target := "-"
 						if matched {
-							target = labelTarget
+							target = set.Name
 							set = st
 						}
-						log.Infof("SNI UDP%v: %s %s:%d -> %s:%d", target, host, src.String(), sport, dst.String(), dport)
+						log.Infof("UDP|%v: %s %s:%d -> %s:%d", target, host, src.String(), sport, dst.String(), dport)
 
 						metrics := metrics.GetMetricsCollector()
 						metrics.RecordConnection("UDP", host, fmt.Sprintf("%s:%d", src, sport), fmt.Sprintf("%s:%d", dst, dport), matched)

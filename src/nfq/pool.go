@@ -94,7 +94,7 @@ func (w *Worker) rebuildMatcher(cfg *config.Config) {
 		m = sni.NewSuffixSet(cfg.Sets)
 		totalDomains := 0
 		for _, set := range cfg.Sets {
-			totalDomains += len(set.Domains.SNIDomains)
+			totalDomains += len(set.Domains.DomainsToMatch)
 		}
 		log.Tracef("Built matcher with %d domains across %d sets", totalDomains, len(cfg.Sets))
 	} else {
@@ -104,13 +104,14 @@ func (w *Worker) rebuildMatcher(cfg *config.Config) {
 	w.matcher.Store(m)
 }
 
-func (p *Pool) UpdateConfig(newCfg *config.Config) {
+func (p *Pool) UpdateConfig(newCfg *config.Config) error {
 	for _, w := range p.workers {
 		w.UpdateConfig(newCfg)
 	}
 	totalDomains := 0
 	for _, set := range newCfg.Sets {
-		totalDomains += len(set.Domains.SNIDomains)
+		totalDomains += len(set.Domains.DomainsToMatch)
 	}
 	log.Tracef("Updated all %d workers with %d domains", len(p.workers), totalDomains)
+	return nil
 }

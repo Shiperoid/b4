@@ -75,7 +75,8 @@ func (a *API) addGeositeDomain(w http.ResponseWriter, r *http.Request) {
 	set.Domains.SNIDomains = append(set.Domains.SNIDomains, req.Domain)
 	log.Infof("Added domain '%s' to set '%s' domains list", req.Domain, set.Id)
 
-	stats, err := a.applyDomainChanges(set)
+	err := a.saveAndPushConfig(a.cfg)
+
 	if err != nil {
 		log.Errorf("Failed to apply domain changes after adding domain: %v", err)
 		http.Error(w, "Failed to apply domain changes: "+err.Error(), http.StatusInternalServerError)
@@ -86,7 +87,7 @@ func (a *API) addGeositeDomain(w http.ResponseWriter, r *http.Request) {
 		Success:       true,
 		Message:       fmt.Sprintf("Successfully added domain '%s'", req.Domain),
 		Domain:        req.Domain,
-		TotalDomains:  stats.TotalDomains,
+		TotalDomains:  len(set.Domains.DomainsToMatch),
 		ManualDomains: set.Domains.SNIDomains,
 	}
 

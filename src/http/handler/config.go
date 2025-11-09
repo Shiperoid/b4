@@ -83,24 +83,34 @@ func (a *API) updateConfig(w http.ResponseWriter, r *http.Request) {
 	if newConfig.System.Geo.GeoSitePath != "" {
 
 		for _, set := range newConfig.Sets {
-			_, err := a.applyDomainChanges(set)
+			_, err := newConfig.GetDomainsForSet(set)
 			if err != nil {
-				log.Errorf("Failed to apply domain changes for set '%s': %v", set.Name, err)
+				log.Errorf("Failed to load domains for set '%s': %v", set.Name, err)
 			}
 
 			allDomainsCount += len(set.Domains.DomainsToMatch)
 			categories = append(categories, set.Domains.GeoSiteCategories...)
-			log.Infof("Loaded %d domains from geodata for set '%s'", len(set.Domains.DomainsToMatch), set.Name)
+
+			log.Infof("Loaded %d domains for set '%s' (manual: %d, geosite: %d)",
+				len(set.Domains.DomainsToMatch),
+				set.Name,
+				len(set.Domains.SNIDomains),
+				len(set.Domains.DomainsToMatch)-len(set.Domains.SNIDomains))
 		}
 
-		m := metrics.GetMetricsCollector()
-		m.RecordEvent("info", fmt.Sprintf("Loaded %d domains from geodata across %d sets",
-			allDomainsCount, len(newConfig.Sets)))
 	}
 
 	categoryBreakdown, _ := a.geodataManager.GetCategoryCounts(utils.FilterUniqueStrings(categories))
-	newConfig.SaveToFile(newConfig.ConfigPath)
-	*a.cfg = newConfig
+
+	if err := a.saveAndPushConfig(&newConfig); err != nil {
+		log.Errorf("Failed to update config: %v", err)
+		http.Error(w, "Failed to update config", http.StatusInternalServerError)
+		return
+	}
+
+	m := metrics.GetMetricsCollector()
+	m.RecordEvent("info", fmt.Sprintf("Loaded %d domains from geodata across %d sets", allDomainsCount, len(newConfig.Sets)))
+
 	response := map[string]interface{}{
 		"success": true,
 		"message": "Configuration updated successfully",
@@ -130,15 +140,18 @@ func (a *API) resetConfig(w http.ResponseWriter, r *http.Request) {
 	defaultCfg.System.WebServer.IsEnabled = a.cfg.System.WebServer.IsEnabled
 
 	for _, set := range a.cfg.Sets {
-		defaultCfg.Sets = append(defaultCfg.Sets, set)
 		set.ResetToDefaults()
-		_, err := a.applyDomainChanges(set)
-		if err != nil {
-			log.Errorf("Failed to apply domain changes for set '%s': %v", set.Name, err)
-		}
+		_, _ = defaultCfg.GetDomainsForSet(set)
+		defaultCfg.Sets = append(defaultCfg.Sets, set)
 	}
 
-	defaultCfg.MainSet.Domains = a.cfg.MainSet.Domains
+	defaultCfg.MainSet = defaultCfg.Sets[0]
+
+	if err := a.saveAndPushConfig(&defaultCfg); err != nil {
+		log.Errorf("Failed to reset config: %v", err)
+		http.Error(w, "Failed to reset config", http.StatusInternalServerError)
+		return
+	}
 
 	setJsonHeader(w)
 	w.WriteHeader(http.StatusOK)
@@ -148,37 +161,26 @@ func (a *API) resetConfig(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (a *API) saveAndPushConfig(cfg *config.Config) error {
+	if globalPool != nil {
+		err := globalPool.UpdateConfig(cfg)
+		if err != nil {
+			return fmt.Errorf("failed to update global pool config: %v", err)
+		}
+	}
+
+	err := cfg.SaveToFile(cfg.ConfigPath)
+	if err != nil {
+		return fmt.Errorf("failed to save config to file: %v", err)
+	}
+
+	*a.cfg = *cfg
+
+	return nil
+}
+
 type domainStats struct {
 	ManualDomains  int
 	GeositeDomains int
 	TotalDomains   int
-}
-
-func (a *API) applyDomainChanges(cfg *config.SetConfig) (domainStats, error) {
-	var err error
-	domains, err := a.cfg.GetDomainsForSet(cfg)
-	if err != nil {
-		return domainStats{}, log.Errorf("Failed to load set domains: %v", err)
-	}
-
-	geositeDomainsCount := len(cfg.Domains.DomainsToMatch) - len(cfg.Domains.SNIDomains)
-	if globalPool != nil {
-		globalPool.UpdateConfig(a.cfg)
-		log.Infof("Config pushed to all workers (manual: %d, geosite: %d, total unique: %d domains)",
-			len(cfg.Domains.SNIDomains), geositeDomainsCount, len(domains))
-	}
-
-	if a.cfg.ConfigPath != "" {
-		if err := a.cfg.SaveToFile(a.cfg.ConfigPath); err != nil {
-			log.Errorf("Failed to save config: %v", err)
-		} else {
-			log.Infof("Config saved to %s", a.cfg.ConfigPath)
-		}
-	}
-
-	return domainStats{
-		ManualDomains:  len(cfg.Domains.SNIDomains),
-		GeositeDomains: geositeDomainsCount,
-		TotalDomains:   len(cfg.Domains.DomainsToMatch),
-	}, nil
 }

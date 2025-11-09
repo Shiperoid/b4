@@ -9,7 +9,6 @@ import {
   Typography,
   Stack,
 } from "@mui/material";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import AddIcon from "@mui/icons-material/Add";
 import {
   SortableTableCell,
@@ -17,11 +16,12 @@ import {
 } from "@atoms/common/SortableTableCell";
 import { ProtocolChip } from "@atoms/common/ProtocolChip";
 import { colors } from "@design";
+import { B4Badge } from "@/components/atoms/common/B4Badge";
 
 export type SortColumn =
   | "timestamp"
   | "protocol"
-  | "isTarget"
+  | "set"
   | "domain"
   | "source"
   | "destination";
@@ -29,7 +29,7 @@ export type SortColumn =
 export interface ParsedLog {
   timestamp: string;
   protocol: "TCP" | "UDP";
-  isTarget: boolean;
+  set: string;
   domain: string;
   source: string;
   destination: string;
@@ -80,11 +80,10 @@ export const DomainsTable: React.FC<DomainsTableProps> = ({
               onSort={() => onSort("protocol")}
             />
             <SortableTableCell
-              label="Target"
-              active={sortColumn === "isTarget"}
-              direction={sortColumn === "isTarget" ? sortDirection : null}
-              onSort={() => onSort("isTarget")}
-              align="center"
+              label="Target Set"
+              active={sortColumn === "set"}
+              direction={sortColumn === "set" ? sortDirection : null}
+              onSort={() => onSort("set")}
             />
             <SortableTableCell
               label="Domain"
@@ -152,14 +151,11 @@ export const DomainsTable: React.FC<DomainsTableProps> = ({
                 </TableCell>
                 <TableCell
                   sx={{
-                    textAlign: "center",
                     borderBottom: `1px solid ${colors.border.light}`,
                   }}
                 >
-                  {log.isTarget && (
-                    <CheckCircleIcon
-                      sx={{ color: colors.secondary, fontSize: 18 }}
-                    />
+                  {log.set !== "-" && (
+                    <B4Badge badgeVariant="secondary" label={log.set} />
                   )}
                 </TableCell>
                 <TableCell

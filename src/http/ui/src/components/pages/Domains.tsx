@@ -12,7 +12,7 @@ import {
 } from "@hooks/useDomainActions";
 import { generateDomainVariants, loadSortState, saveSortState } from "@utils";
 import { colors } from "@design";
-import { useWebSocket } from "@/ctx/B4WsProvider";
+import { useWebSocket } from "@ctx/B4WsProvider";
 
 export default function Domains() {
   const {

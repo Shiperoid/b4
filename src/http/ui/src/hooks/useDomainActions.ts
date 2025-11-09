@@ -162,6 +162,7 @@ export function useFilteredLogs(
       // Check global filters (must match at least one field)
       for (const filterTerm of globalFilters) {
         const matches =
+          log.set.toLowerCase().includes(filterTerm) ||
           log.domain.toLowerCase().includes(filterTerm) ||
           log.source.toLowerCase().includes(filterTerm) ||
           log.protocol.toLowerCase().includes(filterTerm) ||
@@ -193,9 +194,6 @@ export function useSortedLogs(
         const str = typeof value === "string" ? value : "";
         return new Date(str.replaceAll(/\/+/g, "-")).getTime();
       }
-      if (column === "isTarget") {
-        return value ? 1 : 0;
-      }
       if (typeof value === "string") {
         return value.toLowerCase();
       }
@@ -206,8 +204,14 @@ export function useSortedLogs(
     }
 
     const sorted = [...filteredLogs].sort((a, b) => {
-      const aValue = normalizeSortValue(a[sortColumn], sortColumn);
-      const bValue = normalizeSortValue(b[sortColumn], sortColumn);
+      const aValue = normalizeSortValue(
+        a[sortColumn as keyof ParsedLog],
+        sortColumn
+      );
+      const bValue = normalizeSortValue(
+        b[sortColumn as keyof ParsedLog],
+        sortColumn
+      );
 
       if (aValue < bValue) {
         return sortDirection === "asc" ? -1 : 1;
