@@ -6,10 +6,11 @@ import SettingSelect from "@atoms/common/B4Select";
 import SettingTextField from "@atoms/common/B4TextField";
 import B4Slider from "@atoms/common/B4Slider";
 import { B4SetConfig } from "@models/Config";
+import B4Switch from "@/components/atoms/common/B4Switch";
 
 interface UdpSettingsProps {
   config: B4SetConfig;
-  onChange: (field: string, value: string | number) => void;
+  onChange: (field: string, value: string | boolean | number) => void;
 }
 
 const UDP_MODES = [
@@ -72,6 +73,14 @@ export const UdpSettings: React.FC<UdpSettingsProps> = ({
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>
+          <B4Switch
+            label="Ignore STUN Packets"
+            checked={config.udp.filter_stun}
+            onChange={(checked) => onChange("udp.filter_stun", checked)}
+            description="When enabled, STUN packets will be ignored"
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
           <B4Slider
             label="Fake Packet Size"
             value={config.udp.fake_len}
@@ -83,6 +92,7 @@ export const UdpSettings: React.FC<UdpSettingsProps> = ({
             helperText="Size of fake UDP packets"
           />
         </Grid>
+
         <Grid size={{ xs: 12, md: 6 }}>
           <B4Slider
             label="Fake Sequence Length"
@@ -94,6 +104,7 @@ export const UdpSettings: React.FC<UdpSettingsProps> = ({
             helperText="Number of fake packets to send"
           />
         </Grid>
+
         <Grid size={{ xs: 12, md: 6 }}>
           <Grid container spacing={1}>
             <Grid size={6}>
