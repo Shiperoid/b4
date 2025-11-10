@@ -2,10 +2,25 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
+	"github.com/daniellavrushin/b4/config"
 	"github.com/daniellavrushin/b4/log"
 )
+
+type AddGeoIpRequest struct {
+	Cidr  string `json:"cidr"`
+	SetId string `json:"set_id,omitempty"`
+}
+
+type AddIpResponse struct {
+	Success     bool     `json:"success"`
+	Message     string   `json:"message"`
+	Cidr        string   `json:"cidr"`
+	TotalCidrs  int      `json:"total_cidrs"`
+	ManualCidrs []string `json:"manual_cidrs,omitempty"`
+}
 
 func (api *API) RegisterGeoipApi() {
 	api.mux.HandleFunc("/api/geoip", api.handleGeoIp)
@@ -15,9 +30,68 @@ func (a *API) handleGeoIp(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		a.getGeoIpTags(w)
+	case http.MethodPut:
+		a.AddGeoIpTag(w, r)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
+}
+
+func (a *API) AddGeoIpTag(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPut {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var req AddGeoIpRequest
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&req); err != nil {
+		log.Errorf("Failed to decode add domain request: %v", err)
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if req.SetId == "" {
+		req.SetId = config.DefaultSetConfig.Id // Use default set ID if not provided
+	}
+
+	set := a.cfg.GetSetById(req.SetId)
+	if set == nil {
+		http.Error(w, fmt.Sprintf("Set with ID '%s' not found", req.SetId), http.StatusBadRequest)
+		return
+	}
+
+	if req.Cidr == "" {
+		http.Error(w, "CIDR cannot be empty", http.StatusBadRequest)
+		return
+	}
+
+	err := set.Targets.AppendIP(req.Cidr)
+	if err != nil {
+		log.Errorf("Failed to add CIDR to geoip set: %v", err)
+		http.Error(w, "Failed to add CIDR", http.StatusInternalServerError)
+		return
+	}
+
+	log.Infof("Added CIDR '%s' to set '%s' domains list", req.Cidr, set.Id)
+	err = a.saveAndPushConfig(a.cfg)
+
+	if err != nil {
+		log.Errorf("Failed to apply domain changes after adding domain: %v", err)
+		http.Error(w, "Failed to apply domain changes: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	response := AddIpResponse{
+		Success:     true,
+		Message:     fmt.Sprintf("Successfully added CIDR '%s'", req.Cidr),
+		Cidr:        req.Cidr,
+		TotalCidrs:  len(set.Targets.IPs),
+		ManualCidrs: set.Targets.IPs,
+	}
+
+	setJsonHeader(w)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
 func (a *API) getGeoIpTags(w http.ResponseWriter) {

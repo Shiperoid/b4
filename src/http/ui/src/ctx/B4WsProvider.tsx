@@ -1,3 +1,4 @@
+import { parseSniLogLine } from "@/utils/logs";
 import {
   createContext,
   useContext,
@@ -10,8 +11,10 @@ interface WebSocketContextType {
   logs: string[];
   domains: string[];
   pauseLogs: boolean;
+  showAll: boolean;
   pauseDomains: boolean;
   unseenDomainsCount: number;
+  setShowAll: (showAll: boolean) => void;
   setPauseLogs: (paused: boolean) => void;
   setPauseDomains: (paused: boolean) => void;
   clearLogs: () => void;
@@ -28,6 +31,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   const [domains, setDomains] = useState<string[]>([]);
   const [pauseLogs, setPauseLogs] = useState(false);
   const [pauseDomains, setPauseDomains] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const [unseenDomainsCount, setUnseenDomainsCount] = useState(0);
 
   useEffect(() => {
@@ -58,16 +62,20 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
 
     ws.onmessage = (ev) => {
       const line = String(ev.data);
+
       if (!pauseDomains) {
+        const log = parseSniLogLine(line);
         setDomains((prev) => [...prev.slice(-999), line]);
-        setUnseenDomainsCount((count) => count + 1);
+        if (log?.hostSet || log?.ipSet) {
+          setUnseenDomainsCount((count) => count + 1);
+        }
       }
     };
 
     ws.onerror = () => setDomains((prev) => [...prev, "[WS ERROR]"]);
 
     return () => ws.close();
-  }, [pauseDomains]);
+  }, [pauseDomains, showAll]);
 
   const clearLogs = useCallback(() => setLogs([]), []);
   const clearDomains = useCallback(() => {
@@ -87,6 +95,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         pauseLogs,
         pauseDomains,
         unseenDomainsCount,
+        showAll,
+        setShowAll,
         setPauseLogs,
         setPauseDomains,
         clearLogs,

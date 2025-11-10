@@ -8,6 +8,7 @@ import {
   TableRow,
   Typography,
   Stack,
+  Box,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import {
@@ -43,6 +44,7 @@ interface DomainsTableProps {
   sortDirection: SortDirection;
   onSort: (column: SortColumn) => void;
   onDomainClick: (domain: string) => void;
+  onIpClick: (ip: string) => void;
   tableRef: React.RefObject<HTMLDivElement>;
   onScroll: () => void;
 }
@@ -53,6 +55,7 @@ export const DomainsTable: React.FC<DomainsTableProps> = ({
   sortDirection,
   onSort,
   onDomainClick,
+  onIpClick,
   tableRef,
   onScroll,
 }) => {
@@ -79,12 +82,6 @@ export const DomainsTable: React.FC<DomainsTableProps> = ({
               active={sortColumn === "protocol"}
               direction={sortColumn === "protocol" ? sortDirection : null}
               onSort={() => onSort("protocol")}
-            />
-            <SortableTableCell
-              label="Target Set"
-              active={sortColumn === "set"}
-              direction={sortColumn === "set" ? sortDirection : null}
-              onSort={() => onSort("set")}
             />
             <SortableTableCell
               label="Domain"
@@ -150,15 +147,7 @@ export const DomainsTable: React.FC<DomainsTableProps> = ({
                 >
                   <ProtocolChip protocol={log.protocol} />
                 </TableCell>
-                <TableCell
-                  sx={{
-                    borderBottom: `1px solid ${colors.border.light}`,
-                  }}
-                >
-                  {log.hostSet !== "-" && (
-                    <B4Badge badgeVariant="secondary" label={log.hostSet} />
-                  )}
-                </TableCell>
+
                 <TableCell
                   sx={{
                     color: "text.primary",
@@ -170,11 +159,30 @@ export const DomainsTable: React.FC<DomainsTableProps> = ({
                       color: colors.secondary,
                     },
                   }}
-                  onClick={() => onDomainClick(log.domain)}
                 >
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography>{log.domain}</Typography>
-                    <AddIcon sx={{ fontSize: 16, opacity: 0.7 }} />
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    onClick={() =>
+                      log.domain && !log.hostSet && onDomainClick(log.domain)
+                    }
+                  >
+                    {log.domain && <Typography>{log.domain}</Typography>}
+                    <Box sx={{ flex: 1 }} />
+                    {log.domain &&
+                      (log.hostSet ? (
+                        <B4Badge badgeVariant="secondary" label={log.hostSet} />
+                      ) : (
+                        <AddIcon
+                          sx={{
+                            fontSize: 16,
+                            bgcolor: `${colors.secondary}88`,
+                            color: colors.background.default,
+                            borderRadius: "50%",
+                          }}
+                        />
+                      ))}
                   </Stack>
                 </TableCell>
                 <TableCell
@@ -189,16 +197,41 @@ export const DomainsTable: React.FC<DomainsTableProps> = ({
                 </TableCell>
                 <TableCell
                   sx={{
-                    color: "text.secondary",
-                    fontFamily: "monospace",
-                    fontSize: 12,
+                    color: "text.primary",
+                    fontWeight: 500,
                     borderBottom: `1px solid ${colors.border.light}`,
+                    cursor: "pointer",
+                    "&:hover": {
+                      bgcolor: colors.accent.primary,
+                      color: colors.secondary,
+                    },
                   }}
                 >
-                  {log.destination}
-                  {log.ipSet !== "-" && (
-                    <B4Badge badgeVariant="secondary" label={log.ipSet} />
-                  )}
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    onClick={() =>
+                      log.destination &&
+                      !log.ipSet &&
+                      onIpClick(log.destination)
+                    }
+                  >
+                    {log.destination}
+                    <Box sx={{ flex: 1 }} />
+                    {log.ipSet ? (
+                      <B4Badge badgeVariant="secondary" label={log.ipSet} />
+                    ) : (
+                      <AddIcon
+                        sx={{
+                          fontSize: 16,
+                          bgcolor: `${colors.secondary}88`,
+                          color: colors.background.default,
+                          borderRadius: "50%",
+                        }}
+                      />
+                    )}
+                  </Stack>
                 </TableCell>
               </TableRow>
             ))

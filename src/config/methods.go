@@ -7,6 +7,7 @@ import (
 
 	"github.com/daniellavrushin/b4/geodat"
 	"github.com/daniellavrushin/b4/log"
+	"github.com/daniellavrushin/b4/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -86,8 +87,7 @@ func (c *Config) BindFlags(cmd *cobra.Command) {
 	cmd.Flags().IntVar(&c.MainSet.UDP.FakeSeqLength, "udp-fake-seq-len", c.MainSet.UDP.FakeSeqLength, "UDP fake packet sequence length")
 	cmd.Flags().IntVar(&c.MainSet.UDP.FakeLen, "udp-fake-len", c.MainSet.UDP.FakeLen, "UDP fake packet size in bytes")
 	cmd.Flags().StringVar(&c.MainSet.UDP.FakingStrategy, "udp-faking-strategy", c.MainSet.UDP.FakingStrategy, "UDP faking strategy (none|ttl|checksum)")
-	cmd.Flags().IntVar(&c.MainSet.UDP.DPortMin, "udp-dport-min", c.MainSet.UDP.DPortMin, "Minimum UDP destination port to handle")
-	cmd.Flags().IntVar(&c.MainSet.UDP.DPortMax, "udp-dport-max", c.MainSet.UDP.DPortMax, "Maximum UDP destination port to handle")
+	cmd.Flags().StringVar(&c.MainSet.UDP.DPortFilter, "udp-dport-filter", c.MainSet.UDP.DPortFilter, "UDP destination port filter (comma separated list of ports and port ranges, e.g. '80,443,1000-2000')")
 	cmd.Flags().StringVar(&c.MainSet.UDP.FilterQUIC, "udp-filter-quic", c.MainSet.UDP.FilterQUIC, "QUIC filtering mode (disabled|all|parse)")
 	cmd.Flags().BoolVar(&c.MainSet.UDP.FilterSTUN, "udp-filter-stun", c.MainSet.UDP.FilterSTUN, "STUN filtering mode (disabled|all|parse)")
 	cmd.Flags().IntVar(&c.MainSet.UDP.ConnBytesLimit, "udp-conn-bytes-limit", c.MainSet.UDP.ConnBytesLimit, "UDP connection bytes limit (default 8)")
@@ -183,6 +183,8 @@ func (c *Config) Validate() error {
 					return fmt.Errorf("set '%s' has UDP ConnBytesLimit greater than main set", set.Name)
 				}
 			}
+
+			set.UDP.DPortFilter = utils.ValidatePorts(set.UDP.DPortFilter)
 		}
 	}
 
@@ -288,4 +290,40 @@ func (set *SetConfig) ResetToDefaults() {
 	set.Id = id
 	set.Name = name
 	set.Targets = targets
+}
+
+func (t *TargetsConfig) AppendIP(ip string) error {
+
+	for _, existingIP := range t.IPs {
+		if existingIP == ip {
+			return log.Errorf("IP '%s' already exists in the set", ip)
+		}
+	}
+	t.IPs = append(t.IPs, ip)
+
+	for _, existingIP := range t.IpsToMatch {
+		if existingIP == ip {
+			return log.Errorf("IP '%s' already exists in the set", ip)
+		}
+	}
+	t.IpsToMatch = append(t.IpsToMatch, ip)
+	return nil
+}
+
+func (t *TargetsConfig) AppendSNI(sni string) error {
+
+	for _, existingDomain := range t.SNIDomains {
+		if existingDomain == sni {
+			return log.Errorf("SNI '%s' already exists in the set", sni)
+		}
+	}
+	t.SNIDomains = append(t.SNIDomains, sni)
+
+	for _, existingDomain := range t.DomainsToMatch {
+		if existingDomain == sni {
+			return log.Errorf("SNI '%s' already exists in the set", sni)
+		}
+	}
+	t.DomainsToMatch = append(t.DomainsToMatch, sni)
+	return nil
 }

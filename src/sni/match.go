@@ -3,6 +3,7 @@ package sni
 import (
 	"net"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -99,12 +100,31 @@ func NewSuffixSet(sets []*config.SetConfig) *SuffixSet {
 			}
 		}
 
-		if set.UDP.DPortMin > 0 || set.UDP.DPortMax > 0 {
-			s.portRanges = append(s.portRanges, portRange{
-				min: set.UDP.DPortMin,
-				max: set.UDP.DPortMax,
-				set: set,
-			})
+		if set.UDP.DPortFilter != "" {
+			ports := strings.Split(set.UDP.DPortFilter, ",")
+			for _, part := range ports {
+				part = strings.TrimSpace(part)
+				if part == "" {
+					continue
+				}
+
+				if strings.Contains(part, "-") {
+					bounds := strings.SplitN(part, "-", 2)
+					if len(bounds) == 2 {
+						min, err1 := strconv.Atoi(bounds[0])
+						max, err2 := strconv.Atoi(bounds[1])
+						if err1 == nil && err2 == nil {
+							if min >= 0 && max >= 0 && min <= max {
+								s.portRanges = append(s.portRanges, portRange{min: min, max: max, set: set})
+							}
+						}
+					}
+					port, err := strconv.Atoi(part)
+					if err == nil && port >= 0 {
+						s.portRanges = append(s.portRanges, portRange{min: port, max: port, set: set})
+					}
+				}
+			}
 		}
 	}
 

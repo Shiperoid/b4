@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Container, Paper, Snackbar, Alert } from "@mui/material";
-import { DomainsControlBar } from "@molecules/domains/ControlBar";
-import { DomainAddModal } from "@organisms/domains/AddModal";
+import { DomainsControlBar } from "@/components/organisms/domains/ControlBar";
+import { AddSniModal } from "@/components/organisms/domains/AddSniModal";
 import { DomainsTable, SortColumn } from "@organisms/domains/Table";
 import { SortDirection } from "@atoms/common/SortableTableCell";
 import {
@@ -10,14 +10,24 @@ import {
   useFilteredLogs,
   useSortedLogs,
 } from "@hooks/useDomainActions";
-import { generateDomainVariants, loadSortState, saveSortState } from "@utils";
+
+import { useIpActions } from "@hooks/useIpActions";
+import {
+  generateDomainVariants,
+  loadSortState,
+  saveSortState,
+  generateIpVariants,
+} from "@utils";
 import { colors } from "@design";
 import { useWebSocket } from "@ctx/B4WsProvider";
+import { AddIpModal } from "../organisms/domains/AddIpModal";
 
 export default function Domains() {
   const {
     domains,
     pauseDomains,
+    showAll,
+    setShowAll,
     setPauseDomains,
     clearDomains,
     resetDomainsBadge,
@@ -45,6 +55,14 @@ export default function Domains() {
     closeSnackbar,
   } = useDomainActions();
 
+  const {
+    modalState: modalIpState,
+    openModal: openIpModal,
+    closeModal: closeIpModal,
+    selectVariant: selectIpVariant,
+    addIp,
+  } = useIpActions();
+
   useEffect(() => {
     saveSortState(sortColumn, sortDirection);
   }, [sortColumn, sortDirection]);
@@ -56,7 +74,7 @@ export default function Domains() {
     }
   }, [domains, autoScroll]);
 
-  const parsedLogs = useParsedLogs(domains);
+  const parsedLogs = useParsedLogs(domains, showAll);
   const filteredLogs = useFilteredLogs(parsedLogs, filter);
   const sortedData = useSortedLogs(filteredLogs, sortColumn, sortDirection);
 
@@ -88,6 +106,11 @@ export default function Domains() {
     setSortColumn(null);
     setSortDirection(null);
     setAutoScroll(true);
+  };
+
+  const handleIpClick = (ip: string) => {
+    const variants = generateIpVariants(ip);
+    openIpModal(ip, variants);
   };
 
   const handleDomainClick = (domain: string) => {
@@ -159,6 +182,8 @@ export default function Domains() {
           filteredCount={filteredLogs.length}
           sortColumn={sortColumn}
           paused={pauseDomains}
+          showAll={showAll}
+          onShowAllChange={setShowAll}
           onPauseChange={setPauseDomains}
           onClearSort={handleClearSort}
           onReset={clearDomains}
@@ -170,12 +195,13 @@ export default function Domains() {
           sortDirection={sortDirection}
           onSort={handleSort}
           onDomainClick={handleDomainClick}
+          onIpClick={handleIpClick}
           tableRef={tableRef}
           onScroll={handleScroll}
         />
       </Paper>
 
-      <DomainAddModal
+      <AddSniModal
         open={modalState.open}
         domain={modalState.domain}
         variants={modalState.variants}
@@ -184,6 +210,18 @@ export default function Domains() {
         onSelectVariant={selectVariant}
         onAdd={(...args) => {
           void addDomain(...args);
+        }}
+      />
+
+      <AddIpModal
+        open={modalIpState.open}
+        ip={modalIpState.ip}
+        variants={modalIpState.variants}
+        selected={modalIpState.selected}
+        onClose={closeIpModal}
+        onSelectVariant={selectIpVariant}
+        onAdd={(...args) => {
+          void addIp(...args);
         }}
       />
 

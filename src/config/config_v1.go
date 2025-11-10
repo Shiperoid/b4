@@ -7,6 +7,18 @@ import (
 	"github.com/daniellavrushin/b4/log"
 )
 
+type UDPConfigV1 struct {
+	Mode           string `json:"mode" bson:"mode"`
+	FakeSeqLength  int    `json:"fake_seq_length" bson:"fake_seq_length"`
+	FakeLen        int    `json:"fake_len" bson:"fake_len"`
+	FakingStrategy string `json:"faking_strategy" bson:"faking_strategy"`
+	DPortMin       int    `json:"dport_min" bson:"dport_min"`
+	DPortMax       int    `json:"dport_max" bson:"dport_max"`
+	FilterQUIC     string `json:"filter_quic" bson:"filter_quic"`
+	FilterSTUN     bool   `json:"filter_stun" bson:"filter_stun"`
+	ConnBytesLimit int    `json:"conn_bytes_limit" bson:"conn_bytes_limit"`
+}
+
 type ConfigV1 struct {
 	ConfigPath     string  `json:"-" bson:"-"`
 	QueueStartNum  int     `json:"queue_start_num" bson:"queue_start_num"`
@@ -21,7 +33,7 @@ type ConfigV1 struct {
 	Domains       DomainsConfig       `json:"domains" bson:"domains"`
 	Fragmentation FragmentationConfig `json:"fragmentation" bson:"fragmentation"`
 	Faking        FakingConfig        `json:"faking" bson:"faking"`
-	UDP           UDPConfig           `json:"udp" bson:"udp"`
+	UDP           UDPConfigV1         `json:"udp" bson:"udp"`
 
 	WebServer WebServerConfig `json:"web_server" bson:"web_server"`
 	Tables    TablesConfig    `json:"tables" bson:"tables"`
@@ -71,7 +83,7 @@ var DefaultConfigV1 = ConfigV1{
 		SeqOffset:     10000,
 	},
 
-	UDP: UDPConfig{
+	UDP: UDPConfigV1{
 		Mode:           "fake",
 		FakeSeqLength:  6,
 		FakeLen:        64,

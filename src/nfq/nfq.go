@@ -151,8 +151,8 @@ func (w *Worker) Start() error {
 				host := ""
 				matchedIP := matched
 				matchedSNI := false
-				ipTarget := "-"
-				sniTarget := "-"
+				ipTarget := ""
+				sniTarget := ""
 
 				if dport == HTTPSPort && len(payload) > 0 {
 					if h, ok := sni.ParseTLSClientHelloSNI(payload); ok {
@@ -172,7 +172,7 @@ func (w *Worker) Start() error {
 					sniTarget = set.Name
 				}
 
-				log.Infof("TCP: %s|%s %s:%d -> %s|%s:%d", sniTarget, host, src.String(), sport, ipTarget, dst.String(), dport)
+				log.Infof(",TCP,%s,%s,%s:%d,%s,%s:%d", sniTarget, host, src.String(), sport, ipTarget, dst.String(), dport)
 
 				if matched {
 					metrics := metrics.GetMetricsCollector()
@@ -227,12 +227,6 @@ func (w *Worker) Start() error {
 					return 0
 				}
 
-				// Check if QUIC filtering disabled
-				if set.UDP.FilterQUIC == "disabled" {
-					_ = q.SetVerdict(id, nfqueue.NfAccept)
-					return 0
-				}
-
 				if h, ok := sni.ParseQUICClientHelloSNI(payload); ok {
 					host = h
 					if mSNI, stSNI := matcher.MatchSNI(host); mSNI {
@@ -251,13 +245,8 @@ func (w *Worker) Start() error {
 					shouldHandle = matched // Either IP or SNI matched
 				}
 
-				if !shouldHandle {
-					_ = q.SetVerdict(id, nfqueue.NfAccept)
-					return 0
-				}
-
-				ipTarget := "-"
-				sniTarget := "-"
+				ipTarget := ""
+				sniTarget := ""
 				if matchedIP {
 					ipTarget = st.Name
 				}
@@ -268,11 +257,22 @@ func (w *Worker) Start() error {
 					sniTarget = set.Name
 				}
 
-				log.Infof("UDP: %s|%s %s:%d -> %s|%s:%d", sniTarget, host, src.String(), sport, ipTarget, dst.String(), dport)
+				log.Infof(",UDP,%s,%s,%s:%d,%s,%s:%d", sniTarget, host, src.String(), sport, ipTarget, dst.String(), dport)
 
 				metrics := metrics.GetMetricsCollector()
 				metrics.RecordConnection("UDP", host, fmt.Sprintf("%s:%d", src, sport), fmt.Sprintf("%s:%d", dst, dport), matched)
 				metrics.RecordPacket(uint64(len(raw)))
+
+				if !shouldHandle {
+					_ = q.SetVerdict(id, nfqueue.NfAccept)
+					return 0
+				}
+
+				// Check if QUIC filtering disabled
+				if set.UDP.FilterQUIC == "disabled" {
+					_ = q.SetVerdict(id, nfqueue.NfAccept)
+					return 0
+				}
 
 				if set.UDP.Mode == "drop" {
 					_ = q.SetVerdict(id, nfqueue.NfDrop)

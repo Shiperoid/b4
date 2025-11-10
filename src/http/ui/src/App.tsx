@@ -100,9 +100,9 @@ export default function App() {
           <Divider sx={{ borderColor: colors.border.default }} />
           <List>
             {navItems.map((item) => {
-              let badgeCount = 0;
+              let targetCount = 0;
               if (item.path === "/domains" && unseenDomainsCount > 0) {
-                badgeCount = unseenDomainsCount;
+                targetCount = unseenDomainsCount;
               }
 
               return (
@@ -125,9 +125,9 @@ export default function App() {
                     }}
                   >
                     <ListItemIcon sx={{ color: "inherit" }}>
-                      {badgeCount > 0 ? (
+                      {targetCount > 0 ? (
                         <Badge
-                          badgeContent={badgeCount}
+                          badgeContent={targetCount}
                           color="secondary"
                           max={999}
                         >

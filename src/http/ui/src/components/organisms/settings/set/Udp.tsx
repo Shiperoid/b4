@@ -106,30 +106,12 @@ export const UdpSettings: React.FC<UdpSettingsProps> = ({
         </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
-          <Grid container spacing={1}>
-            <Grid size={6}>
-              <SettingTextField
-                label="Dest Port Min"
-                type="number"
-                value={config.udp.dport_min}
-                onChange={(e) =>
-                  onChange("udp.dport_min", Number(e.target.value))
-                }
-                helperText="Minimum destination port"
-              />
-            </Grid>
-            <Grid size={6}>
-              <SettingTextField
-                label="Dest Port Max"
-                type="number"
-                value={config.udp.dport_max}
-                onChange={(e) =>
-                  onChange("udp.dport_max", Number(e.target.value))
-                }
-                helperText="Maximum destination port"
-              />
-            </Grid>
-          </Grid>
+          <SettingTextField
+            label="Destination Port Filter"
+            value={config.udp.dport_filter}
+            onChange={(e) => onChange("udp.dport_filter", e.target.value)}
+            helperText="Destination port filter, e.g., 80,443,1000-2000 (from 1 to 65535)"
+          />
         </Grid>
       </Grid>
     </SettingSection>

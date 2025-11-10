@@ -20,6 +20,8 @@ interface DomainsControlBarProps {
   sortColumn: string | null;
   paused: boolean;
   onPauseChange: (paused: boolean) => void;
+  showAll: boolean;
+  onShowAllChange: (showAll: boolean) => void;
   onClearSort: () => void;
   onReset: () => void;
 }
@@ -31,6 +33,8 @@ export const DomainsControlBar: React.FC<DomainsControlBarProps> = ({
   filteredCount,
   sortColumn,
   paused,
+  showAll,
+  onShowAllChange,
   onPauseChange,
   onClearSort,
   onReset,
@@ -98,6 +102,32 @@ export const DomainsControlBar: React.FC<DomainsControlBarProps> = ({
             />
           )}
         </Stack>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={showAll}
+              onChange={(e) => onShowAllChange(e.target.checked)}
+              sx={{
+                "& .MuiSwitch-switchBase.Mui-checked": {
+                  color: colors.secondary,
+                },
+                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                  backgroundColor: colors.secondary,
+                },
+              }}
+            />
+          }
+          label={
+            <Typography
+              sx={{
+                color: showAll ? colors.secondary : "text.secondary",
+                fontWeight: paused ? 600 : 400,
+              }}
+            >
+              {showAll ? "All packets" : "Domains only"}
+            </Typography>
+          }
+        />
         <FormControlLabel
           control={
             <Switch

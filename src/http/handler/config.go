@@ -69,11 +69,6 @@ func (a *API) updateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := newConfig.Validate(); err != nil {
-		log.Errorf("Invalid configuration: %v", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
 	newConfig.ConfigPath = a.cfg.ConfigPath
 
 	a.geodataManager.UpdatePaths(newConfig.System.Geo.GeoSitePath, newConfig.System.Geo.GeoIpPath)
@@ -82,22 +77,24 @@ func (a *API) updateConfig(w http.ResponseWriter, r *http.Request) {
 	allIpsCount := 0
 	categories := []string{}
 
-	if newConfig.System.Geo.GeoSitePath != "" {
-
-		for _, set := range newConfig.Sets {
-			_, _, err := newConfig.GetTargetsForSet(set)
-			if err != nil {
-				log.Errorf("Failed to load domains for set '%s': %v", set.Name, err)
-			}
-
-			allDomainsCount += len(set.Targets.DomainsToMatch)
-			allIpsCount += len(set.Targets.IPs)
-			categories = append(categories, set.Targets.GeoSiteCategories...)
+	for _, set := range newConfig.Sets {
+		_, _, err := newConfig.GetTargetsForSet(set)
+		if err != nil {
+			log.Errorf("Failed to load domains for set '%s': %v", set.Name, err)
 		}
 
+		allDomainsCount += len(set.Targets.DomainsToMatch)
+		allIpsCount += len(set.Targets.IPs)
+		categories = append(categories, set.Targets.GeoSiteCategories...)
 	}
 
 	categoryBreakdown, _ := a.geodataManager.GetCategoryCounts(utils.FilterUniqueStrings(categories))
+
+	if err := newConfig.Validate(); err != nil {
+		log.Errorf("Invalid configuration: %v", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	if err := a.saveAndPushConfig(&newConfig); err != nil {
 		log.Errorf("Failed to update config: %v", err)
@@ -107,6 +104,7 @@ func (a *API) updateConfig(w http.ResponseWriter, r *http.Request) {
 
 	m := metrics.GetMetricsCollector()
 	m.RecordEvent("info", fmt.Sprintf("Loaded %d domains from geodata across %d sets", allDomainsCount, len(newConfig.Sets)))
+	log.Infof("Loaded %d domains from geodata across %d sets", allDomainsCount, len(newConfig.Sets))
 
 	response := map[string]interface{}{
 		"success": true,

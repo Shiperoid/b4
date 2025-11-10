@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 
 	"github.com/daniellavrushin/b4/log"
@@ -46,10 +47,26 @@ func (c *Config) migrateFromV1(old *ConfigV1) {
 	c.Sets[0].Targets.SNIDomains = old.Domains.SNIDomains
 	c.Sets[0].TCP.ConnBytesLimit = old.ConnBytesLimit
 	c.Sets[0].TCP.Seg2Delay = old.Seg2Delay
-	c.Sets[0].UDP = old.UDP
+
 	c.Sets[0].Fragmentation = old.Fragmentation
 	c.Sets[0].Faking = old.Faking
 
+	c.Sets[0].UDP = UDPConfig{
+		Mode:           old.UDP.Mode,
+		FakeSeqLength:  old.UDP.FakeSeqLength,
+		FakeLen:        old.UDP.FakeLen,
+		FakingStrategy: old.UDP.FakingStrategy,
+		DPortFilter:    "",
+		FilterQUIC:     old.UDP.FilterQUIC,
+		FilterSTUN:     old.UDP.FilterSTUN,
+		ConnBytesLimit: old.UDP.ConnBytesLimit,
+	}
+
+	if old.UDP.DPortMin > 0 || old.UDP.DPortMax > 0 {
+		c.Sets[0].UDP.DPortFilter = fmt.Sprintf("%d-%d", old.UDP.DPortMin, old.UDP.DPortMax)
+	}
+
+	// Set main set pointer
 	c.MainSet = c.Sets[0]
 
 	// System settings

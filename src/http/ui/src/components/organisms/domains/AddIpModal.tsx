@@ -17,9 +17,9 @@ import { colors, button_primary, button_secondary } from "@design";
 import { B4Dialog } from "@molecules/common/B4Dialog";
 import { B4Badge } from "@/components/atoms/common/B4Badge";
 
-interface DomainAddModalProps {
+interface AddIpModalProps {
   open: boolean;
-  domain: string;
+  ip: string;
   variants: string[];
   selected: string;
   onClose: () => void;
@@ -27,9 +27,9 @@ interface DomainAddModalProps {
   onAdd: () => void;
 }
 
-export const DomainAddModal: React.FC<DomainAddModalProps> = ({
+export const AddIpModal: React.FC<AddIpModalProps> = ({
   open,
-  domain,
+  ip,
   variants,
   selected,
   onClose,
@@ -38,7 +38,7 @@ export const DomainAddModal: React.FC<DomainAddModalProps> = ({
 }) => {
   return (
     <B4Dialog
-      title="Add Domain to Manual List"
+      title="Add IP/CIDR to Manual List"
       icon={<DomainIcon />}
       open={open}
       onClose={onClose}
@@ -61,22 +61,21 @@ export const DomainAddModal: React.FC<DomainAddModalProps> = ({
               ...button_primary,
             }}
           >
-            Add Domain
+            Add IP/CIDR
           </Button>
         </>
       }
     >
       <>
         <Alert severity="info" sx={{ mb: 2 }}>
-          Select which domain pattern to add to the manual domains list. More
-          specific patterns will only match exact subdomains, while broader
-          patterns will match all subdomains.
+          Select the desired IP or CIDR range to add to the Manual List.{" "}
+          {variants.length} variants are available based on specificity.
         </Alert>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-          Original domain: <B4Badge label={domain} badgeVariant="secondary" />
+          Original IP: <B4Badge label={ip} badgeVariant="secondary" />
         </Typography>
         <List>
-          {variants.map((variant, index) => (
+          {variants.map((variant) => (
             <ListItem key={variant} disablePadding>
               <ListItemButton
                 onClick={() => onSelectVariant(variant)}
@@ -105,12 +104,26 @@ export const DomainAddModal: React.FC<DomainAddModalProps> = ({
                 </ListItemIcon>
                 {(() => {
                   let secondaryText: string;
-                  if (index === 0) {
-                    secondaryText = "Most specific - exact match only";
-                  } else if (index === variants.length - 1) {
-                    secondaryText = "Broadest - matches all subdomains";
+                  const [baseIp, cidr] = variant.split("/");
+
+                  if (cidr === "32" || cidr === "128") {
+                    secondaryText = "Single IP - exact match only";
+                  } else if (cidr === "24") {
+                    const base = baseIp.substring(0, baseIp.lastIndexOf("."));
+                    secondaryText = `~256 IPs - local subnet (${base}.0-255)`;
+                  } else if (cidr === "16") {
+                    const base = baseIp.substring(0, baseIp.lastIndexOf("."));
+                    const prefix = base.substring(0, base.lastIndexOf("."));
+                    secondaryText = `~65K IPs - network block (${prefix}.0.0-255.255)`;
+                  } else if (cidr === "8") {
+                    const first = baseIp.split(".")[0];
+                    secondaryText = `~16M IPs - entire class A (${first}.0.0.0-255.255.255)`;
+                  } else if (cidr === "64") {
+                    secondaryText = "IPv6 subnet - standard network";
+                  } else if (cidr === "48") {
+                    secondaryText = "IPv6 site - organization range";
                   } else {
-                    secondaryText = "Intermediate specificity";
+                    secondaryText = "IPv6 ISP/large organization range";
                   }
                   return (
                     <ListItemText primary={variant} secondary={secondaryText} />

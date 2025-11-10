@@ -26,8 +26,7 @@ type UDPConfig struct {
 	FakeSeqLength  int    `json:"fake_seq_length" bson:"fake_seq_length"`
 	FakeLen        int    `json:"fake_len" bson:"fake_len"`
 	FakingStrategy string `json:"faking_strategy" bson:"faking_strategy"`
-	DPortMin       int    `json:"dport_min" bson:"dport_min"`
-	DPortMax       int    `json:"dport_max" bson:"dport_max"`
+	DPortFilter    string `json:"dport_filter" bson:"dport_filter"` // can be a comma separated list of ports and port ranges, e.g. "80,443,1000-2000"
 	FilterQUIC     string `json:"filter_quic" bson:"filter_quic"`
 	FilterSTUN     bool   `json:"filter_stun" bson:"filter_stun"`
 	ConnBytesLimit int    `json:"conn_bytes_limit" bson:"conn_bytes_limit"`

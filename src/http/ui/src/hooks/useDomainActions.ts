@@ -57,7 +57,7 @@ export function useDomainActions() {
 
     try {
       const response = await fetch("/api/geosite/domain", {
-        method: "POST",
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
@@ -106,12 +106,15 @@ export function useDomainActions() {
 }
 
 // Hook to parse logs
-export function useParsedLogs(lines: string[]): ParsedLog[] {
+export function useParsedLogs(lines: string[], showAll: boolean): ParsedLog[] {
   return useMemo(() => {
     return lines
       .map(parseSniLogLine)
-      .filter((log): log is ParsedLog => log !== null);
-  }, [lines]);
+      .filter(
+        (log): log is ParsedLog =>
+          log !== null && (showAll || log.domain !== "")
+      );
+  }, [lines, showAll]);
 }
 
 // Hook to filter logs
@@ -150,7 +153,7 @@ export function useFilteredLogs(
       }
     }
 
-    return parsedLogs.filter((log) => {
+    return parsedLogs.filter((log: ParsedLog) => {
       // Check field-specific filters (OR within field, AND across fields)
       for (const [field, values] of Object.entries(fieldFilters)) {
         const fieldValue =
@@ -161,12 +164,14 @@ export function useFilteredLogs(
 
       // Check global filters (must match at least one field)
       for (const filterTerm of globalFilters) {
-        const matches =
-          log.set.toLowerCase().includes(filterTerm) ||
-          log.domain.toLowerCase().includes(filterTerm) ||
-          log.source.toLowerCase().includes(filterTerm) ||
-          log.protocol.toLowerCase().includes(filterTerm) ||
-          log.destination.toLowerCase().includes(filterTerm);
+        const matches = [
+          log.hostSet,
+          log.ipSet,
+          log.domain,
+          log.source,
+          log.protocol,
+          log.destination,
+        ].some((value) => value?.toLowerCase().includes(filterTerm) ?? false);
         if (!matches) return false;
       }
 
