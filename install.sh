@@ -24,11 +24,11 @@ GEOSITE_SRC=""
 GEOSITE_DST=""
 
 # geodat sources (pipe-delimited: number|name|url)
-GEODAT_SOURCES="1|Loyalsoldier source|https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/
-2|RUNET Freedom source|https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/
-3|Nidelon source|https://github.com/Nidelon/ru-block-v2ray-rules/releases/latest/download/
-4|DustinWin source|https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo/
-5|Chocolate4U source|https://raw.githubusercontent.com/Chocolate4U/Iran-v2ray-rules/release/"
+GEODAT_SOURCES="1|Loyalsoldier source|https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download
+2|RUNET Freedom source|https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release
+3|Nidelon source|https://github.com/Nidelon/ru-block-v2ray-rules/releases/latest/download
+4|DustinWin source|https://github.com/DustinWin/ruleset_geodata/releases/download/mihomo
+5|Chocolate4U source|https://raw.githubusercontent.com/Chocolate4U/Iran-v2ray-rules/release"
 
 # Colors for output (if terminal supports it)
 if [ -t 1 ]; then
@@ -691,6 +691,8 @@ install_b4() {
 
     rm -f "/opt/etc/init.d/S99b4" 2>/dev/null || true # remove legacy script
     rm -f "/etc/init.d/b4" 2>/dev/null || true        # remove legacy script
+    rm -f "/var/log/b4.log" 2>/dev/null || true       # remove legacy log
+
     # Extract the binary
     print_info "Extracting archive..."
     cd "$TEMP_DIR"
@@ -813,42 +815,14 @@ create_sysv_service() {
 #!/bin/sh
 
 # B4 DPI Bypass Service Init Script
-PROG=PROG_PLACEHOLDER
-CONFIG_FILE=CONFIG_PLACEHOLDER
-PIDFILE=/var/run/b4.pid
 
-start() {
-    echo "Starting b4..."
-    if [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null; then
-        echo "b4 is already running"
-        return 1
-    fi
+ENABLED=yes
+PROCS=b4
+ARGS="--config=CONFIG_PLACEHOLDER"
+PREARGS=""
+DESC="$PROCS"
+PATH=/opt/sbin:/opt/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-    kernel_mod_load
-
-    nohup $PROG --config $CONFIG_FILE > /var/log/b4.log 2>&1 &
-    echo $! > "$PIDFILE"
-    sleep 1
-    # Verify it's actually running
-    if kill -0 $(cat "$PIDFILE") 2>/dev/null; then
-        echo "b4 started (PID: $(cat "$PIDFILE"))"
-    else
-        echo "Warning: b4 may have failed to start, check /var/log/b4.log"
-        rm -f "$PIDFILE"
-        return 1
-    fi
-}
-
-stop() {
-    echo "Stopping b4..."
-    if [ -f "$PIDFILE" ]; then
-        kill $(cat "$PIDFILE") 2>/dev/null
-        rm -f "$PIDFILE"
-        echo "b4 stopped"
-    else
-        echo "b4 is not running"
-    fi
-}
 
 kernel_mod_load() {
 	KERNEL=$(uname -r)
@@ -867,24 +841,13 @@ kernel_mod_load() {
 	(modprobe xt_NFQUEUE --first-time >/dev/null 2>&1 && echo "xt_NFQUEUE loaded") || true
 }
 
+if [ "$1" = "start" ] || [ "$1" = "restart" ]
+then
+    kernel_mod_load
+fi
 
-case "$1" in
-    start)
-        start
-        ;;
-    stop)
-        stop
-        ;;
-    restart)
-        stop
-        sleep 1
-        start
-        ;;
-    *)
-        echo "Usage: $0 {start|stop|restart}"
-        exit 1
-        ;;
-esac
+. /opt/etc/init.d/rc.func
+
 EOF
 
         chmod +x "${INIT_FULL_PATH}"
