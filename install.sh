@@ -819,7 +819,7 @@ create_sysv_service() {
 ENABLED=yes
 PROCS=b4
 ARGS="--config=CONFIG_PLACEHOLDER"
-PREARGS=""
+PREARGS="nohup"
 DESC="$PROCS"
 PATH=/opt/sbin:/opt/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
