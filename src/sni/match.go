@@ -69,7 +69,9 @@ func NewSuffixSet(sets []*config.SetConfig) *SuffixSet {
 
 			// Regular domain
 			d = strings.TrimRight(d, ".")
-			s.sets[d] = set
+			if _, exists := s.sets[d]; !exists {
+				s.sets[d] = set
+			}
 		}
 
 		for _, ipStr := range set.Targets.IpsToMatch {
@@ -119,6 +121,7 @@ func NewSuffixSet(sets []*config.SetConfig) *SuffixSet {
 							}
 						}
 					}
+				} else {
 					port, err := strconv.Atoi(part)
 					if err == nil && port >= 0 {
 						s.portRanges = append(s.portRanges, portRange{min: port, max: port, set: set})
@@ -142,13 +145,10 @@ func (s *SuffixSet) MatchUDPPort(dport uint16) (bool, *config.SetConfig) {
 		matched := false
 
 		if r.min > 0 && r.max > 0 {
-			// Both set: check range
 			matched = port >= r.min && port <= r.max
 		} else if r.min > 0 {
-			// Only min set
 			matched = port >= r.min
 		} else if r.max > 0 {
-			// Only max set
 			matched = port <= r.max
 		}
 
