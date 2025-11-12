@@ -51,43 +51,47 @@ export function useIpActions() {
     setModalState((prev) => ({ ...prev, selected: variant }));
   }, []);
 
-  const addIp = useCallback(async () => {
-    if (!modalState.selected) return;
+  const addIp = useCallback(
+    async (setId: string) => {
+      if (!modalState.selected) return;
 
-    try {
-      const response = await fetch("/api/geoip", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          cidr: modalState.selected,
-        }),
-      });
-
-      if (response.ok) {
-        setSnackbar({
-          open: true,
-          message: `Successfully added "${modalState.selected}" to manual ips`,
-          severity: "success",
+      try {
+        const response = await fetch("/api/geoip", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            cidr: modalState.selected,
+            set_id: setId,
+          }),
         });
-        closeModal();
-      } else {
-        const error = (await response.json()) as { message: string };
+
+        if (response.ok) {
+          setSnackbar({
+            open: true,
+            message: `Successfully added "${modalState.selected}" to manual ips`,
+            severity: "success",
+          });
+          closeModal();
+        } else {
+          const error = (await response.json()) as { message: string };
+          setSnackbar({
+            open: true,
+            message: `Failed to add ip: ${error.message}`,
+            severity: "error",
+          });
+        }
+      } catch (error) {
         setSnackbar({
           open: true,
-          message: `Failed to add ip: ${error.message}`,
+          message: `Error adding ip: ${String(error)}`,
           severity: "error",
         });
       }
-    } catch (error) {
-      setSnackbar({
-        open: true,
-        message: `Error adding ip: ${String(error)}`,
-        severity: "error",
-      });
-    }
-  }, [modalState.selected, closeModal]);
+    },
+    [modalState.selected, closeModal]
+  );
 
   const closeSnackbar = useCallback(() => {
     setSnackbar((prev) => ({ ...prev, open: false }));

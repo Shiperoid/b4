@@ -10,21 +10,27 @@ import {
   ListItemIcon,
   Radio,
   Box,
+  FormControl,
+  Select,
+  InputLabel,
+  MenuItem,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DomainIcon from "@mui/icons-material/Language";
 import { colors, button_primary, button_secondary } from "@design";
 import { B4Dialog } from "@molecules/common/B4Dialog";
 import { B4Badge } from "@/components/atoms/common/B4Badge";
+import { B4SetConfig } from "@/models/Config";
 
 interface AddSniModalProps {
   open: boolean;
   domain: string;
   variants: string[];
   selected: string;
+  sets: B4SetConfig[];
   onClose: () => void;
   onSelectVariant: (variant: string) => void;
-  onAdd: () => void;
+  onAdd: (setId: string) => void;
 }
 
 export const AddSniModal: React.FC<AddSniModalProps> = ({
@@ -32,10 +38,22 @@ export const AddSniModal: React.FC<AddSniModalProps> = ({
   domain,
   variants,
   selected,
+  sets,
   onClose,
   onSelectVariant,
   onAdd,
 }) => {
+  const [selectedSetId, setSelectedSetId] = React.useState<string>("");
+  const handleAdd = () => {
+    onAdd(selectedSetId);
+  };
+
+  React.useEffect(() => {
+    if (open && sets.length > 0) {
+      setSelectedSetId("11111111-1111-1111-1111-111111111111");
+    }
+  }, [open, sets]);
+
   return (
     <B4Dialog
       title="Add Domain to Manual List"
@@ -53,10 +71,10 @@ export const AddSniModal: React.FC<AddSniModalProps> = ({
           </Button>
           <Box sx={{ flex: 1 }} />
           <Button
-            onClick={onAdd}
+            onClick={handleAdd}
             variant="contained"
             startIcon={<AddIcon />}
-            disabled={!selected}
+            disabled={!selected || !selectedSetId}
             sx={{
               ...button_primary,
             }}
@@ -75,6 +93,28 @@ export const AddSniModal: React.FC<AddSniModalProps> = ({
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           Original domain: <B4Badge label={domain} badgeVariant="secondary" />
         </Typography>
+        {sets.length > 0 && (
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Target Set</InputLabel>
+            <Select
+              value={selectedSetId}
+              label="Target Set"
+              onChange={(e) => setSelectedSetId(e.target.value)}
+              sx={{
+                bgcolor: colors.background.dark,
+                "& fieldset": {
+                  borderColor: `${colors.border.default} !important`,
+                },
+              }}
+            >
+              {sets.map((set) => (
+                <MenuItem key={set.id} value={set.id}>
+                  {set.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
         <List>
           {variants.map((variant, index) => (
             <ListItem key={variant} disablePadding>

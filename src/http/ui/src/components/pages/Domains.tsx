@@ -21,6 +21,7 @@ import {
 import { colors } from "@design";
 import { useWebSocket } from "@ctx/B4WsProvider";
 import { AddIpModal } from "../organisms/domains/AddIpModal";
+import { B4Config, B4SetConfig } from "@/models/Config";
 
 export default function Domains() {
   const {
@@ -77,6 +78,24 @@ export default function Domains() {
   const parsedLogs = useParsedLogs(domains, showAll);
   const filteredLogs = useFilteredLogs(parsedLogs, filter);
   const sortedData = useSortedLogs(filteredLogs, sortColumn, sortDirection);
+  const [availableSets, setAvailableSets] = useState<B4SetConfig[]>([]);
+
+  useEffect(() => {
+    const fetchSets = async () => {
+      try {
+        const response = await fetch("/api/config");
+        if (response.ok) {
+          const data = (await response.json()) as B4Config;
+          if (data.sets && Array.isArray(data.sets)) {
+            setAvailableSets(data.sets);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch sets:", error);
+      }
+    };
+    void fetchSets();
+  }, []);
 
   const handleScroll = () => {
     const el = tableRef.current;
@@ -208,6 +227,7 @@ export default function Domains() {
         selected={modalState.selected}
         onClose={closeModal}
         onSelectVariant={selectVariant}
+        sets={availableSets}
         onAdd={(...args) => {
           void addDomain(...args);
         }}
@@ -218,6 +238,7 @@ export default function Domains() {
         ip={modalIpState.ip}
         variants={modalIpState.variants}
         selected={modalIpState.selected}
+        sets={availableSets}
         onClose={closeIpModal}
         onSelectVariant={selectIpVariant}
         onAdd={(...args) => {

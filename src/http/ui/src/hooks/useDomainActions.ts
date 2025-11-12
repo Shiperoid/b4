@@ -52,43 +52,47 @@ export function useDomainActions() {
     setModalState((prev) => ({ ...prev, selected: variant }));
   }, []);
 
-  const addDomain = useCallback(async () => {
-    if (!modalState.selected) return;
+  const addDomain = useCallback(
+    async (setId: string) => {
+      if (!modalState.selected) return;
 
-    try {
-      const response = await fetch("/api/geosite/domain", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          domain: modalState.selected,
-        }),
-      });
-
-      if (response.ok) {
-        setSnackbar({
-          open: true,
-          message: `Successfully added "${modalState.selected}" to manual domains`,
-          severity: "success",
+      try {
+        const response = await fetch("/api/geosite/domain", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            domain: modalState.selected,
+            set_id: setId,
+          }),
         });
-        closeModal();
-      } else {
-        const error = (await response.json()) as { message: string };
+
+        if (response.ok) {
+          setSnackbar({
+            open: true,
+            message: `Successfully added "${modalState.selected}" to manual domains`,
+            severity: "success",
+          });
+          closeModal();
+        } else {
+          const error = (await response.json()) as { message: string };
+          setSnackbar({
+            open: true,
+            message: `Failed to add domain: ${error.message}`,
+            severity: "error",
+          });
+        }
+      } catch (error) {
         setSnackbar({
           open: true,
-          message: `Failed to add domain: ${error.message}`,
+          message: `Error adding domain: ${String(error)}`,
           severity: "error",
         });
       }
-    } catch (error) {
-      setSnackbar({
-        open: true,
-        message: `Error adding domain: ${String(error)}`,
-        severity: "error",
-      });
-    }
-  }, [modalState.selected, closeModal]);
+    },
+    [modalState.selected, closeModal]
+  );
 
   const closeSnackbar = useCallback(() => {
     setSnackbar((prev) => ({ ...prev, open: false }));
