@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/daniellavrushin/b4/checker"
+	"github.com/daniellavrushin/b4/config"
 	"github.com/daniellavrushin/b4/log"
 	"github.com/daniellavrushin/b4/utils"
+	"github.com/google/uuid"
 )
 
 func (api *API) RegisterCheckApi() {
@@ -16,6 +18,7 @@ func (api *API) RegisterCheckApi() {
 	api.mux.HandleFunc("/api/check/discovery", api.handleStartDiscovery)
 	api.mux.HandleFunc("/api/check/status", api.handleCheckStatus)
 	api.mux.HandleFunc("/api/check/cancel", api.handleCancelCheck)
+	api.mux.HandleFunc("/api/check/add", api.handleAddPresetAsSet)
 }
 
 func (api *API) handleStartCheck(w http.ResponseWriter, r *http.Request) {
@@ -191,4 +194,42 @@ func (api *API) handleStartDiscovery(w http.ResponseWriter, r *http.Request) {
 	setJsonHeader(w)
 	w.WriteHeader(http.StatusAccepted)
 	json.NewEncoder(w).Encode(response)
+}
+
+func (api *API) handleAddPresetAsSet(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var set config.SetConfig
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&set); err != nil {
+		log.Errorf("Failed to decode config update: %v", err)
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	set.Id = uuid.New().String()
+	set.Name = set.Targets.SNIDomains[0]
+	set.Targets.DomainsToMatch = []string{set.Targets.SNIDomains[0]}
+
+	api.cfg.Sets = append([]*config.SetConfig{&set}, api.cfg.Sets...)
+
+	if api.cfg.MainSet == nil {
+		api.cfg.MainSet = &set
+	}
+
+	// Save configuration
+	if err := api.saveAndPushConfig(api.cfg); err != nil {
+		log.Errorf("Failed to save config: %v", err)
+		http.Error(w, "Failed to save configuration", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": fmt.Sprintf("Added '%s' configuration", set.Name),
+	})
 }

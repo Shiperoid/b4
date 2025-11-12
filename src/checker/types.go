@@ -18,17 +18,18 @@ const (
 )
 
 type CheckResult struct {
-	Domain      string        `json:"domain"`
-	Category    string        `json:"category"`
-	Status      CheckStatus   `json:"status"`
-	Duration    time.Duration `json:"duration"`
-	Speed       float64       `json:"speed"`
-	BytesRead   int64         `json:"bytes_read"`
-	Error       string        `json:"error,omitempty"`
-	Timestamp   time.Time     `json:"timestamp"`
-	IsBaseline  bool          `json:"is_baseline"`
-	Improvement float64       `json:"improvement"`
-	StatusCode  int           `json:"status_code"`
+	Domain      string            `json:"domain"`
+	Category    string            `json:"category"`
+	Status      CheckStatus       `json:"status"`
+	Duration    time.Duration     `json:"duration"`
+	Speed       float64           `json:"speed"`
+	BytesRead   int64             `json:"bytes_read"`
+	Error       string            `json:"error,omitempty"`
+	Timestamp   time.Time         `json:"timestamp"`
+	IsBaseline  bool              `json:"is_baseline"`
+	Improvement float64           `json:"improvement"`
+	StatusCode  int               `json:"status_code"`
+	Set         *config.SetConfig `json:"set"`
 }
 
 type CheckSuite struct {
@@ -77,13 +78,14 @@ type ConfigTestMode struct {
 }
 
 type DomainPresetResult struct {
-	PresetName string        `json:"preset_name"`
-	Status     CheckStatus   `json:"status"`
-	Duration   time.Duration `json:"duration"`
-	Speed      float64       `json:"speed"`
-	BytesRead  int64         `json:"bytes_read"`
-	Error      string        `json:"error,omitempty"`
-	StatusCode int           `json:"status_code"`
+	PresetName string            `json:"preset_name"`
+	Status     CheckStatus       `json:"status"`
+	Duration   time.Duration     `json:"duration"`
+	Speed      float64           `json:"speed"`
+	BytesRead  int64             `json:"bytes_read"`
+	Error      string            `json:"error,omitempty"`
+	StatusCode int               `json:"status_code"`
+	Set        *config.SetConfig `json:"set"`
 }
 
 type DomainDiscoveryResult struct {

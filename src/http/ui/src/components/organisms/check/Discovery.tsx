@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Button,
@@ -10,31 +11,22 @@ import {
   Divider,
   Chip,
   Grid,
+  IconButton,
+  Tooltip,
+  Snackbar,
+  Alert as MuiAlert,
+  CircularProgress,
 } from "@mui/material";
 import {
   PlayArrow as StartIcon,
   Stop as StopIcon,
   Refresh as RefreshIcon,
+  Add as AddIcon,
+  Speed as SpeedIcon,
 } from "@mui/icons-material";
 import { colors } from "@design";
 import { useConfigLoad } from "@hooks/useConfig";
-
-interface PresetSummary {
-  average_speed: number;
-  success_rate: number;
-  fastest_domain: string;
-  slowest_domain: string;
-}
-
-interface DiscoverySuite {
-  id: string;
-  status: "pending" | "running" | "complete" | "failed" | "canceled";
-  start_time: string;
-  end_time: string;
-  total_checks: number;
-  completed_checks: number;
-  preset_results?: Record<string, PresetSummary>;
-}
+import { B4SetConfig } from "@/models/Config";
 
 interface DomainPresetResult {
   preset_name: string;
@@ -44,6 +36,7 @@ interface DomainPresetResult {
   bytes_read: number;
   error?: string;
   status_code: number;
+  set?: B4SetConfig;
 }
 
 interface DomainDiscoveryResult {
@@ -70,10 +63,17 @@ interface ConfigDetail {
 }
 
 export const DiscoveryRunner: React.FC = () => {
+  const navigate = useNavigate();
   const [running, setRunning] = useState(false);
   const [suiteId, setSuiteId] = useState<string | null>(null);
   const [suite, setSuite] = useState<DiscoverySuite | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [addingPreset, setAddingPreset] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: "success" | "error";
+  }>({ open: false, message: "", severity: "success" });
   const { config } = useConfigLoad();
 
   // Poll for discovery status
@@ -100,7 +100,7 @@ export const DiscoveryRunner: React.FC = () => {
 
     const interval = setInterval(() => {
       void fetchStatus();
-    }, 2000); // Poll every 2 seconds for discovery (slower process)
+    }, 2000);
 
     return () => clearInterval(interval);
   }, [suiteId, running]);
@@ -155,6 +155,63 @@ export const DiscoveryRunner: React.FC = () => {
     setSuite(null);
     setError(null);
     setRunning(false);
+  };
+
+  const handleAddStrategy = async (
+    domain: string,
+    result: DomainPresetResult
+  ) => {
+    if (!result.set) {
+      setSnackbar({
+        open: true,
+        message: "Configuration data not available",
+        severity: "error",
+      });
+      return;
+    }
+
+    setAddingPreset(`${domain}-${result.preset_name}`);
+
+    try {
+      const configToAdd = {
+        ...result.set,
+        targets: {
+          ...result.set.targets,
+          sni_domains: [domain],
+        },
+      };
+
+      const response = await fetch("/api/check/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(configToAdd),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add configuration");
+      }
+
+      const data = (await response.json()) as { message: string };
+
+      setSnackbar({
+        open: true,
+        message: `✅ ${data.message}`,
+        severity: "success",
+      });
+
+      setTimeout(() => {
+        navigate("/settings");
+      }, 1500);
+    } catch (err) {
+      console.error("Failed to add strategy:", err);
+      setSnackbar({
+        open: true,
+        message: "Failed to add configuration",
+        severity: "error",
+      });
+    } finally {
+      setAddingPreset(null);
+    }
   };
 
   const progress = suite
@@ -476,26 +533,91 @@ export const DiscoveryRunner: React.FC = () => {
                     {/* Configuration Details */}
                     {domainResult.best_success && (
                       <Box sx={{ p: 3 }}>
-                        <Box sx={{ mb: 2 }}>
-                          <Typography
-                            variant="subtitle2"
+                        <Box
+                          sx={{
+                            mb: 2,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <Box
                             sx={{
-                              color: colors.text.secondary,
-                              mb: 1,
-                              textTransform: "uppercase",
-                              fontSize: "0.7rem",
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 2,
                             }}
                           >
-                            Best Configuration
-                          </Typography>
-                          <Chip
-                            label={domainResult.best_preset}
-                            sx={{
-                              bgcolor: colors.accent.secondary,
-                              color: colors.secondary,
-                              fontWeight: 600,
+                            <Typography
+                              variant="subtitle2"
+                              sx={{
+                                color: colors.text.secondary,
+                                textTransform: "uppercase",
+                                fontSize: "0.7rem",
+                              }}
+                            >
+                              Best Configuration
+                            </Typography>
+                            <Chip
+                              icon={<SpeedIcon />}
+                              label={`${domainResult.best_preset} • ${(
+                                domainResult.best_speed /
+                                1024 /
+                                1024
+                              ).toFixed(2)} MB/s`}
+                              sx={{
+                                bgcolor: colors.accent.secondary,
+                                color: colors.secondary,
+                                fontWeight: 600,
+                                "& .MuiChip-icon": {
+                                  color: colors.secondary,
+                                },
+                              }}
+                            />
+                          </Box>
+
+                          <Button
+                            variant="contained"
+                            startIcon={
+                              addingPreset ===
+                              `${domainResult.domain}-${domainResult.best_preset}` ? (
+                                <CircularProgress size={18} color="inherit" />
+                              ) : (
+                                <AddIcon />
+                              )
+                            }
+                            onClick={() => {
+                              const bestResult =
+                                domainResult.results[domainResult.best_preset];
+                              void handleAddStrategy(
+                                domainResult.domain,
+                                bestResult
+                              );
                             }}
-                          />
+                            disabled={
+                              addingPreset ===
+                              `${domainResult.domain}-${domainResult.best_preset}`
+                            }
+                            sx={{
+                              bgcolor: colors.secondary,
+                              color: colors.background.default,
+                              fontWeight: 600,
+                              "&:hover": {
+                                bgcolor: colors.primary,
+                                transform: "translateY(-2px)",
+                                boxShadow: `0 4px 8px ${colors.secondary}44`,
+                              },
+                              transition: "all 0.2s",
+                              "&:disabled": {
+                                bgcolor: colors.accent.secondary,
+                              },
+                            }}
+                          >
+                            {addingPreset ===
+                            `${domainResult.domain}-${domainResult.best_preset}`
+                              ? "Adding..."
+                              : "Use This Strategy"}
+                          </Button>
                         </Box>
 
                         <Divider
@@ -577,33 +699,73 @@ export const DiscoveryRunner: React.FC = () => {
                             {Object.values(domainResult.results)
                               .sort((a, b) => b.speed - a.speed)
                               .map((result) => (
-                                <Chip
+                                <Box
                                   key={result.preset_name}
-                                  label={`${result.preset_name}: ${
-                                    result.status === "complete"
-                                      ? `${(result.speed / 1024 / 1024).toFixed(
-                                          2
-                                        )} MB/s`
-                                      : "Failed"
-                                  }`}
-                                  size="small"
                                   sx={{
-                                    bgcolor:
-                                      result.preset_name ===
-                                      domainResult.best_preset
-                                        ? colors.accent.secondary
-                                        : colors.background.dark,
-                                    color:
-                                      result.status === "complete"
-                                        ? colors.text.primary
-                                        : colors.quaternary,
-                                    border:
-                                      result.preset_name ===
-                                      domainResult.best_preset
-                                        ? `1px solid ${colors.secondary}`
-                                        : `1px solid ${colors.border.light}`,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.5,
                                   }}
-                                />
+                                >
+                                  <Chip
+                                    label={`${result.preset_name}: ${
+                                      result.status === "complete"
+                                        ? `${(
+                                            result.speed /
+                                            1024 /
+                                            1024
+                                          ).toFixed(2)} MB/s`
+                                        : "Failed"
+                                    }`}
+                                    size="small"
+                                    sx={{
+                                      bgcolor:
+                                        result.preset_name ===
+                                        domainResult.best_preset
+                                          ? colors.accent.secondary
+                                          : colors.background.dark,
+                                      color:
+                                        result.status === "complete"
+                                          ? colors.text.primary
+                                          : colors.quaternary,
+                                      border:
+                                        result.preset_name ===
+                                        domainResult.best_preset
+                                          ? `2px solid ${colors.secondary}`
+                                          : `1px solid ${colors.border.light}`,
+                                    }}
+                                  />
+                                  {result.status === "complete" &&
+                                    result.preset_name !==
+                                      domainResult.best_preset && (
+                                      <Tooltip title="Use this configuration">
+                                        <IconButton
+                                          size="small"
+                                          onClick={() => {
+                                            void handleAddStrategy(
+                                              domainResult.domain,
+                                              result
+                                            );
+                                          }}
+                                          disabled={
+                                            addingPreset ===
+                                            `${domainResult.domain}-${result.preset_name}`
+                                          }
+                                          sx={{
+                                            p: 0.5,
+                                            bgcolor: colors.background.dark,
+                                            border: `1px solid ${colors.border.light}`,
+                                            "&:hover": {
+                                              bgcolor: colors.accent.secondary,
+                                              borderColor: colors.secondary,
+                                            },
+                                          }}
+                                        >
+                                          <AddIcon fontSize="small" />
+                                        </IconButton>
+                                      </Tooltip>
+                                    )}
+                                </Box>
                               ))}
                           </Stack>
                         </Box>
@@ -625,6 +787,28 @@ export const DiscoveryRunner: React.FC = () => {
               })}
           </Stack>
         )}
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <MuiAlert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{
+            width: "100%",
+            bgcolor:
+              snackbar.severity === "success"
+                ? colors.secondary
+                : colors.quaternary,
+            color: colors.background.default,
+          }}
+        >
+          {snackbar.message}
+        </MuiAlert>
+      </Snackbar>
     </Stack>
   );
 };

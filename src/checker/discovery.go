@@ -139,6 +139,7 @@ func (ds *DiscoverySuite) RunDiscovery(domains []string) {
 			var result CheckResult
 			for attempt := 0; attempt < 2; attempt++ {
 				result = ds.testDomain(domain)
+				result.Set = testConfig.MainSet
 
 				// If successful or it's the last attempt, use this result
 				if result.Status == CheckStatusComplete || attempt == 1 {
@@ -160,6 +161,7 @@ func (ds *DiscoverySuite) RunDiscovery(domains []string) {
 				BytesRead:  result.BytesRead,
 				Error:      result.Error,
 				StatusCode: result.StatusCode,
+				Set:        result.Set,
 			}
 			ds.mu.Unlock()
 

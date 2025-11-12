@@ -26,15 +26,15 @@ type PresetGenerator struct {
 func GetDefaultGenerator() PresetGenerator {
 	return PresetGenerator{
 		FragStrategies:  []string{"tcp", "ip", "none"},
-		SNIPositions:    []int{1, 2},
+		SNIPositions:    []int{1, 3, 5},
 		FakeStrategies:  []string{"pastseq", "ttl", "randseq", "md5sum"},
 		FakeTTLs:        []uint8{3, 5, 8},
 		SNISeqLengths:   []int{1, 2, 3},
 		UDPModes:        []string{"fake", "drop"},
-		QUICFilters:     []string{"disabled", "all"},
-		Seg2Delays:      []int{0, 5},
-		SNIReverseFlags: []bool{false, true},
-		MiddleSNIFlags:  []bool{false, true},
+		QUICFilters:     []string{"disabled", "parse", "all"},
+		Seg2Delays:      []int{0, 5, 10},
+		SNIReverseFlags: []bool{true, false},
+		MiddleSNIFlags:  []bool{true, false},
 	}
 }
 
