@@ -12,40 +12,32 @@ import (
 // sendFakeSyn sends a fake SYN packet with payload to confuse DPI systems
 func (w *Worker) sendFakeSyn(set *config.SetConfig, raw []byte, ipHdrLen, tcpHdrLen int) {
 	// Determine fake payload length
-	fakePayloadLen := len(sock.FakeSNI)
-	if set.TCP.SynFakeLen > 0 && set.TCP.SynFakeLen < fakePayloadLen {
+	fakePayloadLen := 0 // No payload by default
+	if set.TCP.SynFakeLen > 0 {
 		fakePayloadLen = set.TCP.SynFakeLen
+		if fakePayloadLen > len(sock.FakeSNI) {
+			fakePayloadLen = len(sock.FakeSNI)
+		}
 	}
-
-	// Build fake SYN packet
 	totalLen := ipHdrLen + tcpHdrLen + fakePayloadLen
 	fakePkt := make([]byte, totalLen)
 
-	// Copy IP and TCP headers from original SYN
 	copy(fakePkt[:ipHdrLen+tcpHdrLen], raw[:ipHdrLen+tcpHdrLen])
 
-	// Add fake payload (truncated if SynFakeLen is set)
 	copy(fakePkt[ipHdrLen+tcpHdrLen:], sock.FakeSNI[:fakePayloadLen])
 
-	// Update IP total length
 	binary.BigEndian.PutUint16(fakePkt[2:4], uint16(totalLen))
 
-	// Apply faking strategy to make the fake packet invalid
-	w.applySynFakingStrategy(fakePkt, ipHdrLen, tcpHdrLen, set)
+	w.applySynFakingStrategy(fakePkt, ipHdrLen, set)
 
-	// Recalculate checksums
 	sock.FixIPv4Checksum(fakePkt[:ipHdrLen])
 	sock.FixTCPChecksum(fakePkt)
 
-	// If tcp_check strategy, corrupt checksum AFTER calculation
 	if set.Faking.Strategy == "tcp_check" {
 		fakePkt[ipHdrLen+16] ^= 0xFF // Flip checksum byte
 	}
 
-	// Extract destination IP for sending
 	dst := net.IP(fakePkt[16:20])
-
-	// Send fake SYN
 	if err := w.sock.SendIPv4(fakePkt, dst); err != nil {
 		log.Errorf("Failed to send fake SYN: %v", err)
 	}
@@ -53,55 +45,46 @@ func (w *Worker) sendFakeSyn(set *config.SetConfig, raw []byte, ipHdrLen, tcpHdr
 
 // sendFakeSynV6 sends a fake SYN packet for IPv6
 func (w *Worker) sendFakeSynV6(set *config.SetConfig, raw []byte, ipHdrLen, tcpHdrLen int) {
-	// Determine fake payload length
-	fakePayloadLen := len(sock.FakeSNI)
-	if set.TCP.SynFakeLen > 0 && set.TCP.SynFakeLen < fakePayloadLen {
+	fakePayloadLen := 0 // No payload by default
+	if set.TCP.SynFakeLen > 0 {
 		fakePayloadLen = set.TCP.SynFakeLen
+		if fakePayloadLen > len(sock.FakeSNI) {
+			fakePayloadLen = len(sock.FakeSNI)
+		}
 	}
 
-	// Build fake SYN packet
 	totalLen := ipHdrLen + tcpHdrLen + fakePayloadLen
 	fakePkt := make([]byte, totalLen)
 
-	// Copy IP and TCP headers from original SYN
 	copy(fakePkt[:ipHdrLen+tcpHdrLen], raw[:ipHdrLen+tcpHdrLen])
 
-	// Add fake payload
 	copy(fakePkt[ipHdrLen+tcpHdrLen:], sock.FakeSNI[:fakePayloadLen])
 
-	// Update IPv6 payload length (bytes 4-5)
 	payloadLen := tcpHdrLen + fakePayloadLen
 	binary.BigEndian.PutUint16(fakePkt[4:6], uint16(payloadLen))
 
-	// Apply faking strategy
-	w.applySynFakingStrategyV6(fakePkt, ipHdrLen, tcpHdrLen, set)
+	w.applySynFakingStrategyV6(fakePkt, ipHdrLen, set)
 
-	// Recalculate TCP checksum for IPv6
 	sock.FixTCPChecksumV6(fakePkt)
 
-	// If tcp_check strategy, corrupt checksum AFTER calculation
 	if set.Faking.Strategy == "tcp_check" {
 		fakePkt[ipHdrLen+16] ^= 0xFF
 	}
 
-	// Extract destination IP for sending
 	dst := net.IP(fakePkt[24:40])
 
-	// Send fake SYN
 	if err := w.sock.SendIPv6(fakePkt, dst); err != nil {
 		log.Errorf("Failed to send fake SYN v6: %v", err)
 	}
 }
 
 // applySynFakingStrategy modifies the fake SYN packet according to configured strategy
-func (w *Worker) applySynFakingStrategy(pkt []byte, ipHdrLen, tcpHdrLen int, set *config.SetConfig) {
+func (w *Worker) applySynFakingStrategy(pkt []byte, ipHdrLen int, set *config.SetConfig) {
 	switch set.Faking.Strategy {
 	case "ttl":
-		// Set low TTL so fake packet dies before reaching server
 		pkt[8] = set.Faking.TTL
 
 	case "randseq":
-		// Randomize TCP sequence number
 		seq := binary.BigEndian.Uint32(pkt[ipHdrLen+4 : ipHdrLen+8])
 		seq += uint32(set.Faking.SeqOffset)
 		if set.Faking.SeqOffset == 0 {
@@ -110,7 +93,6 @@ func (w *Worker) applySynFakingStrategy(pkt []byte, ipHdrLen, tcpHdrLen int, set
 		binary.BigEndian.PutUint32(pkt[ipHdrLen+4:ipHdrLen+8], seq)
 
 	case "pastseq":
-		// Use past sequence number
 		seq := binary.BigEndian.Uint32(pkt[ipHdrLen+4 : ipHdrLen+8])
 		offset := uint32(set.Faking.SeqOffset)
 		if offset == 0 {
@@ -120,22 +102,13 @@ func (w *Worker) applySynFakingStrategy(pkt []byte, ipHdrLen, tcpHdrLen int, set
 			seq -= offset
 		}
 		binary.BigEndian.PutUint32(pkt[ipHdrLen+4:ipHdrLen+8], seq)
-
-	case "tcp_check":
-		// Checksum will be corrupted after calculation in the caller
-		// Do nothing here
-
-	case "md5sum":
-		// TODO: Implement TCP MD5 signature option
-		log.Warnf("md5sum strategy not yet implemented for SYN fake")
 	}
 }
 
 // applySynFakingStrategyV6 modifies the fake SYN packet for IPv6
-func (w *Worker) applySynFakingStrategyV6(pkt []byte, ipHdrLen, tcpHdrLen int, set *config.SetConfig) {
+func (w *Worker) applySynFakingStrategyV6(pkt []byte, ipHdrLen int, set *config.SetConfig) {
 	switch set.Faking.Strategy {
 	case "ttl":
-		// IPv6 uses Hop Limit (byte 7) instead of TTL
 		pkt[7] = set.Faking.TTL
 
 	case "randseq":
@@ -157,10 +130,5 @@ func (w *Worker) applySynFakingStrategyV6(pkt []byte, ipHdrLen, tcpHdrLen int, s
 		}
 		binary.BigEndian.PutUint32(pkt[ipHdrLen+4:ipHdrLen+8], seq)
 
-	case "tcp_check":
-		// Will be corrupted after checksum calculation
-
-	case "md5sum":
-		log.Warnf("md5sum strategy not yet implemented for SYN fake")
 	}
 }

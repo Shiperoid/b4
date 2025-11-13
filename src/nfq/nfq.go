@@ -154,9 +154,9 @@ func (w *Worker) Start() error {
 				isSyn := (tcpFlags & 0x02) != 0 // SYN flag
 				isAck := (tcpFlags & 0x10) != 0 // ACK flag
 
-				if isSyn && !isAck && dport == HTTPSPort {
+				if set.TCP.SynFake && isSyn && !isAck && dport == HTTPSPort {
 
-					if matched && set.TCP.SynFake {
+					if matched {
 						log.Tracef("TCP SYN to %s:%d - sending fake SYN (set: %s)", dstStr, dport, set.Name)
 
 						metrics := metrics.GetMetricsCollector()
