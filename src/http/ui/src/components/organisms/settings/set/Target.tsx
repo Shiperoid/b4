@@ -469,7 +469,7 @@ export const TargetSettings: React.FC<TargetSettingsProps> = ({
             </Alert>
 
             <Grid container spacing={2}>
-              {/* Manual Bypass Domains */}
+              {/* Manual Bypass IPs */}
               <Grid size={{ sm: 12, md: 6 }}>
                 <Box>
                   <Typography
@@ -490,7 +490,7 @@ export const TargetSettings: React.FC<TargetSettingsProps> = ({
                     sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}
                   >
                     <SettingTextField
-                      label="Add Bypass Domain"
+                      label="Add Bypass IP/CIDR"
                       value={newBypassIP}
                       onChange={(e) => setNewBypassIP(e.target.value)}
                       onKeyDown={(e) => {

@@ -34,7 +34,7 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
                 onChange("system.geo.sitedat_url", e.target.value)
               }
               helperText="Url to geosite.dat file"
-              placeholder="/path/to/geosite.dat"
+              placeholder="https://example.com/geosite.dat"
             />
             <SettingTextField
               label="Geosite.dat database path"
@@ -58,7 +58,7 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({
               value={config.system.geo.ipdat_url}
               onChange={(e) => onChange("system.geo.ipdat_url", e.target.value)}
               helperText="Url to geoip.dat file"
-              placeholder="/path/to/geoip.dat"
+              placeholder="https://example.com/geoip.dat"
             />
             <SettingTextField
               label="GeoIP.dat Database Path"
