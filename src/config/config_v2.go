@@ -110,5 +110,8 @@ var DefaultConfig = Config{
 			MaxConcurrent:  4,
 			Domains:        []string{},
 		},
+		API: ApiConfig{
+			IPInfoToken: "",
+		},
 	},
 }

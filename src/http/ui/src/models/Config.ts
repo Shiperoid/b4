@@ -115,12 +115,17 @@ export interface GeoConfig {
   ipdat_path: string;
 }
 
+export interface ApiConfig {
+  ipinfo_token: string;
+}
+
 export interface SystemConfig {
   logging: LoggingConfig;
   web_server: WebServerConfig;
   tables: TableConfig;
   checker: CheckerConfig;
   geo: GeoConfig;
+  api: ApiConfig;
 }
 
 export interface B4Config {

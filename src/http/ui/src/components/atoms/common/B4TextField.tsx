@@ -3,7 +3,7 @@ import { TextField, TextFieldProps } from "@mui/material";
 import { colors } from "@design";
 
 interface B4TextFieldProps extends Omit<TextFieldProps, "variant"> {
-  helperText?: string;
+  helperText?: React.ReactNode;
 }
 
 export const B4TextField: React.FC<B4TextFieldProps> = ({

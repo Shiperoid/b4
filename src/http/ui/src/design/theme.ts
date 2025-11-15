@@ -46,6 +46,14 @@ export const theme = createTheme({
             scrollbarColor: `${colors.primary} ${colors.background.default}`,
           },
         },
+        a: {
+          color: colors.secondary,
+          textDecoration: "none",
+          "&:hover": {
+            textDecoration: "none",
+            color: colors.primary,
+          },
+        },
       },
     },
     MuiAppBar: {

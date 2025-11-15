@@ -8,6 +8,10 @@ const (
 	FakePayloadDefault
 )
 
+type ApiConfig struct {
+	IPInfoToken string `json:"ipinfo_token" bson:"ipinfo_token"`
+}
+
 type QueueConfig struct {
 	StartNum    int  `json:"start_num" bson:"start_num"`
 	Threads     int  `json:"threads" bson:"threads"`
@@ -67,6 +71,7 @@ type SystemConfig struct {
 	WebServer WebServerConfig `json:"web_server" bson:"web_server"`
 	Checker   CheckerConfig   `json:"checker" bson:"checker"`
 	Geo       GeoDatConfig    `json:"geo" bson:"geo"`
+	API       ApiConfig       `json:"api" bson:"api"`
 }
 
 type TablesConfig struct {

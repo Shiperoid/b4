@@ -19,6 +19,7 @@ import { TargetSettings } from "@/components/organisms/settings/set/Target";
 import { TcpSettings } from "./Tcp";
 import { UdpSettings } from "./Udp";
 import { FragmentationSettings } from "./Fragmentation";
+import { ImportExportSettings } from "./ImportExport";
 import { FakingSettings } from "./Faking";
 import { SetStats } from "@organisms/settings/set/Manager";
 
@@ -47,6 +48,7 @@ export const SetEditor: React.FC<SetEditorProps> = ({
     UDP,
     FRAGMENTATION,
     FAKING,
+    IMPORT_EXPORT,
   }
 
   const [activeTab, setActiveTab] = useState<TABS>(TABS.TARGETS);
@@ -85,6 +87,11 @@ export const SetEditor: React.FC<SetEditorProps> = ({
     if (editedSet) {
       onSave(editedSet);
     }
+  };
+
+  const handleApplyImport = (importedSet: B4SetConfig) => {
+    setEditedSet(importedSet);
+    setActiveTab(TABS.TARGETS);
   };
 
   if (!editedSet) return null;
@@ -135,6 +142,7 @@ export const SetEditor: React.FC<SetEditorProps> = ({
           <Tab label="UDP" icon={<UdpIcon />} />
           <Tab label="Fragmentation" icon={<FragIcon />} />
           <Tab label="Faking" icon={<FakingIcon />} />
+          <Tab label="Import/Export" icon={<LayersIcon />} />
         </Tabs>
       </Paper>
       <Box>
@@ -174,6 +182,16 @@ export const SetEditor: React.FC<SetEditorProps> = ({
               config={editedSet}
               stats={stats}
               onChange={handleChange}
+            />
+          </Stack>
+        </Box>
+
+        {/* Import/Export Settings */}
+        <Box hidden={activeTab !== TABS.IMPORT_EXPORT}>
+          <Stack spacing={2}>
+            <ImportExportSettings
+              config={editedSet}
+              onImport={handleApplyImport}
             />
           </Stack>
         </Box>

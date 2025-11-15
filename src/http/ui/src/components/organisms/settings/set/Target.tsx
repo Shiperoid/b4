@@ -145,10 +145,24 @@ export const TargetSettings: React.FC<TargetSettingsProps> = ({
   };
 
   const handleAddBypassIP = () => {
-    if (newBypassIP.trim()) {
-      onChange("targets.ip", [...config.targets.ip, newBypassIP.trim()]);
-      setNewBypassIP("");
+    const value = newBypassIP.trim();
+    if (!value) return;
+
+    const ipRange = value.split(/[\s,|]+/).filter(Boolean);
+
+    const existing = new Set(config.targets.ip);
+    const next = [...config.targets.ip];
+
+    for (const raw of ipRange) {
+      const ip = raw.trim();
+      if (ip && !existing.has(ip)) {
+        existing.add(ip);
+        next.push(ip);
+      }
     }
+
+    onChange("targets.ip", next);
+    setNewBypassIP("");
   };
 
   const handleRemoveBypassIP = (ip: string) => {

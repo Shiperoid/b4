@@ -27,6 +27,7 @@ import {
   Layers as LayersIcon,
   Monitor as MonitorIcon,
   Language as LanguageIcon,
+  Cloud as ApiIcon,
 } from "@mui/icons-material";
 
 import { NetworkSettings } from "@organisms/settings/Network";
@@ -34,8 +35,12 @@ import { LoggingSettings } from "@organisms/settings/Logging";
 import { FeatureSettings } from "@organisms/settings/Feature";
 import { CheckerSettings } from "@organisms/settings/Checker";
 import { ControlSettings } from "@organisms/settings/Control";
-import { SetsManager } from "@/components/organisms/settings/set/Manager";
+import {
+  SetsManager,
+  SetWithStats,
+} from "@/components/organisms/settings/set/Manager";
 import { GeoSettings } from "@organisms/settings/Geo";
+import { ApiSettings } from "@organisms/settings/Api";
 
 import { B4Config, B4SetConfig } from "@models/Config";
 import { colors, spacing, button_primary, button_secondary } from "@design";
@@ -73,6 +78,7 @@ enum TABS {
   GENERAL,
   DOMAINS,
   TESTING,
+  API,
 }
 
 // Settings categories with route paths
@@ -109,10 +115,20 @@ const SETTING_CATEGORIES = [
     description: "DPI bypass domains testing",
     requiresRestart: false,
   },
+  {
+    id: TABS.API,
+    path: "api",
+    label: "API",
+    icon: <ApiIcon />,
+    description: "API settings for various services",
+    requiresRestart: false,
+  },
 ];
 
 export default function Settings() {
-  const [config, setConfig] = useState<B4Config | null>(null);
+  const [config, setConfig] = useState<
+    (B4Config & { sets?: SetWithStats[] }) | null
+  >(null);
   const [originalConfig, setOriginalConfig] = useState<B4Config | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -188,6 +204,11 @@ export default function Settings() {
       [TABS.TESTING]:
         JSON.stringify(config.system.checker) !==
         JSON.stringify(originalConfig.system.checker),
+
+      // API
+      [TABS.API]:
+        JSON.stringify(config.system.api) !==
+        JSON.stringify(originalConfig.system.api),
     };
   }, [config, originalConfig, hasChanges]);
 
@@ -200,7 +221,9 @@ export default function Settings() {
       setLoading(true);
       const response = await fetch("/api/config");
       if (!response.ok) throw new Error("Failed to load configuration");
-      const data = (await response.json()) as unknown as B4Config;
+      const data = (await response.json()) as unknown as B4Config & {
+        sets?: SetWithStats[];
+      };
       setConfig(data);
       setOriginalConfig(structuredClone(data)); // Deep clone
     } catch (error) {
@@ -255,7 +278,9 @@ export default function Settings() {
 
   const resetChanges = () => {
     if (originalConfig) {
-      setConfig(structuredClone(originalConfig));
+      setConfig(
+        structuredClone(originalConfig) as B4Config & { sets?: SetWithStats[] }
+      );
       setShowResetDialog(false);
       setSnackbar({
         open: true,
@@ -500,6 +525,10 @@ export default function Settings() {
 
         <TabPanel value={validTab} index={TABS.DOMAINS}>
           <GeoSettings config={config} onChange={handleChange} />
+        </TabPanel>
+
+        <TabPanel value={validTab} index={TABS.API}>
+          <ApiSettings config={config} onChange={handleChange} />
         </TabPanel>
 
         <TabPanel value={validTab} index={TABS.TESTING}>

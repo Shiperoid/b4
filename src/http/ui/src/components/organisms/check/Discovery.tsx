@@ -13,7 +13,6 @@ import {
   IconButton,
   Tooltip,
   Snackbar,
-  Alert as MuiAlert,
   CircularProgress,
 } from "@mui/material";
 import {
@@ -193,7 +192,7 @@ export const DiscoveryRunner: React.FC = () => {
 
       setSnackbar({
         open: true,
-        message: `✅ ${data.message}`,
+        message: `${data.message}`,
         severity: "success",
       });
     } catch (err) {
@@ -784,24 +783,17 @@ export const DiscoveryRunner: React.FC = () => {
 
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={4000}
+        autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
-        <MuiAlert
+        <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity={snackbar.severity}
-          sx={{
-            width: "100%",
-            bgcolor:
-              snackbar.severity === "success"
-                ? colors.secondary
-                : colors.quaternary,
-            color: colors.background.default,
-          }}
+          sx={{ width: "100%" }}
         >
           {snackbar.message}
-        </MuiAlert>
+        </Alert>
       </Snackbar>
     </Stack>
   );
