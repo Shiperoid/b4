@@ -11,6 +11,8 @@ import (
 
 func (api *API) RegisterIntegrationApi() {
 	api.mux.HandleFunc("/api/integration/ipinfo", api.getIpInfo)
+	api.mux.HandleFunc("/api/integration/ripestat/asn", api.getRipestatAsnPrefixes)
+	api.mux.HandleFunc("/api/integration/ripestat", api.getRipestatNetworkInfo)
 }
 
 func (a *API) getIpInfo(w http.ResponseWriter, r *http.Request) {
@@ -48,6 +50,77 @@ func (a *API) getIpInfo(w http.ResponseWriter, r *http.Request) {
 
 	if resp.StatusCode != http.StatusOK {
 		http.Error(w, "IPInfo API error", resp.StatusCode)
+		return
+	}
+
+	setJsonHeader(w)
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.Copy(w, resp.Body)
+}
+
+func (a *API) getRipestatAsnPrefixes(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	asn := r.URL.Query().Get("asn")
+	if asn == "" {
+		http.Error(w, "ASN parameter required", http.StatusBadRequest)
+		return
+	}
+
+	// Remove AS/ASN prefix if present
+	asn = strings.TrimPrefix(strings.TrimPrefix(asn, "AS"), "N")
+
+	url := fmt.Sprintf("https://stat.ripe.net/data/announced-prefixes/data.json?resource=AS%s", asn)
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Errorf("Failed to fetch RIPE ASN prefixes: %v", err)
+		http.Error(w, "Failed to fetch ASN prefixes", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, "RIPE API error", resp.StatusCode)
+		return
+	}
+
+	setJsonHeader(w)
+	w.WriteHeader(http.StatusOK)
+	_, _ = io.Copy(w, resp.Body)
+}
+
+func (a *API) getRipestatNetworkInfo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	ip := r.URL.Query().Get("ip")
+	if ip == "" {
+		http.Error(w, "IP parameter required", http.StatusBadRequest)
+		return
+	}
+
+	cleanIP := ip
+	if idx := strings.Index(cleanIP, ":"); idx != -1 {
+		cleanIP = cleanIP[:idx]
+	}
+	cleanIP = strings.Trim(cleanIP, "[]")
+
+	url := fmt.Sprintf("https://stat.ripe.net/data/network-info/data.json?resource=%s", cleanIP)
+	resp, err := http.Get(url)
+	if err != nil {
+		log.Errorf("Failed to fetch RIPE network info: %v", err)
+		http.Error(w, "Failed to fetch network info", http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, "RIPE API error", resp.StatusCode)
 		return
 	}
 

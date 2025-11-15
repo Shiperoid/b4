@@ -49,8 +49,6 @@ interface DomainsTableProps {
   onScroll: () => void;
   hasIpInfoToken: boolean;
   onIpInfoClick: (ip: string) => void;
-  hasBdcToken: boolean;
-  onBdcClick: (ip: string) => void;
 }
 
 export const DomainsTable: React.FC<DomainsTableProps> = ({
@@ -64,8 +62,6 @@ export const DomainsTable: React.FC<DomainsTableProps> = ({
   onScroll,
   hasIpInfoToken,
   onIpInfoClick,
-  hasBdcToken,
-  onBdcClick,
 }) => {
   return (
     <TableContainer
@@ -264,21 +260,6 @@ export const DomainsTable: React.FC<DomainsTableProps> = ({
                         onClick={() => onIpInfoClick(log.destination)}
                         badgeVariant="primary"
                         label="IPI"
-                        sx={{
-                          bgcolor: colors.accent.primary,
-                          border: `1px solid ${colors.primary}`,
-                          color: colors.secondary,
-                          "& .MuiChip-deleteIcon": {
-                            color: colors.secondary,
-                          },
-                        }}
-                      />
-                    )}
-                    {hasBdcToken && (
-                      <B4Badge
-                        onClick={() => onBdcClick(log.destination)}
-                        badgeVariant="primary"
-                        label="BDC"
                         sx={{
                           bgcolor: colors.accent.primary,
                           border: `1px solid ${colors.primary}`,
