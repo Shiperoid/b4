@@ -116,7 +116,7 @@ func (a *API) getGeoIpTags(w http.ResponseWriter) {
 
 	if !a.geodataManager.IsGeoipConfigured() {
 		log.Tracef("Geoip path is not configured")
-		_ = enc.Encode(GeositeResponse{Tags: []string{}})
+		_ = enc.Encode(GeoipResponse{Tags: []string{}})
 		return
 	}
 
@@ -126,7 +126,7 @@ func (a *API) getGeoIpTags(w http.ResponseWriter) {
 		return
 	}
 
-	response := GeositeResponse{
+	response := GeoipResponse{
 		Tags: tags,
 	}
 
