@@ -26,6 +26,7 @@ import { B4Badge } from "@/components/atoms/common/B4Badge";
 import { B4SetConfig, MAIN_SET_ID } from "@/models/Config";
 import { SetSelector } from "@molecules/common/SetSelector";
 import { asnStorage } from "@utils";
+import { clearAsnLookupCache } from "@hooks/useDomainActions";
 
 interface IpInfo {
   ip: string;
@@ -80,14 +81,31 @@ export const AddIpModal: React.FC<AddIpModalProps> = ({
     if (open) {
       setIpInfo(null);
       setAsn("");
-      setVariants(initialVariants);
       setPrefixes([]);
       setAddMode("single");
+      setLoadingInfo(false);
+      setLoadingPrefixes(false);
+      setNewSetName("");
+      setVariants(initialVariants);
       if (sets.length > 0) {
         setSelectedSetId(MAIN_SET_ID);
       }
     }
-  }, [open, sets, initialVariants]);
+  }, [open, sets, initialVariants, ip]);
+
+  React.useEffect(() => {
+    if (!open) {
+      setIpInfo(null);
+      setAsn("");
+      setPrefixes([]);
+      setVariants(initialVariants);
+      setAddMode("single");
+      setLoadingInfo(false);
+      setLoadingPrefixes(false);
+      setNewSetName("");
+      onSelectVariant(initialVariants[0] || "");
+    }
+  }, [open, initialVariants, onSelectVariant]);
 
   const loadIpInfo = async () => {
     setLoadingInfo(true);
@@ -157,16 +175,14 @@ export const AddIpModal: React.FC<AddIpModalProps> = ({
         setAddMode("all");
         onSelectVariant(loadedPrefixes);
         asnStorage.addAsn(asn, ipInfo?.org || `AS${asn}`, loadedPrefixes);
-
-        setAddMode("all");
-        onSelectVariant(loadedPrefixes);
+        clearAsnLookupCache();
       }
     } catch (error) {
       console.error("Failed to load RIPE prefixes:", error);
     } finally {
       setLoadingPrefixes(false);
     }
-  }, [asn, onSelectVariant]);
+  }, [asn, ipInfo?.org, onSelectVariant]);
 
   const handleAdd = () => {
     onAdd(selectedSetId, newSetName);

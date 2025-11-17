@@ -134,6 +134,10 @@ export function useAsnLookup(destination: string): string | null {
   }, [destination]);
 }
 
+export function clearAsnLookupCache() {
+  asnLookupCache.clear();
+}
+
 // Hook to parse logs
 export function useParsedLogs(lines: string[], showAll: boolean): ParsedLog[] {
   return useMemo(() => {

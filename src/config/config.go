@@ -1,4 +1,3 @@
-// path: src/config/config.go
 package config
 
 import (
@@ -10,9 +9,13 @@ import (
 var (
 	MAIN_SET_ID = "11111111-1111-1111-1111-111111111111"
 	NEW_SET_ID  = "00000000-0000-0000-0000-000000000000"
+
+	CurrentConfigVersion = 2
+	MinSupportedVersion  = 0
 )
 
 type Config struct {
+	Version    int    `json:"version" bson:"version"`
 	ConfigPath string `json:"-" bson:"-"`
 
 	Queue   QueueConfig  `json:"queue" bson:"queue"`
@@ -22,8 +25,9 @@ type Config struct {
 }
 
 var DefaultSetConfig = SetConfig{
-	Id:   MAIN_SET_ID,
-	Name: "default",
+	Id:      MAIN_SET_ID,
+	Name:    "default",
+	Enabled: true,
 
 	UDP: UDPConfig{
 		Mode:           "fake",
@@ -70,6 +74,7 @@ var DefaultSetConfig = SetConfig{
 }
 
 var DefaultConfig = Config{
+	Version:    MinSupportedVersion,
 	ConfigPath: "",
 
 	Queue: QueueConfig{

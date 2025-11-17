@@ -137,6 +137,7 @@ export interface B4Config {
 export interface B4SetConfig {
   id: string;
   name: string;
+  enabled: boolean;
 
   tcp: TcpConfig;
   udp: UdpConfig;

@@ -114,11 +114,13 @@ export const SetSelector: React.FC<SetSelectorProps> = ({
           <AddIcon sx={{ mr: 1, fontSize: 18 }} />
           Create New Set
         </MenuItem>
-        {sets.map((set) => (
-          <MenuItem key={set.id} value={set.id}>
-            {set.name}
-          </MenuItem>
-        ))}
+        {sets
+          .filter((set) => set.enabled)
+          .map((set) => (
+            <MenuItem key={set.id} value={set.id}>
+              {set.name}
+            </MenuItem>
+          ))}
       </Select>
     </FormControl>
   );

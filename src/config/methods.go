@@ -17,6 +17,7 @@ func (c *Config) SaveToFile(path string) error {
 		return nil
 	}
 
+	c.Version = CurrentConfigVersion
 	if len(c.Sets) == 0 {
 		c.Sets = []*SetConfig{&DefaultSetConfig}
 	}
@@ -213,6 +214,11 @@ func (c *Config) LoadTargets() ([]*SetConfig, int, int, error) {
 
 	// Process all sets
 	for _, set := range c.Sets {
+
+		if !set.Enabled {
+			continue
+		}
+
 		domains, ips, err := c.GetTargetsForSet(set)
 		if err != nil {
 			return nil, -1, -1, fmt.Errorf("failed to load domains for set '%s': %w", set.Name, err)

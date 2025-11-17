@@ -9,17 +9,21 @@ import {
   Paper,
   Divider,
   Grid,
+  Chip,
+  IconButton,
 } from "@mui/material";
 import {
   PlayArrow as StartIcon,
   Stop as StopIcon,
   Refresh as RefreshIcon,
+  Add as AddIcon,
 } from "@mui/icons-material";
-import { colors } from "@design";
+import { button_secondary, colors } from "@design";
 import { TestResultCard } from "@molecules/check/ResultCard";
 import { TestStatus } from "@atoms/check/Badge";
 import { useConfigLoad } from "@hooks/useConfig";
 import SettingTextField from "@atoms/common/B4TextField";
+import { useTestDomains } from "@hooks/useTestDomains";
 
 interface TestResult {
   domain: string;
@@ -67,7 +71,9 @@ export const TestRunner: React.FC<TestRunnerProps> = ({
   const [suite, setSuite] = useState<TestSuite | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { config } = useConfigLoad();
-  const [testDomains, setTestDomains] = useState<string>("");
+  const { domains, addDomain, removeDomain, clearDomains, resetToDefaults } =
+    useTestDomains();
+  const [newDomain, setNewDomain] = useState("");
 
   // Poll for test status
   useEffect(() => {
@@ -108,6 +114,11 @@ export const TestRunner: React.FC<TestRunnerProps> = ({
   }, [testId, running, onComplete]);
 
   const startTest = async () => {
+    if (domains.length === 0) {
+      setError("Add at least one domain to test");
+      return;
+    }
+
     setError(null);
     setRunning(true);
     setSuite(null);
@@ -119,12 +130,6 @@ export const TestRunner: React.FC<TestRunnerProps> = ({
     try {
       const timeout = (config?.system.checker.timeout || 15) * 1e9;
       const maxConcurrent = config?.system.checker.max_concurrent || 5;
-
-      // Parse domains from textarea (split by newlines, commas, spaces)
-      const domains = testDomains
-        .split(/[\n,\s]+/)
-        .map((d) => d.trim())
-        .filter((d) => d.length > 0);
 
       const response = await fetch("/api/check/start", {
         method: "POST",
@@ -185,6 +190,7 @@ export const TestRunner: React.FC<TestRunnerProps> = ({
         }}
       >
         <Stack spacing={2}>
+          {/* Header with actions */}
           <Box
             sx={{
               display: "flex",
@@ -203,9 +209,14 @@ export const TestRunner: React.FC<TestRunnerProps> = ({
                   onClick={() => {
                     void startTest();
                   }}
+                  disabled={domains.length === 0}
                   sx={{
                     bgcolor: colors.secondary,
                     "&:hover": { bgcolor: colors.primary },
+                    "&:disabled": {
+                      bgcolor: colors.accent.secondary,
+                      color: colors.text.secondary,
+                    },
                   }}
                 >
                   Start Test
@@ -244,25 +255,140 @@ export const TestRunner: React.FC<TestRunnerProps> = ({
 
           {error && <Alert severity="error">{error}</Alert>}
 
+          {/* Domain Management Section */}
           <Box>
-            <Typography
-              variant="subtitle2"
-              sx={{ mb: 1, color: colors.text.primary }}
+            <Stack
+              direction="row"
+              alignItems="center"
+              justifyContent="space-between"
+              sx={{ mb: 1 }}
             >
-              Domains to Test
-            </Typography>
-            <SettingTextField
-              label="Enter domains"
-              value={testDomains}
-              onChange={(e) => setTestDomains(e.target.value)}
-              multiline
-              rows={4}
-              placeholder="youtube.com, google.com, facebook.com"
-              helperText="Enter domains separated by commas, spaces, or new lines"
-              disabled={running}
-            />
+              <Typography
+                variant="subtitle2"
+                sx={{ color: colors.text.primary }}
+              >
+                Domains to Test
+              </Typography>
+              <Stack direction="row" spacing={1}>
+                <Button
+                  size="small"
+                  onClick={resetToDefaults}
+                  disabled={running}
+                  sx={{ ...button_secondary, textTransform: "none" }}
+                >
+                  Reset to Defaults
+                </Button>
+                <Button
+                  size="small"
+                  onClick={clearDomains}
+                  disabled={running || domains.length === 0}
+                  sx={{ ...button_secondary, textTransform: "none" }}
+                >
+                  Clear All
+                </Button>
+              </Stack>
+            </Stack>
+
+            <Grid container spacing={2}>
+              <Grid size={{ sm: 12, md: 6 }}>
+                {/* Domain Input */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1,
+                    pb: 2,
+                    width: "100%",
+                    alignItems: "flex-start",
+                  }}
+                >
+                  <SettingTextField
+                    fullWidth
+                    label="Add domain"
+                    value={newDomain}
+                    onChange={(e) => setNewDomain(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === "Enter" ||
+                        e.key === "," ||
+                        e.key === "Tab"
+                      ) {
+                        e.preventDefault();
+                        addDomain(newDomain);
+                        setNewDomain("");
+                      }
+                    }}
+                    placeholder="youtube.com"
+                    disabled={running}
+                    helperText="Press Enter or comma to add"
+                  />
+                  <IconButton
+                    onClick={() => {
+                      addDomain(newDomain);
+                      setNewDomain("");
+                    }}
+                    disabled={running || !newDomain.trim()}
+                    sx={{
+                      bgcolor: colors.accent.secondary,
+                      color: colors.secondary,
+                      "&:hover": {
+                        bgcolor: colors.accent.secondaryHover,
+                      },
+                    }}
+                  >
+                    <AddIcon />
+                  </IconButton>
+                </Box>
+              </Grid>
+              <Grid size={{ sm: 12, md: 6 }}>
+                {/* Domain Chips */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 1,
+                    p: 2,
+                    width: "100%",
+                    border: `1px solid ${colors.border.default}`,
+                    borderRadius: 1,
+                    bgcolor: colors.background.dark,
+                  }}
+                >
+                  {domains.length === 0 ? (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: colors.text.secondary,
+                        width: "100%",
+                        textAlign: "center",
+                      }}
+                    >
+                      No domains added. Add domains above or click "Reset to
+                      Defaults"
+                    </Typography>
+                  ) : (
+                    domains.map((domain) => (
+                      <Chip
+                        size="small"
+                        key={domain}
+                        label={domain}
+                        onDelete={() => removeDomain(domain)}
+                        disabled={running}
+                        sx={{
+                          bgcolor: colors.accent.primary,
+                          color: colors.secondary,
+                          "& .MuiChip-deleteIcon": {
+                            color: colors.secondary,
+                          },
+                        }}
+                      />
+                    ))
+                  )}
+                </Box>
+              </Grid>
+            </Grid>
           </Box>
 
+          {/* Progress indicator */}
           {running && suite && (
             <Box>
               <Box
@@ -370,7 +496,7 @@ export const TestRunner: React.FC<TestRunnerProps> = ({
                 <TestResultCard
                   domain={result.domain}
                   status={result.status}
-                  duration={result.duration / 1000000} // Convert nanoseconds to milliseconds
+                  duration={result.duration / 1000000}
                   speed={result.speed}
                   improvement={result.improvement}
                   error={result.error}

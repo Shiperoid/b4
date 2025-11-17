@@ -1,5 +1,13 @@
 # B4 - Bye Bye Big Bro
 
+## [1.16.0] - 2024-11-17
+
+- ADDED: Configuration sets can now be enabled/disabled without deletion.
+- ADDED: Clear button next to the IP/CIDR list in the set configuration.
+- IMPROVED: Redesigned `/test` page UX - domains are now managed directly on the test page.
+- FIXED: Resolved severe performance bottleneck on `/domains` page when adding ASN filters (caused by expensive ASN lookup operations executing on every render).
+- REMOVED: test domain configuration from `Settings` - domains are now managed exclusively on the Test page.
+
 ## [1.15.0] - 2025-11-16
 
 - ADDED: SYN fake packet functionality for advanced DPI bypass. Sends fake SYN packets with configurable payload length to confuse DPI systems before the real connection is established. Configure via `--tcp-syn-fake` and `--tcp-syn-fake-len` flags, or through the TCP settings in Web UI.

@@ -24,11 +24,12 @@ import {
   Domain as DomainIcon,
   LooksTwo as IpsIcon,
   LooksOne as DomainsIcon,
+  Delete as ClearIcon,
 } from "@mui/icons-material";
 import SettingSection from "@molecules/common/B4Section";
 import SettingTextField from "@atoms/common/B4TextField";
 import SettingAutocomplete from "@atoms/common/B4Autocomplete";
-import { colors, button_primary } from "@design";
+import { colors, button_primary, button_secondary } from "@design";
 import { B4Dialog } from "@molecules/common/B4Dialog";
 import { B4SetConfig, GeoConfig } from "@models/Config";
 import { SetStats } from "@organisms/settings/set/Manager";
@@ -163,6 +164,10 @@ export const TargetSettings: React.FC<TargetSettingsProps> = ({
 
     onChange("targets.ip", next);
     setNewBypassIP("");
+  };
+
+  const handleClearAllBypassIPs = () => {
+    onChange("targets.ip", []);
   };
 
   const handleRemoveBypassIP = (ip: string) => {
@@ -534,14 +539,35 @@ export const TargetSettings: React.FC<TargetSettingsProps> = ({
                     </IconButton>
                   </Box>
                   <Box sx={{ mt: 2 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Active manually added IPs
-                    </Typography>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 1,
+                      }}
+                    >
+                      <Typography variant="subtitle2">
+                        Active manually added IPs ({config.targets.ip.length})
+                      </Typography>
+                      {config.targets.ip.length > 0 && (
+                        <Button
+                          size="small"
+                          onClick={handleClearAllBypassIPs}
+                          sx={{ ...button_secondary, textTransform: "none" }}
+                          startIcon={<ClearIcon />}
+                        >
+                          Clear All
+                        </Button>
+                      )}
+                    </Box>
                     <Box
                       sx={{
                         display: "flex",
                         flexWrap: "wrap",
                         gap: 1,
+                        maxHeight: 200,
+                        overflowY: "auto",
                         p: 1,
                         border: `1px solid ${colors.border.default}`,
                         borderRadius: 1,

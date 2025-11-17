@@ -15,6 +15,7 @@ import {
   Divider,
   Paper,
   Tooltip,
+  Switch,
 } from "@mui/material";
 import {
   Add as AddIcon,
@@ -97,6 +98,7 @@ export const SetsManager: React.FC<SetsManagerProps> = ({
     const newSet: B4SetConfig = {
       id: uuidv4(),
       name: `Set ${sets.length + 1}`,
+      enabled: true,
       tcp: { conn_bytes_limit: 19, seg2delay: 0 } as B4SetConfig["tcp"],
       udp: {
         mode: "fake",
@@ -268,6 +270,7 @@ export const SetsManager: React.FC<SetsManagerProps> = ({
                   key={set.id}
                   elevation={isMain ? 2 : 1}
                   sx={{
+                    opacity: set.enabled ? 1 : 0.6,
                     position: "relative",
                     overflow: "hidden",
                     border: `1px solid ${
@@ -305,6 +308,33 @@ export const SetsManager: React.FC<SetsManagerProps> = ({
                       justifyContent="space-between"
                     >
                       <Stack direction="row" alignItems="center" spacing={2}>
+                        <Tooltip
+                          title={set.enabled ? "Disable set" : "Enable set"}
+                        >
+                          <Switch
+                            checked={set.enabled}
+                            onChange={(e) => {
+                              const updatedSet = {
+                                ...set,
+                                enabled: e.target.checked,
+                              };
+                              const updatedSets = sets.map((s) =>
+                                s.id === set.id ? updatedSet : s
+                              );
+                              onChange("sets", updatedSets);
+                            }}
+                            size="small"
+                            sx={{
+                              "& .MuiSwitch-switchBase.Mui-checked": {
+                                color: colors.secondary,
+                              },
+                              "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track":
+                                {
+                                  backgroundColor: colors.secondary,
+                                },
+                            }}
+                          />
+                        </Tooltip>
                         <Chip
                           size="small"
                           label={isMain ? "MAIN" : `#${index + 1}`}

@@ -104,6 +104,7 @@ type SetConfig struct {
 	Fragmentation FragmentationConfig `json:"fragmentation" bson:"fragmentation"`
 	Faking        FakingConfig        `json:"faking" bson:"faking"`
 	Targets       TargetsConfig       `json:"targets" bson:"targets"`
+	Enabled       bool                `json:"enabled" bson:"enabled"`
 }
 
 type GeoDatConfig struct {
