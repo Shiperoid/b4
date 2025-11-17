@@ -1105,16 +1105,18 @@ update_config_geodat_path() {
         # Create temporary file
         temp_file="${CONFIG_FILE}.tmp"
 
-        # Update or add geodat paths under system.geo
+        # Merge into existing geo object instead of replacing
         if jq \
             --arg geosite_path "$geosite_file" \
             --arg geosite_url "$site_url" \
             --arg geoip_path "$geoip_file" \
             --arg geoip_url "$ip_url" \
-            '.system.geo.sitedat_path = $geosite_path | 
-             .system.geo.sitedat_url = $geosite_url | 
-             .system.geo.ipdat_path = $geoip_path | 
-             .system.geo.ipdat_url = $geoip_url' \
+            '.system.geo = (.system.geo // {}) + {
+                 sitedat_path: $geosite_path,
+                 sitedat_url: $geosite_url,
+                 ipdat_path: $geoip_path,
+                 ipdat_url: $geoip_url
+             }' \
             "$CONFIG_FILE" >"$temp_file" 2>/dev/null; then
 
             mv "$temp_file" "$CONFIG_FILE" || {
@@ -1124,7 +1126,15 @@ update_config_geodat_path() {
             }
             print_success "Config updated:"
             print_success "  Geosite: $geosite_file"
+            print_success "  URL: $site_url"
             print_success "  GeoIP:   $geoip_file"
+            print_success "  URL: $ip_url"
+
+            # Show what was actually written
+            print_info "Verifying config..."
+            if command_exists jq; then
+                jq '.system.geo' "$CONFIG_FILE" 2>/dev/null || true
+            fi
             return 0
         else
             print_error "Failed to parse config with jq"
