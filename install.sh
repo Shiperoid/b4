@@ -1071,55 +1071,79 @@ download_geodat() {
     return 0
 }
 
-# Update config file with geosite path
+# Update config file with geodat paths
 update_config_geodat_path() {
     geosite_file="$1"
     geoip_file="$2"
+    local site_url="$3/geosite.dat"
+    local ip_url="$3/geoip.dat"
 
     # Try to update with jq if available
     if command_exists jq; then
         print_info "Updating config file..."
 
         if [ ! -f "$CONFIG_FILE" ]; then
-            jq -n --arg path "$geosite_file" --arg geosite_url "$geosite_url" --arg geoip_path "$geoip_file" --arg geoip_url "$geoip_url" '{
-           domains: {
-               geosite_path: $path,
-               geosite_url: $geosite_url,
-               geoip_path: $geoip_path,
-               geoip_url: $geoip_url
-           }
-       }' >"$CONFIG_FILE"
+            jq -n \
+                --arg geosite_path "$geosite_file" \
+                --arg geosite_url "$site_url" \
+                --arg geoip_path "$geoip_file" \
+                --arg geoip_url "$ip_url" \
+                '{
+                    system: {
+                        geo: {
+                            sitedat_path: $geosite_path,
+                            sitedat_url: $geosite_url,
+                            ipdat_path: $geoip_path,
+                            ipdat_url: $geoip_url
+                        }
+                    }
+                }' >"$CONFIG_FILE"
+            print_success "Created new config file with geodat settings"
             return 0
         fi
 
         # Create temporary file
         temp_file="${CONFIG_FILE}.tmp"
 
-        # Update or add geosite_path
-        if jq ".domains.geosite_path = \"$geosite_file\" | .domains.geosite_url = \"$geosite_url\" | .domains.geoip_path = \"$geoip_file\" | .domains.geoip_url = \"$geoip_url\" " "$CONFIG_FILE" >"$temp_file" 2>/dev/null; then
+        # Update or add geodat paths under system.geo
+        if jq \
+            --arg geosite_path "$geosite_file" \
+            --arg geosite_url "$site_url" \
+            --arg geoip_path "$geoip_file" \
+            --arg geoip_url "$ip_url" \
+            '.system.geo.sitedat_path = $geosite_path | 
+             .system.geo.sitedat_url = $geosite_url | 
+             .system.geo.ipdat_path = $geoip_path | 
+             .system.geo.ipdat_url = $geoip_url' \
+            "$CONFIG_FILE" >"$temp_file" 2>/dev/null; then
+
             mv "$temp_file" "$CONFIG_FILE" || {
                 print_error "Failed to update config file"
                 rm -f "$temp_file"
-                return 0
+                return 1
             }
-            print_success "Config updated with geosite path: $geosite_file"
-            print_success "Config updated with geosite URL: $geosite_url"
-            print_success "Config updated with geoip path: $geoip_file"
-            print_success "Config updated with geoip URL: $geoip_url"
+            print_success "Config updated:"
+            print_success "  Geosite: $geosite_file"
+            print_success "  GeoIP:   $geoip_file"
             return 0
         else
             print_error "Failed to parse config with jq"
             rm -f "$temp_file"
-            return 0
+            return 1
         fi
     else
         print_warning "jq not found - cannot automatically update config"
         print_info "Please manually add to your config file:"
-        print_info "  \"domains\": {"
-        print_info "    \"geosite_path\": \"$geosite_file\""
-        print_info "  }"
+        print_info '  "system": {'
+        print_info '    "geo": {'
+        print_info "      \"sitedat_path\": \"$geosite_file\","
+        print_info "      \"sitedat_url\": \"$site_url\","
+        print_info "      \"ipdat_path\": \"$geoip_file\","
+        print_info "      \"ipdat_url\": \"$ip_url\""
+        print_info '    }'
+        print_info '  }'
         echo ""
-        print_info "Or remember to update Geosite Path in the B4 Web UI by accessing Settings -> Domains."
+        print_info "Or update paths in B4 Web UI: Settings -> Geodat Settings"
         return 0
     fi
 }
@@ -1185,7 +1209,7 @@ setup_geodat() {
         geoip_file="${geosite_dst_dir}/geoip.dat"
 
         # Update config
-        update_config_geodat_path "$geosite_file" "$geoip_file"
+        update_config_geodat_path "$geosite_file" "$geoip_file" "$geosite_url"
 
         print_success "Geosite setup completed!"
         return 0

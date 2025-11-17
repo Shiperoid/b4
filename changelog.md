@@ -4,9 +4,10 @@
 
 - ADDED: Configuration sets can now be enabled/disabled without deletion.
 - ADDED: Clear button next to the IP/CIDR list in the set configuration.
+- ADDED: Download `GeoSite`/`GeoIP` database files directly from Settings UI with preset sources.
 - IMPROVED: Redesigned `/test` page UX - domains are now managed directly on the test page.
 - FIXED: Resolved severe performance bottleneck on `/domains` page when adding ASN filters (caused by expensive ASN lookup operations executing on every render).
-- REMOVED: test domain configuration from `Settings` - domains are now managed exclusively on the Test page.
+- REMOVED: Test domain configuration from `Settings` - domains are now managed exclusively on the Test page.
 
 ## [1.15.0] - 2025-11-16
 

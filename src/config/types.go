@@ -110,4 +110,6 @@ type SetConfig struct {
 type GeoDatConfig struct {
 	GeoSitePath string `json:"sitedat_path" bson:"sitedat_path"`
 	GeoIpPath   string `json:"ipdat_path" bson:"ipdat_path"`
+	GeoSiteURL  string `json:"sitedat_url" bson:"sitedat_url"`
+	GeoIpURL    string `json:"ipdat_url" bson:"ipdat_url"`
 }

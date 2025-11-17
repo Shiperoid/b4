@@ -93,6 +93,8 @@ var DefaultConfig = Config{
 		Geo: GeoDatConfig{
 			GeoSitePath: "",
 			GeoIpPath:   "",
+			GeoSiteURL:  "",
+			GeoIpURL:    "",
 		},
 
 		Tables: TablesConfig{
