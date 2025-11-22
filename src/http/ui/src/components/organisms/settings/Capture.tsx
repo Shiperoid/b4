@@ -77,6 +77,12 @@ export const CaptureSettings: React.FC = () => {
     const capturedDomain = probeForm.domain; // Store for notification
     setLoading(true);
 
+    setNotification({
+      open: true,
+      message: `Capturing enabled for ${capturedDomain}. Open https://${capturedDomain} in your browser to capture the payload.`,
+      severity: "success",
+    });
+
     try {
       if (probeForm.protocol === "both") {
         await fetch("/api/capture/probe", {
@@ -313,8 +319,14 @@ export const CaptureSettings: React.FC = () => {
         </Grid>
 
         {loading && (
-          <Alert severity="info" sx={{ mt: 2 }}>
-            Probing {probeForm.domain}... Waiting for capture to complete
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Capture window is open for {probeForm.domain}
+            </Typography>
+            <Typography variant="caption">
+              Please open https://{probeForm.domain} in your browser within 30
+              seconds
+            </Typography>
           </Alert>
         )}
       </B4Section>

@@ -196,7 +196,7 @@ func (w *Worker) Start() error {
 					host, _ = sni.ParseTLSClientHelloSNI(payload)
 
 					if captureManager := capture.GetManager(cfg); captureManager != nil {
-						go captureManager.CapturePayload(connKey, host, "tls", payload)
+						captureManager.CapturePayload(connKey, host, "tls", payload)
 					}
 
 					if host != "" {
@@ -310,7 +310,7 @@ func (w *Worker) Start() error {
 				}
 
 				if captureManager := capture.GetManager(cfg); captureManager != nil {
-					go captureManager.CapturePayload(connKey, host, "quic", payload)
+					captureManager.CapturePayload(connKey, host, "quic", payload)
 				}
 
 				shouldHandle := (matchedPort || matchedIP || matchedQUIC) && !(isSTUN && set.UDP.FilterSTUN)
