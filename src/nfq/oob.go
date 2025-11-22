@@ -68,9 +68,6 @@ func (w *Worker) sendWithOOB(cfg *config.SetConfig, packet []byte, dst net.IP) b
 
 	binary.BigEndian.PutUint16(oobSeg[2:4], uint16(oobSegLen))
 
-	sock.FixIPv4Checksum(oobSeg[:ipHdrLen])
-	sock.FixTCPChecksum(oobSeg)
-
 	regularSegLen := payloadStart + (payloadLen - oobPos)
 	regularSeg := make([]byte, regularSegLen)
 
@@ -78,25 +75,23 @@ func (w *Worker) sendWithOOB(cfg *config.SetConfig, packet []byte, dst net.IP) b
 	copy(regularSeg[:payloadStart], packet[:payloadStart])
 	copy(regularSeg[payloadStart:], packet[payloadStart+oobPos:])
 
-	seq := binary.BigEndian.Uint32(regularSeg[ipHdrLen+4 : ipHdrLen+8])
+	seq := binary.BigEndian.Uint32(packet[ipHdrLen+4 : ipHdrLen+8])
+	id := binary.BigEndian.Uint16(packet[4:6])
 
 	if cfg.Fragmentation.OOBReverse {
 		binary.BigEndian.PutUint32(oobSeg[ipHdrLen+4:ipHdrLen+8], seq)
-		binary.BigEndian.PutUint32(regularSeg[ipHdrLen+4:ipHdrLen+8], seq+uint32(oobPos))
-	} else {
-		binary.BigEndian.PutUint32(regularSeg[ipHdrLen+4:ipHdrLen+8], seq+uint32(oobPos))
-	}
-
-	// Update IP ID for second packet
-	id := binary.BigEndian.Uint16(packet[4:6])
-	if cfg.Fragmentation.OOBReverse {
 		binary.BigEndian.PutUint16(oobSeg[4:6], id+1)
+		binary.BigEndian.PutUint32(regularSeg[ipHdrLen+4:ipHdrLen+8], seq+uint32(oobPos))
 	} else {
+		binary.BigEndian.PutUint32(regularSeg[ipHdrLen+4:ipHdrLen+8], seq+uint32(oobPos))
 		binary.BigEndian.PutUint16(regularSeg[4:6], id+1)
 	}
 
 	binary.BigEndian.PutUint16(regularSeg[2:4], uint16(regularSegLen))
 
+	// Fix checksums AFTER all modifications
+	sock.FixIPv4Checksum(oobSeg[:ipHdrLen])
+	sock.FixTCPChecksum(oobSeg)
 	sock.FixIPv4Checksum(regularSeg[:ipHdrLen])
 	sock.FixTCPChecksum(regularSeg)
 
@@ -121,7 +116,6 @@ func (w *Worker) sendWithOOB(cfg *config.SetConfig, packet []byte, dst net.IP) b
 	return true
 }
 
-// IPv6 version
 func (w *Worker) sendWithOOBv6(cfg *config.SetConfig, packet []byte, dst net.IP) bool {
 	if cfg.Fragmentation.OOBPosition <= 0 {
 		return false
@@ -142,7 +136,6 @@ func (w *Worker) sendWithOOBv6(cfg *config.SetConfig, packet []byte, dst net.IP)
 
 	oobPos := cfg.Fragmentation.OOBPosition
 
-	// Handle +s modifier (add SNI offset) if needed
 	if cfg.Fragmentation.MiddleSNI {
 		if sniStart, sniEnd, ok := locateSNI(packet[payloadStart:]); ok {
 			oobPos += sniStart + (sniEnd-sniStart)/2
@@ -166,14 +159,8 @@ func (w *Worker) sendWithOOBv6(cfg *config.SetConfig, packet []byte, dst net.IP)
 	copy(oobSeg[:payloadStart], packet[:payloadStart])
 	copy(oobSeg[payloadStart:payloadStart+oobPos], packet[payloadStart:payloadStart+oobPos])
 	oobSeg[payloadStart+oobPos] = oobChar
-
-	// Set URG flag
 	oobSeg[ipv6HdrLen+13] |= 0x20
 	binary.BigEndian.PutUint16(oobSeg[ipv6HdrLen+18:ipv6HdrLen+20], uint16(oobPos+1))
-
-	// Update IPv6 payload length
-	binary.BigEndian.PutUint16(oobSeg[4:6], uint16(oobSegLen-ipv6HdrLen))
-	sock.FixTCPChecksumV6(oobSeg)
 
 	// Build regular segment
 	regularSegLen := payloadStart + (payloadLen - oobPos)
@@ -181,7 +168,7 @@ func (w *Worker) sendWithOOBv6(cfg *config.SetConfig, packet []byte, dst net.IP)
 	copy(regularSeg[:payloadStart], packet[:payloadStart])
 	copy(regularSeg[payloadStart:], packet[payloadStart+oobPos:])
 
-	// Handle sequence numbers based on reverse flag
+	// Handle sequence numbers
 	seq := binary.BigEndian.Uint32(packet[ipv6HdrLen+4 : ipv6HdrLen+8])
 
 	if cfg.Fragmentation.OOBReverse {
@@ -191,10 +178,12 @@ func (w *Worker) sendWithOOBv6(cfg *config.SetConfig, packet []byte, dst net.IP)
 		binary.BigEndian.PutUint32(regularSeg[ipv6HdrLen+4:ipv6HdrLen+8], seq+uint32(oobPos))
 	}
 
+	// Update lengths and fix checksums AFTER all modifications
+	binary.BigEndian.PutUint16(oobSeg[4:6], uint16(oobSegLen-ipv6HdrLen))
 	binary.BigEndian.PutUint16(regularSeg[4:6], uint16(regularSegLen-ipv6HdrLen))
+	sock.FixTCPChecksumV6(oobSeg)
 	sock.FixTCPChecksumV6(regularSeg)
 
-	// Send based on reverse flag
 	seg2delay := cfg.TCP.Seg2Delay
 
 	if cfg.Fragmentation.OOBReverse {

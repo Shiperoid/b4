@@ -293,6 +293,52 @@ func GetTestPresets() []ConfigPreset {
 		},
 	})
 
+	// 12. OOB (Out-of-Band) variations
+	oobConfigs := []struct {
+		pos     int
+		reverse bool
+		char    byte
+	}{
+		{1, false, 'x'},  // Early position, normal order
+		{1, true, 'x'},   // Early position, reversed
+		{2, false, 0x00}, // Position 2, null byte
+		{3, true, 'x'},   // After TLS version
+		{1, false, 0x00}, // Null OOB byte
+	}
+
+	for _, oc := range oobConfigs {
+		name := fmt.Sprintf("oob-pos%d", oc.pos)
+		if oc.reverse {
+			name += "-rev"
+		}
+		if oc.char == 0x00 {
+			name += "-null"
+		}
+
+		presets = append(presets, ConfigPreset{
+			Name:        name,
+			Description: fmt.Sprintf("OOB at pos=%d reverse=%v", oc.pos, oc.reverse),
+			Config: config.SetConfig{
+				TCP:           config.TCPConfig{ConnBytesLimit: 19},
+				UDP:           config.UDPConfig{Mode: "fake", FakeSeqLength: 6, FakeLen: 64, FakingStrategy: "none", FilterQUIC: "disabled", FilterSTUN: true, ConnBytesLimit: 8},
+				Fragmentation: config.FragmentationConfig{Strategy: "none", OOBPosition: oc.pos, OOBReverse: oc.reverse, OOBChar: oc.char},
+				Faking:        config.FakingConfig{SNI: false},
+			},
+		})
+	}
+
+	// 13. OOB + Fragmentation combined (powerful combo)
+	presets = append(presets, ConfigPreset{
+		Name:        "oob-frag-combo",
+		Description: "OOB with TCP fragmentation",
+		Config: config.SetConfig{
+			TCP:           config.TCPConfig{ConnBytesLimit: 19},
+			UDP:           config.UDPConfig{Mode: "fake", FakeSeqLength: 6, FakeLen: 64, FakingStrategy: "none", FilterQUIC: "disabled", FilterSTUN: true, ConnBytesLimit: 8},
+			Fragmentation: config.FragmentationConfig{Strategy: "tcp", SNIPosition: 1, SNIReverse: true, OOBPosition: 2, OOBReverse: false, OOBChar: 'x'},
+			Faking:        config.FakingConfig{SNI: true, TTL: 8, Strategy: "pastseq", SeqOffset: 10000, SNISeqLength: 1, SNIType: 2},
+		},
+	})
+
 	presets = append(presets, ConfigPreset{
 		Name:        "fake-only",
 		Description: "Fake packets only, no fragmentation",
