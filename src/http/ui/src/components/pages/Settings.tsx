@@ -534,7 +534,13 @@ export default function Settings() {
         </TabPanel>
 
         <TabPanel value={validTab} index={TABS.DOMAINS}>
-          <GeoSettings config={config} onChange={handleChange} />
+          <GeoSettings
+            config={config}
+            onChange={handleChange}
+            loadConfig={() => {
+              void loadConfig();
+            }}
+          />
         </TabPanel>
 
         <TabPanel value={validTab} index={TABS.API}>

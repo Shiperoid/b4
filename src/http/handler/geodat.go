@@ -132,6 +132,8 @@ func (api *API) handleGeodatDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	api.geodataManager.UpdatePaths(geositePath, geoipPath)
+
 	log.Infof("Downloaded geodat files: geosite.dat (%d bytes), geoip.dat (%d bytes)", geositeSize, geoipSize)
 
 	response := GeodatDownloadResponse{

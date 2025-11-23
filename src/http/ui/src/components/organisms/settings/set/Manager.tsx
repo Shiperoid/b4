@@ -116,8 +116,8 @@ export const SetsManager: React.FC<SetsManagerProps> = ({
         middle_sni: true,
         sni_position: 1,
         oob_position: 0,
-        disoob_position: 0,
-        oob_char: "x",
+        oob_reverse: false,
+        oob_char: 120,
       } as B4SetConfig["fragmentation"],
       faking: {
         sni: true,

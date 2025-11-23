@@ -25,6 +25,7 @@ import { button_primary, colors } from "@design";
 export interface GeoSettingsProps {
   config: B4Config;
   onChange: (field: string, value: boolean | string | number) => void;
+  loadConfig: () => void;
 }
 
 interface GeodatSource {
@@ -39,7 +40,10 @@ interface FileInfo {
   last_modified?: string;
 }
 
-export const GeoSettings: React.FC<GeoSettingsProps> = ({ config }) => {
+export const GeoSettings: React.FC<GeoSettingsProps> = ({
+  config,
+  loadConfig,
+}) => {
   const [sources, setSources] = useState<GeodatSource[]>([]);
   const [selectedSource, setSelectedSource] = useState<string>("");
   const [customGeositeURL, setCustomGeositeURL] = useState<string>("");
@@ -154,8 +158,9 @@ export const GeoSettings: React.FC<GeoSettingsProps> = ({ config }) => {
         };
 
         setDownloadStatus(
-          `✓ Downloaded successfully to ${extractDir(result.geosite_path)}`
+          `Downloaded successfully to ${extractDir(result.geosite_path)}`
         );
+        loadConfig();
         setTimeout(() => setDownloadStatus(""), 5000);
         void checkFileStatus();
       } else {
