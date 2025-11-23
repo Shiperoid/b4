@@ -4,13 +4,13 @@ import (
 	"container/list"
 	"net"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 
 	"github.com/daniellavrushin/b4/config"
+	"github.com/yl2chen/cidranger"
 )
 
 type ipRange struct {
@@ -28,7 +28,7 @@ type SuffixSet struct {
 	sets       map[string]*config.SetConfig
 	regexes    []*regexWithSet
 	regexCache sync.Map
-	ipRanges   []ipRange
+	ipRanger   cidranger.Ranger
 	portRanges []portRange
 
 	ipCache      map[string]*cacheEntry
@@ -55,17 +55,23 @@ type regexWithSet struct {
 	set   *config.SetConfig
 }
 
+func (e *ipRange) Network() net.IPNet {
+	return *e.ipNet
+}
+
 func NewSuffixSet(sets []*config.SetConfig) *SuffixSet {
 	s := &SuffixSet{
-		sets:         make(map[string]*config.SetConfig),
-		regexes:      make([]*regexWithSet, 0),
+		sets:     make(map[string]*config.SetConfig),
+		regexes:  make([]*regexWithSet, 0),
+		ipRanger: cidranger.NewPCTrieRanger(),
+
 		ipCache:      make(map[string]*cacheEntry),
 		ipCacheLRU:   list.New(),
-		ipCacheLimit: 10000,
+		ipCacheLimit: 5000,
 
 		domainCache:      make(map[string]*cacheEntry),
 		domainCacheLRU:   list.New(),
-		domainCacheLimit: 50000,
+		domainCacheLimit: 10000,
 	}
 
 	seenRegexes := make(map[string]bool)
@@ -107,7 +113,6 @@ func NewSuffixSet(sets []*config.SetConfig) *SuffixSet {
 				continue
 			}
 
-			// Parse CIDR or single IP
 			var ipNet *net.IPNet
 			var err error
 
@@ -125,7 +130,9 @@ func NewSuffixSet(sets []*config.SetConfig) *SuffixSet {
 			}
 
 			if err == nil && ipNet != nil {
-				s.ipRanges = append(s.ipRanges, ipRange{ipNet: ipNet, set: set})
+				// Store set config in the ranger entry
+				entry := &ipRange{ipNet: ipNet, set: set}
+				_ = s.ipRanger.Insert(entry)
 			}
 		}
 
@@ -156,14 +163,6 @@ func NewSuffixSet(sets []*config.SetConfig) *SuffixSet {
 				}
 			}
 		}
-	}
-
-	if len(s.ipRanges) > 0 {
-		sort.Slice(s.ipRanges, func(i, j int) bool {
-			onesI, _ := s.ipRanges[i].ipNet.Mask.Size()
-			onesJ, _ := s.ipRanges[j].ipNet.Mask.Size()
-			return onesI > onesJ // /32 first, /0 last
-		})
 	}
 
 	return s
@@ -207,21 +206,18 @@ func (s *SuffixSet) MatchSNI(host string) (bool, *config.SetConfig) {
 }
 
 func (s *SuffixSet) MatchIP(ip net.IP) (bool, *config.SetConfig) {
-	if s == nil || len(s.ipRanges) == 0 || ip == nil {
+	if s == nil || s.ipRanger == nil || ip == nil {
 		return false, nil
 	}
 
 	ipStr := ip.String()
 
-	// Quick read-only check
 	s.ipCacheMu.RLock()
 	_, found := s.ipCache[ipStr]
 	s.ipCacheMu.RUnlock()
 
 	if found {
-		// Need write lock to move element
 		s.ipCacheMu.Lock()
-		// Recheck (entry might be evicted between unlock/lock)
 		if entry, ok := s.ipCache[ipStr]; ok {
 			s.ipCacheLRU.MoveToFront(entry.element)
 			matched, set := entry.matched, entry.set
@@ -229,21 +225,21 @@ func (s *SuffixSet) MatchIP(ip net.IP) (bool, *config.SetConfig) {
 			return matched, set
 		}
 		s.ipCacheMu.Unlock()
-		// Fall through to cache miss
 	}
 
-	// Cache miss - do linear scan
-	var matched bool
-	var matchedSet *config.SetConfig
-	for _, r := range s.ipRanges {
-		if r.ipNet.Contains(ip) {
-			matched = true
-			matchedSet = r.set
-			break
-		}
+	entries, err := s.ipRanger.ContainingNetworks(ip)
+	if err != nil || len(entries) == 0 {
+		s.cacheIPResult(ipStr, false, nil)
+		return false, nil
 	}
 
-	// Update cache
+	matchedEntry := entries[0].(*ipRange)
+	s.cacheIPResult(ipStr, true, matchedEntry.set)
+
+	return true, matchedEntry.set
+}
+
+func (s *SuffixSet) cacheIPResult(ipStr string, matched bool, set *config.SetConfig) {
 	s.ipCacheMu.Lock()
 	defer s.ipCacheMu.Unlock()
 
@@ -258,11 +254,9 @@ func (s *SuffixSet) MatchIP(ip net.IP) (bool, *config.SetConfig) {
 	element := s.ipCacheLRU.PushFront(ipStr)
 	s.ipCache[ipStr] = &cacheEntry{
 		matched: matched,
-		set:     matchedSet,
+		set:     set,
 		element: element,
 	}
-
-	return matched, matchedSet
 }
 
 func (s *SuffixSet) matchDomain(host string) (bool, *config.SetConfig) {
