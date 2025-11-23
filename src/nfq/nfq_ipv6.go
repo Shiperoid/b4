@@ -90,6 +90,8 @@ func (w *Worker) dropAndInjectTCPv6(cfg *config.SetConfig, raw []byte, dst net.I
 		w.sendIPFragmentsv6(cfg, raw, dst)
 	case "oob":
 		w.sendOOBFragmentsV6(cfg, raw, dst)
+	case "tls":
+		w.sendTLSFragmentsV6(cfg, raw, dst)
 	case "none":
 		_ = w.sock.SendIPv6(raw, dst)
 	default:

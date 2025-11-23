@@ -224,6 +224,15 @@ func (w *Worker) Start() error {
 
 					packetCopy := make([]byte, len(raw))
 					copy(packetCopy, raw)
+
+					if set.TCP.DropSACK {
+						if v == 4 {
+							packetCopy = sock.StripSACKFromTCP(packetCopy)
+						} else {
+							packetCopy = sock.StripSACKFromTCPv6(packetCopy)
+						}
+					}
+
 					dstCopy := make(net.IP, len(dst))
 					copy(dstCopy, dst)
 					setCopy := set
@@ -465,6 +474,8 @@ func (w *Worker) dropAndInjectTCP(cfg *config.SetConfig, raw []byte, dst net.IP)
 		w.sendIPFragments(cfg, raw, dst)
 	case "oob":
 		w.sendOOBFragments(cfg, raw, dst)
+	case "tls":
+		w.sendTLSFragments(cfg, raw, dst)
 	case "none":
 		_ = w.sock.SendIPv4(raw, dst)
 	default:

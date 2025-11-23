@@ -18,6 +18,7 @@ func (c *Config) BindFlags(cmd *cobra.Command) {
 	cmd.Flags().IntVar(&c.MainSet.TCP.Seg2Delay, "tcp-seg2delay", c.MainSet.TCP.Seg2Delay, "Delay between segments in ms")
 	cmd.Flags().BoolVar(&c.MainSet.TCP.SynFake, "tcp-syn-fake", c.MainSet.TCP.SynFake, "Enable SYN fake packets (default false)")
 	cmd.Flags().IntVar(&c.MainSet.TCP.SynFakeLen, "tcp-syn-fake-len", c.MainSet.TCP.SynFakeLen, "SYN fake packet size in bytes (default 0)")
+	cmd.Flags().BoolVar(&c.MainSet.TCP.DropSACK, "tcp-drop-sack", c.MainSet.TCP.DropSACK, "Enable dropping SACK option from TCP packets (default false)")
 
 	// UDP bypass configuration
 	cmd.Flags().StringVar(&c.MainSet.UDP.Mode, "udp-mode", c.MainSet.UDP.Mode, "UDP handling strategy (drop|fake)")
@@ -31,13 +32,14 @@ func (c *Config) BindFlags(cmd *cobra.Command) {
 	cmd.Flags().IntVar(&c.MainSet.UDP.Seg2Delay, "udp-seg2delay", c.MainSet.UDP.Seg2Delay, "Delay between segments in ms (default 0)")
 
 	// Fragmentation configuration
-	cmd.Flags().StringVar(&c.MainSet.Fragmentation.Strategy, "frag", c.MainSet.Fragmentation.Strategy, "Fragmentation strategy (tcp|ip|none)")
+	cmd.Flags().StringVar(&c.MainSet.Fragmentation.Strategy, "frag", c.MainSet.Fragmentation.Strategy, "Fragmentation strategy (tcp|ip|tls|oob|none)")
 	cmd.Flags().BoolVar(&c.MainSet.Fragmentation.SNIReverse, "frag-sni-reverse", c.MainSet.Fragmentation.SNIReverse, "Reverse fragment order")
 	cmd.Flags().BoolVar(&c.MainSet.Fragmentation.MiddleSNI, "frag-middle-sni", c.MainSet.Fragmentation.MiddleSNI, "Fragment in middle of SNI")
 	cmd.Flags().IntVar(&c.MainSet.Fragmentation.SNIPosition, "frag-sni-pos", c.MainSet.Fragmentation.SNIPosition, "SNI fragment position")
 	cmd.Flags().IntVar(&c.MainSet.Fragmentation.OOBPosition, "frag-oob-pos", c.MainSet.Fragmentation.OOBPosition, "OOB data position")
 	cmd.Flags().BoolVar(&c.MainSet.Fragmentation.OOBReverse, "frag-oob-reverse", c.MainSet.Fragmentation.OOBReverse, "Send OOB fragments in reverse order")
 	cmd.Flags().Uint8Var(&c.MainSet.Fragmentation.OOBChar, "frag-oob-char", c.MainSet.Fragmentation.OOBChar, "OOB character (ASCII code)")
+	cmd.Flags().IntVar(&c.MainSet.Fragmentation.TLSRecordPosition, "frag-tlsrec-pos", c.MainSet.Fragmentation.TLSRecordPosition, "TLS record split position")
 
 	// Faking configuration
 	cmd.Flags().StringVar(&c.MainSet.Faking.Strategy, "fake-strategy", c.MainSet.Faking.Strategy, "Faking strategy (ttl|randseq|pastseq|tcp_check|md5sum)")

@@ -25,6 +25,7 @@ type TCPConfig struct {
 	Seg2Delay      int  `json:"seg2delay" bson:"seg2delay"`
 	SynFake        bool `json:"syn_fake" bson:"syn_fake"`
 	SynFakeLen     int  `json:"syn_fake_len" bson:"syn_fake_len"`
+	DropSACK       bool `json:"drop_sack" bson:"drop_sack"`
 }
 
 type UDPConfig struct {
@@ -41,6 +42,8 @@ type UDPConfig struct {
 
 type FragmentationConfig struct {
 	Strategy string `json:"strategy" bson:"strategy"` // Values: "tcp", "ip", "oob", "none"
+
+	TLSRecordPosition int `json:"tlsrec_pos" bson:"tlsrec_pos"` // where to split TLS record
 
 	MiddleSNI   bool `json:"middle_sni" bson:"middle_sni"`
 	SNIPosition int  `json:"sni_position" bson:"sni_position"`

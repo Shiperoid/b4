@@ -46,16 +46,18 @@ var DefaultSetConfig = SetConfig{
 		Seg2Delay:      0,
 		SynFake:        false,
 		SynFakeLen:     0,
+		DropSACK:       false,
 	},
 
 	Fragmentation: FragmentationConfig{
-		Strategy:    "tcp",
-		SNIReverse:  true,
-		MiddleSNI:   true,
-		SNIPosition: 1,
-		OOBPosition: 0,
-		OOBReverse:  false,
-		OOBChar:     'x',
+		Strategy:          "tcp",
+		SNIReverse:        true,
+		MiddleSNI:         true,
+		SNIPosition:       1,
+		OOBPosition:       0,
+		OOBReverse:        false,
+		OOBChar:           'x',
+		TLSRecordPosition: 0,
 	},
 
 	Faking: FakingConfig{
