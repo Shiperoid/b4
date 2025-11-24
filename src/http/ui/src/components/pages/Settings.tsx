@@ -167,7 +167,7 @@ export default function Settings() {
       location.pathname === "/settings" ||
       location.pathname === "/settings/"
     ) {
-      navigate("/settings/core", { replace: true });
+      navigate("/settings/general", { replace: true });
     }
   }, [location.pathname, navigate]);
 
