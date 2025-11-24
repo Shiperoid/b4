@@ -9,12 +9,12 @@ interface B4SectionProps {
   children: React.ReactNode;
 }
 
-export const B4Section: React.FC<B4SectionProps> = ({
+export const B4Section = ({
   title,
   description,
   icon,
   children,
-}) => {
+}: B4SectionProps) => {
   return (
     <Paper
       sx={{

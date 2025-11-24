@@ -13,6 +13,7 @@ type MigrationFunc func(*Config) error
 var migrationRegistry = map[int]MigrationFunc{
 	0: migrateV0to1, // Add enabled field to sets
 	1: migrateV1to2,
+	2: migrateV2to3,
 }
 
 // Migration: v0 -> v1 (add enabled field to sets)
@@ -32,6 +33,27 @@ func migrateV0to1(c *Config) error {
 
 func migrateV1to2(c *Config) error {
 	log.Tracef("Migration v1->v2: Renaming sni_reverse to reverse_order")
+
+	for _, set := range c.Sets {
+		set.Fragmentation.ReverseOrder = DefaultSetConfig.Fragmentation.ReverseOrder
+		set.Fragmentation.OOBChar = DefaultSetConfig.Fragmentation.OOBChar
+		set.Fragmentation.OOBPosition = DefaultSetConfig.Fragmentation.OOBPosition
+		set.Fragmentation.TLSRecordPosition = DefaultSetConfig.Fragmentation.TLSRecordPosition
+	}
+
+	return nil
+}
+
+func migrateV2to3(c *Config) error {
+	log.Tracef("Migration v2->v3: Adding TCP desync settings with default values")
+
+	for _, set := range c.Sets {
+		set.TCP.DesyncMode = DefaultSetConfig.TCP.DesyncMode
+		set.TCP.DesyncTTL = DefaultSetConfig.TCP.DesyncTTL
+		set.TCP.DesyncCount = DefaultSetConfig.TCP.DesyncCount
+
+		set.Faking.SNIMutation = DefaultSetConfig.Faking.SNIMutation
+	}
 
 	return nil
 }

@@ -19,6 +19,8 @@ func (c *Config) BindFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&c.MainSet.TCP.SynFake, "tcp-syn-fake", c.MainSet.TCP.SynFake, "Enable SYN fake packets (default false)")
 	cmd.Flags().IntVar(&c.MainSet.TCP.SynFakeLen, "tcp-syn-fake-len", c.MainSet.TCP.SynFakeLen, "SYN fake packet size in bytes (default 0)")
 	cmd.Flags().BoolVar(&c.MainSet.TCP.DropSACK, "tcp-drop-sack", c.MainSet.TCP.DropSACK, "Enable dropping SACK option from TCP packets (default false)")
+	cmd.Flags().StringVar(&c.MainSet.TCP.WinMode, "tcp-win-mode", c.MainSet.TCP.WinMode, "TCP window modification mode (off|oscillate|zero|random|escalate)")
+	cmd.Flags().IntSliceVar(&c.MainSet.TCP.WinValues, "tcp-win-values", c.MainSet.TCP.WinValues, "Custom TCP window values (comma separated list)")
 
 	// UDP bypass configuration
 	cmd.Flags().StringVar(&c.MainSet.UDP.Mode, "udp-mode", c.MainSet.UDP.Mode, "UDP handling strategy (drop|fake)")

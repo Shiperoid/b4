@@ -1,8 +1,6 @@
 package config
 
 import (
-	_ "embed"
-
 	"github.com/daniellavrushin/b4/log"
 )
 
@@ -10,7 +8,7 @@ var (
 	MAIN_SET_ID = "11111111-1111-1111-1111-111111111111"
 	NEW_SET_ID  = "00000000-0000-0000-0000-000000000000"
 
-	CurrentConfigVersion = 3
+	CurrentConfigVersion = len(migrationRegistry)
 	MinSupportedVersion  = 0
 )
 
@@ -47,6 +45,13 @@ var DefaultSetConfig = SetConfig{
 		SynFake:        false,
 		SynFakeLen:     0,
 		DropSACK:       false,
+
+		WinMode:   "off",
+		WinValues: []int{0, 1460, 8192, 65535},
+
+		DesyncMode:  "combo",
+		DesyncTTL:   3,
+		DesyncCount: 3,
 	},
 
 	Fragmentation: FragmentationConfig{
@@ -67,6 +72,14 @@ var DefaultSetConfig = SetConfig{
 		CustomPayload: "",
 		Strategy:      "pastseq",
 		SeqOffset:     10000,
+
+		SNIMutation: SNIMutationConfig{
+			Mode:         "off",
+			GreaseCount:  3,
+			PaddingSize:  2048,
+			FakeExtCount: 5,
+			FakeSNIs:     []string{"ya.ru", "vk.com", "max.ru"},
+		},
 	},
 
 	Targets: TargetsConfig{

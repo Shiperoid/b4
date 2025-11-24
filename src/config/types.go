@@ -26,6 +26,14 @@ type TCPConfig struct {
 	SynFake        bool `json:"syn_fake" bson:"syn_fake"`
 	SynFakeLen     int  `json:"syn_fake_len" bson:"syn_fake_len"`
 	DropSACK       bool `json:"drop_sack" bson:"drop_sack"`
+
+	WinMode   string `json:"win_mode" bson:"win_mode"`     // "off", "oscillate", "zero", "random", "escalate"
+	WinValues []int  `json:"win_values" bson:"win_values"` // Custom window values
+
+	DesyncMode  string `json:"desync_mode" bson:"desync_mode"`   // "off" "rst", "fin", "ack", "combo", "full"
+	DesyncTTL   uint8  `json:"desync_ttl" bson:"desync_ttl"`     // TTL for desync packets
+	DesyncCount int    `json:"desync_count" bson:"desync_count"` // Number of desync packets
+
 }
 
 type UDPConfig struct {
@@ -61,6 +69,16 @@ type FakingConfig struct {
 	SNISeqLength  int    `json:"sni_seq_length" bson:"sni_seq_length"`
 	SNIType       int    `json:"sni_type" bson:"sni_type"`
 	CustomPayload string `json:"custom_payload" bson:"custom_payload"`
+
+	SNIMutation SNIMutationConfig `json:"sni_mutation" bson:"sni_mutation"`
+}
+
+type SNIMutationConfig struct {
+	Mode         string   `json:"mutate_mode" bson:"mutate_mode"` // "off", "duplicate", "grease", "padding", "reorder", "full"
+	GreaseCount  int      `json:"grease_count" bson:"grease_count"`
+	PaddingSize  int      `json:"padding_size" bson:"padding_size"`
+	FakeExtCount int      `json:"fake_ext_count" bson:"fake_ext_count"`
+	FakeSNIs     []string `json:"fake_snis" bson:"fake_snis"` // Additional SNIs to inject
 }
 
 type TargetsConfig struct {

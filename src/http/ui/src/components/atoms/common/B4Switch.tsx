@@ -12,24 +12,27 @@ interface B4SwitchProps extends Omit<SwitchProps, "checked" | "onChange"> {
   label: string;
   checked: boolean;
   description?: string;
+  disabled?: boolean;
   onChange: (checked: boolean) => void;
 }
 
-export const B4Switch: React.FC<B4SwitchProps> = ({
+export const B4Switch = ({
   label,
   checked,
   description,
   onChange,
   disabled,
   ...props
-}) => {
+}: B4SwitchProps) => {
   return (
     <Box>
       <FormControlLabel
         control={
           <Switch
             checked={checked}
-            onChange={(e) => onChange(e.target.checked)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              onChange(e.target.checked)
+            }
             disabled={disabled}
             sx={{
               "& .MuiSwitch-switchBase.Mui-checked": {

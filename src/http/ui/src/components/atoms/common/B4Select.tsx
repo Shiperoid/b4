@@ -1,4 +1,3 @@
-import React from "react";
 import {
   FormControl,
   InputLabel,
@@ -15,12 +14,12 @@ interface B4SelectProps extends Omit<SelectProps<string | number>, "variant"> {
   helperText?: string;
 }
 
-export const B4Select: React.FC<B4SelectProps> = ({
+export const B4Select = ({
   label,
   options,
   helperText,
   ...props
-}) => {
+}: B4SelectProps) => {
   return (
     <FormControl fullWidth size="small">
       <InputLabel sx={{ color: colors.text.secondary }}>{label}</InputLabel>

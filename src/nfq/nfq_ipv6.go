@@ -77,6 +77,15 @@ func (w *Worker) dropAndInjectTCPv6(cfg *config.SetConfig, raw []byte, dst net.I
 		return
 	}
 
+	if cfg.TCP.DesyncMode != "off" {
+		w.ExecuteDesyncIPv6(cfg, raw, dst)
+		time.Sleep(time.Duration(cfg.TCP.Seg2Delay) * time.Millisecond)
+	}
+
+	if cfg.TCP.WinMode != "off" {
+		w.ManipulateWindowIPv6(cfg, raw, dst)
+	}
+
 	// Inject fake SNI packets if configured
 	if cfg.Faking.SNI && cfg.Faking.SNISeqLength > 0 {
 		w.sendFakeSNISequencev6(cfg, raw, dst)

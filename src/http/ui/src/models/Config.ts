@@ -97,12 +97,21 @@ export interface CheckerConfig {
   domains: string[];
 }
 
+export type WindowMode = "off" | "oscillate" | "zero" | "random" | "escalate";
+export type DesyncMode = "off" | "rst" | "fin" | "ack" | "combo" | "full";
 export interface TcpConfig {
   conn_bytes_limit: number;
   seg2delay: number;
   syn_fake: boolean;
   syn_fake_len: number;
   drop_sack: boolean;
+
+  win_mode: "off";
+  win_size: number[];
+
+  desync_mode: "off";
+  desync_ttl: 3;
+  desync_count: 3;
 }
 
 export interface WebServerConfig {

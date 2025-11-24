@@ -463,6 +463,19 @@ func (w *Worker) dropAndInjectTCP(cfg *config.SetConfig, raw []byte, dst net.IP)
 		return
 	}
 
+	if cfg.Faking.SNIMutation.Mode != "off" {
+		raw = w.MutateClientHello(cfg, raw, dst)
+	}
+
+	if cfg.TCP.DesyncMode != "off" {
+		w.ExecuteDesyncIPv4(cfg, raw, dst)
+		time.Sleep(time.Duration(cfg.TCP.Seg2Delay) * time.Millisecond)
+	}
+
+	if cfg.TCP.WinMode != "off" {
+		w.ManipulateWindowIPv4(cfg, raw, dst)
+	}
+
 	if cfg.Faking.SNI && cfg.Faking.SNISeqLength > 0 {
 		w.sendFakeSNISequence(cfg, raw, dst)
 	}

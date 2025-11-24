@@ -42,7 +42,7 @@ export const FakingSettings: React.FC<FakingSettingsProps> = ({
           <SettingSwitch
             label="Enable Fake SNI"
             checked={config.faking.sni}
-            onChange={(checked) => onChange("faking.sni", checked)}
+            onChange={(checked: boolean) => onChange("faking.sni", checked)}
             description="Send fake SNI packets"
           />
         </Grid>
@@ -74,7 +74,7 @@ export const FakingSettings: React.FC<FakingSettingsProps> = ({
           <B4Slider
             label="Fake TTL"
             value={config.faking.ttl}
-            onChange={(value) => onChange("faking.ttl", value)}
+            onChange={(value: number) => onChange("faking.ttl", value)}
             min={1}
             max={64}
             step={1}
@@ -98,7 +98,9 @@ export const FakingSettings: React.FC<FakingSettingsProps> = ({
           <B4Slider
             label="SNI Sequence Length"
             value={config.faking.sni_seq_length}
-            onChange={(value) => onChange("faking.sni_seq_length", value)}
+            onChange={(value: number) =>
+              onChange("faking.sni_seq_length", value)
+            }
             min={1}
             max={20}
             step={1}

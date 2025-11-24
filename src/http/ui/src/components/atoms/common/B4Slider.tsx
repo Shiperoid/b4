@@ -2,9 +2,9 @@ import React from "react";
 import {
   Box,
   Slider,
-  SliderProps,
   Typography,
   FormHelperText,
+  SliderProps,
 } from "@mui/material";
 import { colors } from "@design";
 
@@ -19,9 +19,10 @@ interface B4SliderProps extends Omit<SliderProps, "onChange"> {
   showValue?: boolean;
   valueSuffix?: string;
   alert?: React.ReactNode;
+  disabled?: boolean;
 }
 
-export const B4Slider: React.FC<B4SliderProps> = ({
+export const B4Slider = ({
   label,
   value,
   onChange,
@@ -34,7 +35,7 @@ export const B4Slider: React.FC<B4SliderProps> = ({
   disabled,
   alert,
   ...props
-}) => {
+}: B4SliderProps) => {
   const handleChange = (_event: Event, newValue: number | number[]) => {
     onChange(Array.isArray(newValue) ? newValue[0] : newValue);
   };

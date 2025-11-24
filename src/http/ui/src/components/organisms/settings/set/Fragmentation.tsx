@@ -30,10 +30,10 @@ const strategyDescriptions = {
   none: "No fragmentation applied - packets sent as-is",
 };
 
-export const FragmentationSettings: React.FC<FragmentationSettingsProps> = ({
+export const FragmentationSettings = ({
   config,
   onChange,
-}) => {
+}: FragmentationSettingsProps) => {
   const strategy = config.fragmentation.strategy;
   const isTcpOrIp = strategy === "tcp" || strategy === "ip";
   const isOob = strategy === "oob";
@@ -63,7 +63,7 @@ export const FragmentationSettings: React.FC<FragmentationSettingsProps> = ({
           <SettingSwitch
             label="Reverse Fragment Order"
             checked={config.fragmentation.reverse_order}
-            onChange={(checked) =>
+            onChange={(checked: boolean) =>
               onChange("fragmentation.reverse_order", checked)
             }
             description="Send fragments in reverse order (applies to TCP/IP/TLS strategies)"
@@ -120,7 +120,7 @@ export const FragmentationSettings: React.FC<FragmentationSettingsProps> = ({
               <B4Slider
                 label="SNI Split Position"
                 value={config.fragmentation.sni_position}
-                onChange={(value) =>
+                onChange={(value: number) =>
                   onChange("fragmentation.sni_position", value)
                 }
                 min={0}
@@ -134,7 +134,7 @@ export const FragmentationSettings: React.FC<FragmentationSettingsProps> = ({
               <SettingSwitch
                 label="Split in Middle of SNI"
                 checked={config.fragmentation.middle_sni}
-                onChange={(checked) =>
+                onChange={(checked: boolean) =>
                   onChange("fragmentation.middle_sni", checked)
                 }
                 description="Split at SNI midpoint instead of start"
@@ -156,7 +156,7 @@ export const FragmentationSettings: React.FC<FragmentationSettingsProps> = ({
               <B4Slider
                 label="OOB Split Position"
                 value={config.fragmentation.oob_position || 1}
-                onChange={(value) =>
+                onChange={(value: number) =>
                   onChange("fragmentation.oob_position", value)
                 }
                 min={1}
@@ -172,7 +172,7 @@ export const FragmentationSettings: React.FC<FragmentationSettingsProps> = ({
                 value={String.fromCharCode(
                   config.fragmentation.oob_char || 120
                 )}
-                onChange={(e) => {
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   const char = e.target.value.slice(0, 1);
                   onChange(
                     "fragmentation.oob_char",
@@ -200,7 +200,7 @@ export const FragmentationSettings: React.FC<FragmentationSettingsProps> = ({
               <B4Slider
                 label="TLS Record Split Position"
                 value={config.fragmentation.tlsrec_pos || 1}
-                onChange={(value) =>
+                onChange={(value: number) =>
                   onChange("fragmentation.tlsrec_pos", value)
                 }
                 min={1}
