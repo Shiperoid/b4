@@ -6,10 +6,7 @@ interface B4TextFieldProps extends Omit<TextFieldProps, "variant"> {
   helperText?: React.ReactNode;
 }
 
-export const B4TextField: React.FC<B4TextFieldProps> = ({
-  helperText,
-  ...props
-}) => {
+export const B4TextField = ({ helperText, ...props }: B4TextFieldProps) => {
   return (
     <TextField
       {...props}

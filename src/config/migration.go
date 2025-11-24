@@ -45,13 +45,19 @@ func migrateV1to2(c *Config) error {
 }
 
 func migrateV2to3(c *Config) error {
-	log.Tracef("Migration v2->v3: Adding TCP desync settings with default values")
+	log.Tracef("Migration v2->v3: Adding TCP desync/window settings and SNI mutation")
 
 	for _, set := range c.Sets {
+		// TCP desync settings
 		set.TCP.DesyncMode = DefaultSetConfig.TCP.DesyncMode
 		set.TCP.DesyncTTL = DefaultSetConfig.TCP.DesyncTTL
 		set.TCP.DesyncCount = DefaultSetConfig.TCP.DesyncCount
 
+		// TCP window manipulation
+		set.TCP.WinMode = DefaultSetConfig.TCP.WinMode
+		set.TCP.WinValues = DefaultSetConfig.TCP.WinValues
+
+		// SNI mutation
 		set.Faking.SNIMutation = DefaultSetConfig.Faking.SNIMutation
 	}
 

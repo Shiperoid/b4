@@ -35,8 +35,8 @@ export interface FakingConfig {
   sni_seq_length: number;
   sni_type: FakingPayloadType;
   custom_payload: string;
+  sni_mutation: SNIMutationConfig;
 }
-
 export type FragmentationStrategy = "tcp" | "ip" | "tls" | "oob" | "none";
 export interface FragmentationConfig {
   strategy: FragmentationStrategy;
@@ -123,7 +123,7 @@ export interface TcpConfig {
   drop_sack: boolean;
 
   win_mode: WindowMode;
-  win_size: number[];
+  win_values: number[];
 
   desync_mode: DesyncMode;
   desync_ttl: number;

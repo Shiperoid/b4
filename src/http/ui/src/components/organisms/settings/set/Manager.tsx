@@ -99,7 +99,18 @@ export const SetsManager: React.FC<SetsManagerProps> = ({
       id: uuidv4(),
       name: `Set ${sets.length + 1}`,
       enabled: true,
-      tcp: { conn_bytes_limit: 19, seg2delay: 0 } as B4SetConfig["tcp"],
+      tcp: {
+        conn_bytes_limit: 19,
+        seg2delay: 0,
+        syn_fake: false,
+        syn_fake_len: 0,
+        drop_sack: false,
+        win_mode: "off",
+        win_values: [0, 1460, 8192, 65535],
+        desync_mode: "combo",
+        desync_ttl: 3,
+        desync_count: 3,
+      } as B4SetConfig["tcp"],
       udp: {
         mode: "fake",
         fake_seq_length: 6,
@@ -127,6 +138,13 @@ export const SetsManager: React.FC<SetsManagerProps> = ({
         sni_seq_length: 1,
         sni_type: 2,
         custom_payload: "",
+        sni_mutation: {
+          mode: "off",
+          grease_count: 3,
+          padding_size: 2048,
+          fake_ext_count: 5,
+          fake_snis: [],
+        },
       } as B4SetConfig["faking"],
       targets: {
         sni_domains: [],
