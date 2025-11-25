@@ -1,6 +1,7 @@
 {
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "MarkdownPaste.path": "${workspaceRoot}/docs/static/img/${fileBasenameNoExtension}",
   "files.eol": "\n",
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.expand": false,

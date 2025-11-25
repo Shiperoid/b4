@@ -41,10 +41,10 @@ const config: Config = {
 
   themeConfig: {
     navbar: {
-      title: "B4",
+      title: "",
       logo: {
         alt: "B4 Logo",
-        src: "img/logo.svg",
+        src: "img/favicon.svg",
       },
       items: [
         {
