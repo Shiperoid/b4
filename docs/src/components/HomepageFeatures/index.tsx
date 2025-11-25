@@ -1,77 +1,65 @@
 import clsx from "clsx";
 import Heading from "@theme/Heading";
+import Link from "@docusaurus/Link";
 import styles from "./styles.module.css";
 import { JSX } from "react";
 
-type FeatureItem = {
+type DocSection = {
   title: string;
-  icon: string;
+  link: string;
   description: JSX.Element;
 };
 
-const FeatureList: FeatureItem[] = [
+const DocSections: DocSection[] = [
   {
-    title: "Обход DPI в реальном времени",
-    icon: "🛡️",
+    title: "Установка",
+    link: "/docs/intro",
     description: (
       <>
-        Продвинутая манипуляция пакетами с TCP фрагментацией, UDP маскировкой и
-        SNI спуфингом
+        Быстрая установка на Linux, OpenWRT, Entware. Настройка systemd, запуск
+        сервиса, решение типичных проблем.
       </>
     ),
   },
   {
-    title: "Веб-интерфейс управления",
-    icon: "🎛️",
+    title: "Мониторинг соединений",
+    link: "/docs/domains",
     description: (
       <>
-        Красивая панель управления с метриками в реальном времени, потоковыми
-        логами и управлением конфигурацией
+        Live-монитор TCP/UDP трафика. Добавление доменов и IP в обход DPI,
+        обогащение через RIPE/IPInfo, фильтрация потока.
       </>
     ),
   },
   {
-    title: "Интеграция GeoIP/GeoSite",
-    icon: "🌍",
+    title: "Сеты конфигураций",
+    link: "/docs/sets",
     description: (
       <>
-        Поддержка геоданных v2ray/xray с автоматическими обновлениями и
-        фильтрацией по категориям
+        Создание наборов настроек для разных сценариев. TCP/UDP параметры,
+        стратегии фрагментации, фейкинг, мутация ClientHello.
       </>
     ),
   },
   {
-    title: "Мульти-сет конфигурации",
-    icon: "⚙️",
+    title: "Общие настройки",
+    link: "/docs/settings",
     description: (
       <>
-        Создавайте множественные стратегии обхода с различными параметрами для
-        разных сценариев
+        Сетевые параметры, логирование, firewall, geodata файлы, внешние API,
+        захват пакетов.
       </>
-    ),
-  },
-  {
-    title: "Сетевая аналитика",
-    icon: "🔍",
-    description: <>Интеграция с IPInfo и RIPE для поиска ASN и анализа сетей</>,
-  },
-  {
-    title: "Высокая производительность",
-    icon: "⚡",
-    description: (
-      <>Многопоточная обработка пакетов с минимальным влиянием на задержку</>
     ),
   },
 ];
 
-function Feature({ title, icon, description }: FeatureItem) {
+function DocCard({ title, link, description }: DocSection) {
   return (
-    <div className={clsx("col col--4")}>
-      <div className="text--center">
-        <div className="feature-icon">{icon}</div>
-      </div>
-      <div className="text--center padding-horiz--md">
-        <Heading as="h3">{title}</Heading>
+    <div className={clsx("col col--6")}>
+      <div className={styles.docCard}>
+        <Heading as="h3">
+          <Link to={link}>{title}</Link>
+        </Heading>
         <p>{description}</p>
       </div>
     </div>
@@ -82,9 +70,12 @@ export default function HomepageFeatures() {
   return (
     <section className={styles.features}>
       <div className="container">
+        <Heading as="h2" className={styles.sectionTitle}>
+          Документация
+        </Heading>
         <div className="row">
-          {FeatureList.map((props, idx) => (
-            <Feature key={idx} {...props} />
+          {DocSections.map((props, idx) => (
+            <DocCard key={idx} {...props} />
           ))}
         </div>
       </div>

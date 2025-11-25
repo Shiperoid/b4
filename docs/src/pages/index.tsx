@@ -12,20 +12,24 @@ function HomepageHeader() {
       <div className="container">
         <h1 className="hero__title">{siteConfig.title}</h1>
         <p className="hero__subtitle">
-          Продвинутая система обхода DPI для сетевой свободы
+          Локальный модуль обхода DPI для Linux и роутеров
+        </p>
+        <p className={styles.description}>
+          Манипуляция TCP/UDP пакетами, фрагментация, фейкинг SNI, интеграция с
+          GeoSite/GeoIP базами
         </p>
         <div className={styles.buttons}>
           <Link
             className="button button--secondary button--lg"
             to="/docs/intro"
           >
-            Быстрый старт - 5 минут ⏱️
+            Установка
           </Link>
           <Link
             className="button button--outline button--secondary button--lg margin-left--md"
             to="https://github.com/DanielLavrushin/b4"
           >
-            Посмотреть на GitHub
+            GitHub
           </Link>
         </div>
       </div>
@@ -35,10 +39,7 @@ function HomepageHeader() {
 
 export default function Home() {
   return (
-    <Layout
-      title="Система обхода DPI"
-      description="B4 - Продвинутый инструмент манипуляции пакетами для обхода DPI систем"
-    >
+    <Layout title="Документация" description="B4 — модуль обхода DPI для Linux">
       <HomepageHeader />
       <main>
         <HomepageFeatures />
