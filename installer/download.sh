@@ -73,7 +73,7 @@ download_file() {
 
     if ! fetch_file "$url" "$output"; then
         print_error "Download failed"
-        return 0
+        return 1
     fi
 
     # Construct checksum URL
