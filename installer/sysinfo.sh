@@ -1,3 +1,4 @@
+#!/bin/sh
 # Check kernel module status
 check_kernel_module() {
     module_name="$1"
@@ -53,7 +54,7 @@ get_network_info() {
     # Get primary IP
     primary_ip=""
     if command_exists ip; then
-        primary_ip=$(ip -4 route get 1 2>/dev/null | grep -oP 'src \K\S+' | head -1 || true)
+        primary_ip=$(ip -4 route get 1 2>/dev/null | awk '/src/{print $7}' | head -1 || true)
     elif command_exists ifconfig; then
         primary_ip=$(ifconfig 2>/dev/null | grep 'inet addr:' | grep -v '127.0.0.1' | head -1 | awk '{print $2}' | cut -d':' -f2 || true)
     fi

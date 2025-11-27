@@ -1,3 +1,4 @@
+#!/bin/sh
 # Helper functions
 print_info() {
     if [ "$QUIET_MODE" -eq 0 ]; then
@@ -141,6 +142,7 @@ setup_directories() {
     fi
 
     # Create temp directory
+    rm -rf "$TEMP_DIR" 2>/dev/null || true
     mkdir -p "$TEMP_DIR" || {
         print_error "Failed to create temp directory"
         exit 1

@@ -1,3 +1,4 @@
+#!/bin/sh
 # Get geosite path from config using jq if available
 get_geosite_path_from_config() {
     if [ -f "$CONFIG_FILE" ] && command_exists jq; then

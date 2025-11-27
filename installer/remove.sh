@@ -1,3 +1,5 @@
+#!/bin/sh
+# B4 DPI Bypass Uninstaller Script
 remove_b4() {
     echo ""
     echo "======================================="

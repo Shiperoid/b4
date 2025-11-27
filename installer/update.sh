@@ -1,3 +1,4 @@
+#!/bin/sh
 # Perform update - stops service, updates, and restarts
 perform_update() {
     QUIET_MODE=1 # Force quiet mode during updates

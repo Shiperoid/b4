@@ -1,3 +1,4 @@
+#!/bin/sh
 # Configuration
 REPO_OWNER="DanielLavrushin"
 REPO_NAME="b4"

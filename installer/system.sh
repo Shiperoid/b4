@@ -1,3 +1,4 @@
+#!/bin/sh
 # Detect system type and set appropriate paths
 detect_system_type() {
     # Check for Entware

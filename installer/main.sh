@@ -1,3 +1,4 @@
+#!/bin/sh
 # Main function - parse arguments
 main() {
     # Check for remove flag first

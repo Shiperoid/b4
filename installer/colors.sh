@@ -1,3 +1,4 @@
+#!/bin/sh
 # Colors for output (if terminal supports it)
 if [ -t 1 ]; then
     RED='\033[0;31m'

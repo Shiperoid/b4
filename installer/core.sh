@@ -1,5 +1,5 @@
+#!/bin/sh
 # This is the core installation part script for b4 Universal.
-
 # Install b4 binary
 install_b4() {
     arch="$1"

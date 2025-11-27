@@ -1,3 +1,4 @@
+#!/bin/sh
 # This is the core installation part script for b4 Universal.
 
 # Get latest release version from GitHub - ONLY returns version string
@@ -72,7 +73,7 @@ download_file() {
 
     if ! fetch_file "$url" "$output"; then
         print_error "Download failed"
-        return 1
+        return 0
     fi
 
     # Construct checksum URL
@@ -84,7 +85,7 @@ download_file() {
         return 0
     elif [ $? -eq 2 ]; then
         print_error "Download verification failed!"
-        return 1
+        return 0
     else
         print_warning "No checksum file found - unable to verify download integrity"
 

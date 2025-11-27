@@ -1,3 +1,4 @@
+#!/bin/sh
 # Create systemd service file (for systems with systemd)
 create_systemd_service() {
     # Only create if systemd is actually available and functioning
@@ -193,8 +194,8 @@ EOF
         fi
 
         chmod +x "${INIT_FULL_PATH}"
-        sed -i "s|PROG_PLACEHOLDER|${INSTALL_DIR}/${BINARY_NAME}|g" "${INIT_FULL_PATH}"
-        sed -i "s|CONFIG_PLACEHOLDER|${CONFIG_FILE}|g" "${INIT_FULL_PATH}"
+        sed "s|PROG_PLACEHOLDER|${INSTALL_DIR}/${BINARY_NAME}|g" "${INIT_FULL_PATH}" >"${INIT_FULL_PATH}.tmp"
+        mv "${INIT_FULL_PATH}.tmp" "${INIT_FULL_PATH}"
 
         print_success "Init script created at ${INIT_FULL_PATH}"
         print_info "You can manage it with:"

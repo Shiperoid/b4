@@ -1,5 +1,4 @@
 #!/bin/sh
-#
 # B4 Universal Installer Script (POSIX Compliant)
 # Automatically detects system architecture and installs the appropriate b4 binary
 # Supports OpenWRT, MerlinWRT, and other Linux-based routers with only sh shell
