@@ -132,26 +132,37 @@ version:
 	@echo "Commit:  $(VERSION_COMMIT)"
 	@echo "Date:    $(VERSION_DATE)"
 
+.PHONY: build-installer
+build-installer:
+	@echo "Building installer script..."
+	@./installer/_build.sh
+
+.PHONY: watch-installer
+watch-installer:
+	@./installer/_watch.sh
+
 # Show help
 .PHONY: help
 help:
 	@echo "B4 Makefile - Linux packet processor build system"
 	@echo ""
 	@echo "Common targets:"
-	@echo "  make            - Build for current platform"
-	@echo "  make build-all  - Build for all Linux architectures"
-	@echo "  make amd64      - Build for Linux amd64"
-	@echo "  make arm64      - Build for Linux arm64"
-	@echo "  make arm        - Build for Linux armv7"
-	@echo "  make android    - Build for all Android architectures (requires ANDROID_NDK_HOME)"
-	@echo "  make run        - Build and run with sudo"
-	@echo "  make install    - Install to /usr/local/bin"
-	@echo "  make clean      - Remove build artifacts"
-	@echo "  make help       - Show this help"
+	@printf "  %-25s %s\n" "make" "Build for current platform"
+	@printf "  %-25s %s\n" "make build-all" "Build for all Linux architectures"
+	@printf "  %-25s %s\n" "make amd64" "Build for Linux amd64"
+	@printf "  %-25s %s\n" "make arm64" "Build for Linux arm64"
+	@printf "  %-25s %s\n" "make arm" "Build for Linux armv7"
+	@printf "  %-25s %s\n" "make android" "Build for all Android architectures (requires ANDROID_NDK_HOME)"
+	@printf "  %-25s %s\n" "make run" "Build and run with sudo"
+	@printf "  %-25s %s\n" "make install" "Install to /usr/local/bin"
+	@printf "  %-25s %s\n" "make clean" "Remove build artifacts"
+	@printf "  %-25s %s\n" "make build-installer" "Build the installer script"
+	@printf "  %-25s %s\n" "make watch-installer" "Watch and rebuild installer on changes"
+	@printf "  %-25s %s\n" "make help" "Show this help"
 	@echo ""
 	@echo "Architecture-specific builds:"
-	@echo "  make linux-<arch>   - Build for specific Linux architecture"
-	@echo "  make android-<arch> - Build for specific Android architecture"
+	@printf "  %-25s %s\n" "make linux-<arch>" "Build for specific Linux architecture"
+	@printf "  %-25s %s\n" "make android-<arch>" "Build for specific Android architecture"
 	@echo ""
 	@echo "Available Linux architectures:"
 	@echo "  $(LINUX_ARCHS)"
