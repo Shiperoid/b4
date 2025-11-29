@@ -24,7 +24,6 @@ import {
   Refresh as RefreshIcon,
   Settings as SettingsIcon,
   Warning as WarningIcon,
-  Layers as LayersIcon,
   Science as DiscoveryIcon,
   Language as LanguageIcon,
   Cloud as ApiIcon,
@@ -36,10 +35,6 @@ import { LoggingSettings } from "@organisms/settings/Logging";
 import { FeatureSettings } from "@organisms/settings/Feature";
 import { CheckerSettings } from "@/components/organisms/settings/Checker";
 import { ControlSettings } from "@organisms/settings/Control";
-import {
-  SetsManager,
-  SetWithStats,
-} from "@/components/organisms/settings/set/Manager";
 import { GeoSettings } from "@organisms/settings/Geo";
 import { ApiSettings } from "@organisms/settings/Api";
 
@@ -75,8 +70,7 @@ function TabPanel({
 }
 
 enum TABS {
-  SETS = 0,
-  GENERAL,
+  GENERAL = 0,
   DOMAINS,
   DISCOVERY,
   API,
@@ -92,14 +86,6 @@ const SETTING_CATEGORIES = [
     icon: <SettingsIcon />,
     description: "Global network and queue configuration",
     requiresRestart: true,
-  },
-  {
-    id: TABS.SETS,
-    path: "sets",
-    label: "Sets",
-    icon: <LayersIcon />,
-    description: "Manage configuration sets for different scenarios",
-    requiresRestart: false,
   },
   {
     id: TABS.DOMAINS,
@@ -136,9 +122,7 @@ const SETTING_CATEGORIES = [
 ];
 
 export default function Settings() {
-  const [config, setConfig] = useState<
-    (B4Config & { sets?: SetWithStats[] }) | null
-  >(null);
+  const [config, setConfig] = useState<B4Config | null>(null);
   const [originalConfig, setOriginalConfig] = useState<B4Config | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -204,9 +188,6 @@ export default function Settings() {
         JSON.stringify(config.system.tables) !==
           JSON.stringify(originalConfig.system.tables),
 
-      // Sets
-      [TABS.SETS]:
-        JSON.stringify(config.sets) !== JSON.stringify(originalConfig.sets),
       // Geosite Settings
       [TABS.DOMAINS]:
         JSON.stringify(config.system.geo) !==
@@ -233,9 +214,7 @@ export default function Settings() {
       setLoading(true);
       const response = await fetch("/api/config");
       if (!response.ok) throw new Error("Failed to load configuration");
-      const data = (await response.json()) as unknown as B4Config & {
-        sets?: SetWithStats[];
-      };
+      const data = (await response.json()) as unknown as B4Config & {};
       setConfig(data);
       setOriginalConfig(structuredClone(data)); // Deep clone
     } catch (error) {
@@ -290,9 +269,7 @@ export default function Settings() {
 
   const resetChanges = () => {
     if (originalConfig) {
-      setConfig(
-        structuredClone(originalConfig) as B4Config & { sets?: SetWithStats[] }
-      );
+      setConfig(structuredClone(originalConfig));
       setShowResetDialog(false);
       setSnackbar({
         open: true,
@@ -529,10 +506,6 @@ export default function Settings() {
               <FeatureSettings config={config} onChange={handleChange} />
             </Grid>
           </Grid>
-        </TabPanel>
-
-        <TabPanel value={validTab} index={TABS.SETS}>
-          <SetsManager config={config} onChange={handleChange} />
         </TabPanel>
 
         <TabPanel value={validTab} index={TABS.DOMAINS}>

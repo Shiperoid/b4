@@ -46,7 +46,7 @@ import { SetEditor } from "./Editor";
 
 import { colors, radius, button_secondary } from "@design";
 import { B4Config, B4SetConfig, MAIN_SET_ID } from "@models/Config";
-import { SetCompare } from "./Comparte";
+import { SetCompare } from "./Compare";
 
 export interface SetStats {
   manual_domains: number;
@@ -289,12 +289,7 @@ export const SetsManager = ({ config, onChange }: SetsManagerProps) => {
         description="Manage multiple bypass configurations for different scenarios"
         icon={<LayersIcon />}
       >
-        <Stack
-          direction="row"
-          spacing={2}
-          justifyContent="space-between"
-          mb={2}
-        >
+        <Stack direction="row" justifyContent="space-between" mb={0}>
           <TextField
             size="small"
             placeholder="Filter by name, domain, or geosite category..."

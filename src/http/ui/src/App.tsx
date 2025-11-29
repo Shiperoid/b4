@@ -31,6 +31,7 @@ import {
   Speed as SpeedIcon,
   Assessment as AssessmentIcon,
   Science as ScienceIcon,
+  Layers as SetsIcon,
 } from "@mui/icons-material";
 import Dashboard from "@pages/Dashboard";
 import Logs from "@pages/Logs";
@@ -41,6 +42,7 @@ import Logo from "@molecules/Logo";
 import Version from "@organisms/version/Version";
 import { useWebSocket } from "@ctx/B4WsProvider";
 import Discovery from "@pages/Discovery";
+import Sets from "./components/pages/Sets";
 
 const DRAWER_WIDTH = 240;
 
@@ -52,6 +54,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { path: "/dashboard", label: "Dashboard", icon: <SpeedIcon /> },
+  { path: "/sets", label: "Sets", icon: <SetsIcon /> },
   { path: "/connections", label: "Connections", icon: <ConnectionIcon /> },
   { path: "/discovery", label: "Discovery", icon: <ScienceIcon /> },
   { path: "/logs", label: "Logs", icon: <AssessmentIcon /> },
@@ -67,6 +70,7 @@ export default function App() {
   const getPageTitle = () => {
     const path = location.pathname;
     if (path.startsWith("/dashboard")) return "System Dashboard";
+    if (path.startsWith("/sets")) return "Sets";
     if (path.startsWith("/connections")) return "Connections";
     if (path.startsWith("/test")) return "DPI Bypass Test";
     if (path.startsWith("/logs")) return "Log Viewer";
@@ -183,6 +187,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/sets" element={<Sets />} />
             <Route path="/connections" element={<Connections />} />
             <Route path="/discovery" element={<Discovery />} />
             <Route path="/logs" element={<Logs />} />

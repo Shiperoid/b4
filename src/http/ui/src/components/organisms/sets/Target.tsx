@@ -32,7 +32,7 @@ import SettingAutocomplete from "@atoms/common/B4Autocomplete";
 import { colors, button_primary, button_secondary } from "@design";
 import { B4Dialog } from "@molecules/common/B4Dialog";
 import { B4SetConfig, GeoConfig } from "@models/Config";
-import { SetStats } from "@organisms/settings/set/Manager";
+import { SetStats } from "./Manager";
 
 interface TargetSettingsProps {
   config: B4SetConfig;

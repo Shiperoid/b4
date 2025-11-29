@@ -15,13 +15,13 @@ import B4TextField from "@atoms/common/B4TextField";
 import { colors, button_primary, button_secondary } from "@design";
 import { B4SetConfig, SystemConfig } from "@models/Config";
 
-import { TargetSettings } from "@/components/organisms/settings/set/Target";
+import { TargetSettings } from "./Target";
 import { TcpSettings } from "./Tcp";
 import { UdpSettings } from "./Udp";
 import { FragmentationSettings } from "./Fragmentation";
 import { ImportExportSettings } from "./ImportExport";
 import { FakingSettings } from "./Faking";
-import { SetStats } from "@organisms/settings/set/Manager";
+import { SetStats } from "./Manager";
 
 export interface SetEditorProps {
   open: boolean;
@@ -61,7 +61,7 @@ export const SetEditor: React.FC<SetEditorProps> = ({
 
   const handleChange = (
     field: string,
-    value: string | number | boolean | string[] | null | undefined
+    value: string | number | boolean | string[] | number[] | null | undefined
   ) => {
     if (!editedSet) return;
 
