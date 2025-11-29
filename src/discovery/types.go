@@ -94,11 +94,6 @@ type CheckConfig struct {
 	MaxConcurrent          int           `json:"max_concurrent"`
 }
 
-type DomainSample struct {
-	Domain   string
-	Category string
-}
-
 type ConfigTestMode struct {
 	Enabled        bool
 	OriginalConfig *config.Config
@@ -128,16 +123,6 @@ type DomainDiscoveryResult struct {
 	WorkingFamilies []StrategyFamily               `json:"working_families,omitempty"`
 	BaselineSpeed   float64                        `json:"baseline_speed,omitempty"`
 	Improvement     float64                        `json:"improvement,omitempty"`
-}
-
-// DomainCluster groups domains that likely need the same bypass config
-type DomainCluster struct {
-	ID             string   `json:"id"`
-	Domains        []string `json:"domains"`
-	Representative string   `json:"representative"` // Domain we actually test
-	BestPreset     string   `json:"best_preset,omitempty"`
-	BestSpeed      float64  `json:"best_speed,omitempty"`
-	Tested         bool     `json:"tested"`
 }
 
 // ConfigPreset represents a bypass configuration to test
