@@ -139,7 +139,9 @@ func (api *API) handleAddPresetAsSet(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "At least one SNI domain is required", http.StatusBadRequest)
 		return
 	}
-	set.Name = set.Targets.SNIDomains[0]
+	if set.Name == "" {
+		set.Name = set.Targets.SNIDomains[0]
+	}
 	set.Targets.DomainsToMatch = []string{set.Targets.SNIDomains[0]}
 
 	// Ensure all target arrays are initialized (not null)

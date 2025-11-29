@@ -26,7 +26,7 @@ import {
   TrendingUp as ImprovementIcon,
   Science as ScienceIcon,
 } from "@mui/icons-material";
-import { colors } from "@design";
+import { colors, button_yellow_outline } from "@design";
 import { B4SetConfig } from "@/models/Config";
 import SettingTextField from "@atoms/common/B4TextField";
 import { DiscoveryAddDialog } from "./AddDialog";
@@ -375,14 +375,9 @@ export const DiscoveryRunner: React.FC = () => {
               }}
               disabled={!domain.trim()}
               sx={{
-                minWidth: 200,
+                px: 3,
                 whiteSpace: "nowrap",
-                bgcolor: colors.secondary,
-                "&:hover": { bgcolor: colors.primary },
-                "&:disabled": {
-                  bgcolor: colors.accent.secondary,
-                  color: colors.text.secondary,
-                },
+                ...button_yellow_outline,
               }}
             >
               Start Discovery
