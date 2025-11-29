@@ -55,8 +55,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { path: "/dashboard", label: "Dashboard", icon: <SpeedIcon /> },
   { path: "/sets", label: "Sets", icon: <SetsIcon /> },
-  { path: "/connections", label: "Connections", icon: <ConnectionIcon /> },
   { path: "/discovery", label: "Discovery", icon: <ScienceIcon /> },
+  { path: "/connections", label: "Connections", icon: <ConnectionIcon /> },
   { path: "/logs", label: "Logs", icon: <AssessmentIcon /> },
   { path: "/settings", label: "Settings", icon: <SettingsIcon /> },
 ];
