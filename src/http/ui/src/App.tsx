@@ -108,7 +108,7 @@ export default function App() {
           <List>
             {navItems.map((item) => {
               let targetCount = 0;
-              if (item.path === "/domains" && unseenDomainsCount > 0) {
+              if (item.path === "/connections" && unseenDomainsCount > 0) {
                 targetCount = unseenDomainsCount;
               }
 
@@ -117,7 +117,7 @@ export default function App() {
                   <ListItemButton
                     selected={isNavItemSelected(item.path)}
                     onClick={() => {
-                      if (item.path === "/domains") {
+                      if (item.path === "/connections") {
                         resetDomainsBadge();
                       }
                       navigate(item.path);
