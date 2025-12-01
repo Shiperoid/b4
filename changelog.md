@@ -2,7 +2,9 @@
 
 ## [1.19.1] - 2025-12-01
 
-- FIXED: Web panel inaccessible on some routers due to IPv6-only socket binding.
+- FIXED: New sets with geosite/geoip categories not matching traffic until service restart.
+- IMPROVED: Discovery service now tests ~150+ configurations.
+- CHANGED: Replace Fragmentation SNI split position Slider field with textbox number field.
 
 ## [1.19.0] - 2025-11-29
 

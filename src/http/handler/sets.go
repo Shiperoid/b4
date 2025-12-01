@@ -75,6 +75,10 @@ func (api *API) createSet(w http.ResponseWriter, r *http.Request) {
 
 	api.cfg.Sets = append([]*config.SetConfig{&set}, api.cfg.Sets...)
 
+	if _, _, err := api.cfg.GetTargetsForSet(&set); err != nil {
+		log.Errorf("Failed to load targets for new set '%s': %v", set.Name, err)
+	}
+
 	if err := api.saveAndPushConfig(api.cfg); err != nil {
 		log.Errorf("Failed to save config after creating set: %v", err)
 		http.Error(w, "Failed to save", http.StatusInternalServerError)
@@ -107,6 +111,10 @@ func (api *API) updateSet(w http.ResponseWriter, r *http.Request, id string) {
 	if !found {
 		http.Error(w, "Set not found", http.StatusNotFound)
 		return
+	}
+
+	if _, _, err := api.cfg.GetTargetsForSet(&updated); err != nil {
+		log.Errorf("Failed to load targets for set '%s': %v", updated.Name, err)
 	}
 
 	if err := api.saveAndPushConfig(api.cfg); err != nil {

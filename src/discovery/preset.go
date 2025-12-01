@@ -222,6 +222,186 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 			},
 		},
+		{
+			Name:        "desync-rst-frag",
+			Description: "TCP desync RST attack with fragmentation",
+			Family:      FamilyDesync,
+			Phase:       PhaseStrategy,
+			Priority:    8,
+			Config: config.SetConfig{
+				TCP: config.TCPConfig{
+					ConnBytesLimit: 19,
+					DesyncMode:     "rst",
+					DesyncTTL:      3,
+					DesyncCount:    3,
+				},
+				UDP: defaultUDP(),
+				Fragmentation: config.FragmentationConfig{
+					Strategy:     "tcp",
+					SNIPosition:  1,
+					ReverseOrder: true,
+				},
+				Faking: config.FakingConfig{
+					SNI:          true,
+					TTL:          8,
+					Strategy:     "pastseq",
+					SeqOffset:    10000,
+					SNISeqLength: 1,
+					SNIType:      config.FakePayloadDefault,
+				},
+			},
+		},
+
+		// 9. Desync Combo (RST+FIN+ACK flood)
+		{
+			Name:        "desync-combo",
+			Description: "TCP desync combo attack",
+			Family:      FamilyDesync,
+			Phase:       PhaseStrategy,
+			Priority:    9,
+			Config: config.SetConfig{
+				TCP: config.TCPConfig{
+					ConnBytesLimit: 19,
+					DesyncMode:     "combo",
+					DesyncTTL:      2,
+					DesyncCount:    5,
+				},
+				UDP: defaultUDP(),
+				Fragmentation: config.FragmentationConfig{
+					Strategy:     "tcp",
+					SNIPosition:  1,
+					ReverseOrder: true,
+					MiddleSNI:    true,
+				},
+				Faking: config.FakingConfig{
+					SNI:          true,
+					TTL:          3,
+					Strategy:     "pastseq",
+					SeqOffset:    10000,
+					SNISeqLength: 2,
+					SNIType:      config.FakePayloadDefault,
+				},
+			},
+		},
+
+		// 10. SYN Fake with TCP frag
+		{
+			Name:        "synfake-frag",
+			Description: "SYN fake packets with fragmentation",
+			Family:      FamilySynFake,
+			Phase:       PhaseStrategy,
+			Priority:    10,
+			Config: config.SetConfig{
+				TCP: config.TCPConfig{
+					ConnBytesLimit: 19,
+					SynFake:        true,
+					SynFakeLen:     256,
+				},
+				UDP: defaultUDP(),
+				Fragmentation: config.FragmentationConfig{
+					Strategy:     "tcp",
+					SNIPosition:  1,
+					ReverseOrder: true,
+				},
+				Faking: config.FakingConfig{
+					SNI:          true,
+					TTL:          8,
+					Strategy:     "pastseq",
+					SeqOffset:    10000,
+					SNISeqLength: 1,
+					SNIType:      config.FakePayloadDefault,
+				},
+			},
+		},
+
+		// 11. Seg2Delay with fragmentation (timing-based)
+		{
+			Name:        "delay-frag",
+			Description: "Delayed segments with fragmentation",
+			Family:      FamilyDelay,
+			Phase:       PhaseStrategy,
+			Priority:    11,
+			Config: config.SetConfig{
+				TCP: config.TCPConfig{
+					ConnBytesLimit: 19,
+					Seg2Delay:      10,
+				},
+				UDP: defaultUDP(),
+				Fragmentation: config.FragmentationConfig{
+					Strategy:     "tcp",
+					SNIPosition:  1,
+					ReverseOrder: true,
+					MiddleSNI:    true,
+				},
+				Faking: config.FakingConfig{
+					SNI:          true,
+					TTL:          8,
+					Strategy:     "pastseq",
+					SeqOffset:    10000,
+					SNISeqLength: 1,
+					SNIType:      config.FakePayloadDefault,
+				},
+			},
+		},
+
+		// 12. Very low TTL fake (TTL=1-2)
+		{
+			Name:        "fake-ttl-ultra-low",
+			Description: "Fake SNI with ultra-low TTL",
+			Family:      FamilyFakeSNI,
+			Phase:       PhaseStrategy,
+			Priority:    12,
+			Config: config.SetConfig{
+				TCP: config.TCPConfig{
+					ConnBytesLimit: 19,
+				},
+				UDP: defaultUDP(),
+				Fragmentation: config.FragmentationConfig{
+					Strategy:     "tcp",
+					SNIPosition:  1,
+					ReverseOrder: true,
+				},
+				Faking: config.FakingConfig{
+					SNI:          true,
+					TTL:          1,
+					Strategy:     "ttl",
+					SNISeqLength: 3,
+					SNIType:      config.FakePayloadDefault,
+				},
+			},
+		},
+
+		// 13. Full desync attack
+		{
+			Name:        "desync-full",
+			Description: "Full desync attack sequence",
+			Family:      FamilyDesync,
+			Phase:       PhaseStrategy,
+			Priority:    13,
+			Config: config.SetConfig{
+				TCP: config.TCPConfig{
+					ConnBytesLimit: 19,
+					DesyncMode:     "full",
+					DesyncTTL:      3,
+					DesyncCount:    5,
+				},
+				UDP: defaultUDP(),
+				Fragmentation: config.FragmentationConfig{
+					Strategy:     "tcp",
+					SNIPosition:  1,
+					ReverseOrder: true,
+					MiddleSNI:    true,
+				},
+				Faking: config.FakingConfig{
+					SNI:          true,
+					TTL:          3,
+					Strategy:     "pastseq",
+					SeqOffset:    50000,
+					SNISeqLength: 3,
+					SNIType:      config.FakePayloadDefault,
+				},
+			},
+		},
 	}
 }
 
@@ -420,6 +600,74 @@ func GetPhase2Presets(family StrategyFamily) []ConfigPreset {
 				Phase:    PhaseOptimize,
 				Priority: i,
 				Config:   cfg,
+			})
+		}
+
+	case FamilyDesync:
+		modes := []string{"rst", "fin", "ack", "combo", "full"}
+		ttls := []uint8{1, 2, 3, 5}
+		counts := []int{2, 3, 5}
+
+		for _, mode := range modes {
+			for _, ttl := range ttls {
+				for _, count := range counts {
+					presets = append(presets, ConfigPreset{
+						Name:     formatName("desync-%s-ttl%d-c%d", mode, ttl, count),
+						Family:   FamilyDesync,
+						Phase:    PhaseOptimize,
+						Priority: int(ttl),
+						Config: withTCP(withFragmentation(base, config.FragmentationConfig{
+							Strategy:     "tcp",
+							SNIPosition:  1,
+							ReverseOrder: true,
+						}), config.TCPConfig{
+							ConnBytesLimit: 19,
+							DesyncMode:     mode,
+							DesyncTTL:      ttl,
+							DesyncCount:    count,
+						}),
+					})
+				}
+			}
+		}
+
+	case FamilySynFake:
+		lengths := []int{0, 64, 128, 256, 512}
+		for _, l := range lengths {
+			presets = append(presets, ConfigPreset{
+				Name:     formatName("synfake-len%d", l),
+				Family:   FamilySynFake,
+				Phase:    PhaseOptimize,
+				Priority: l,
+				Config: withTCP(withFragmentation(base, config.FragmentationConfig{
+					Strategy:     "tcp",
+					SNIPosition:  1,
+					ReverseOrder: true,
+				}), config.TCPConfig{
+					ConnBytesLimit: 19,
+					SynFake:        true,
+					SynFakeLen:     l,
+				}),
+			})
+		}
+
+	case FamilyDelay:
+		delays := []int{1, 5, 10, 20, 50, 100}
+		for _, d := range delays {
+			presets = append(presets, ConfigPreset{
+				Name:     formatName("delay-%dms", d),
+				Family:   FamilyDelay,
+				Phase:    PhaseOptimize,
+				Priority: d,
+				Config: withTCP(withFragmentation(base, config.FragmentationConfig{
+					Strategy:     "tcp",
+					SNIPosition:  1,
+					ReverseOrder: true,
+					MiddleSNI:    true,
+				}), config.TCPConfig{
+					ConnBytesLimit: 19,
+					Seg2Delay:      d,
+				}),
 			})
 		}
 	}

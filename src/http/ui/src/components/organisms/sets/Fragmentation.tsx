@@ -117,15 +117,13 @@ export const FragmentationSettings = ({
             </Grid>
 
             <Grid size={{ xs: 12, md: 6 }}>
-              <B4Slider
+              <B4TextField
                 label="SNI Split Position"
-                value={config.fragmentation.sni_position}
-                onChange={(value: number) =>
-                  onChange("fragmentation.sni_position", value)
+                type="number"
+                value={config.fragmentation.sni_position || 1}
+                onChange={(e) =>
+                  onChange("fragmentation.sni_position", Number(e.target.value))
                 }
-                min={0}
-                max={10}
-                step={1}
                 helperText="Where to split SNI field (0=first byte)"
               />
             </Grid>
@@ -153,15 +151,13 @@ export const FragmentationSettings = ({
             </Grid>
 
             <Grid size={{ xs: 12, md: 4 }}>
-              <B4Slider
+              <B4TextField
                 label="OOB Split Position"
+                type="number"
                 value={config.fragmentation.oob_position || 1}
-                onChange={(value: number) =>
-                  onChange("fragmentation.oob_position", value)
+                onChange={(e) =>
+                  onChange("fragmentation.oob_position", Number(e.target.value))
                 }
-                min={1}
-                max={10}
-                step={1}
                 helperText="Bytes before OOB insertion"
               />
             </Grid>

@@ -491,6 +491,9 @@ func (ds *DiscoverySuite) runExtendedSearch() []StrategyFamily {
 		FamilyFakeSNI,
 		FamilyIPFrag,
 		FamilySACK,
+		FamilyDesync,
+		FamilySynFake,
+		FamilyDelay,
 	}
 
 	var workingFamilies []StrategyFamily
