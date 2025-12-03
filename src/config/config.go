@@ -130,7 +130,7 @@ var DefaultConfig = Config{
 		Checker: DiscoveryConfig{
 			DiscoveryTimeoutSec: 5,
 			ConfigPropagateMs:   1500,
-			ReferenceDomain:     "max.ru",
+			ReferenceDomain:     "yandex.ru",
 		},
 		API: ApiConfig{
 			IPInfoToken: "",

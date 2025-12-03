@@ -451,16 +451,7 @@ func (ds *DiscoverySuite) updatePayloadKnowledge(payload int, speed float64) {
 func (ds *DiscoverySuite) runPhase2(families []StrategyFamily) map[StrategyFamily]ConfigPreset {
 	bestParams := make(map[StrategyFamily]ConfigPreset)
 
-	totalPhase2Presets := 0
-	for _, family := range families {
-		totalPhase2Presets += len(GetPhase2Presets(family))
-	}
-
-	ds.CheckSuite.mu.Lock()
-	ds.TotalChecks += totalPhase2Presets
-	ds.CheckSuite.mu.Unlock()
-
-	log.Infof("Phase 2: Optimizing %d working families (%d presets)", len(families), totalPhase2Presets)
+	log.Infof("Phase 2: Optimizing %d working families", len(families))
 
 	for _, family := range families {
 		select {
@@ -469,51 +460,237 @@ func (ds *DiscoverySuite) runPhase2(families []StrategyFamily) map[StrategyFamil
 		default:
 		}
 
-		presets := GetPhase2Presets(family)
-		if len(presets) == 0 {
-			continue
-		}
-
-		log.Infof("  Optimizing %s (%d variants)", family, len(presets))
-
-		var bestPreset ConfigPreset
-		var bestSpeed float64
-		successCount := 0
-
-		for _, preset := range presets {
-			select {
-			case <-ds.cancel:
-				return bestParams
-			default:
-			}
-
-			if successCount >= 3 {
-				log.Tracef("    Found %d good configs for %s, skipping rest", successCount, family)
-				break
-			}
-
-			result := ds.testPresetWithBestPayload(preset)
-			ds.storeResult(preset, result)
-
-			if result.Status == CheckStatusComplete {
-				successCount++
-				if result.Speed > bestSpeed {
-					bestSpeed = result.Speed
-					bestPreset = preset
-					// Store with best payload
-					bestPreset.Config.Faking.SNIType = ds.bestPayload
-				}
-				log.Tracef("    %s: %.2f KB/s", preset.Name, result.Speed/1024)
-			}
-		}
-
-		if bestSpeed > 0 {
-			bestParams[family] = bestPreset
-			log.Infof("  Best %s config: %s (%.2f KB/s)", family, bestPreset.Name, bestSpeed/1024)
+		// Use binary search for families with searchable parameters
+		switch family {
+		case FamilyFakeSNI:
+			bestParams[family] = ds.optimizeFakeSNI()
+		case FamilyTCPFrag:
+			bestParams[family] = ds.optimizeTCPFrag()
+		case FamilyTLSRec:
+			bestParams[family] = ds.optimizeTLSRec()
+		default:
+			// Fallback to preset-based testing for other families
+			bestParams[family] = ds.optimizeWithPresets(family)
 		}
 	}
 
 	return bestParams
+}
+
+func (ds *DiscoverySuite) optimizeFakeSNI() ConfigPreset {
+	log.Infof("  Optimizing FakeSNI with binary search")
+
+	ds.CheckSuite.mu.Lock()
+	ds.TotalChecks += 9
+	ds.CheckSuite.mu.Unlock()
+
+	base := baseConfig()
+	base.Faking.SNI = true
+	base.Faking.Strategy = "pastseq"
+	base.Faking.SeqOffset = 10000
+	base.Faking.SNISeqLength = 1
+	base.Faking.SNIType = ds.bestPayload
+	base.Fragmentation.Strategy = "tcp"
+	base.Fragmentation.SNIPosition = 1
+	base.Fragmentation.ReverseOrder = true
+
+	basePreset := ConfigPreset{
+		Name:   "fake-optimize",
+		Family: FamilyFakeSNI,
+		Phase:  PhaseOptimize,
+		Config: base,
+	}
+
+	var ttlHint uint8
+	if ds.Fingerprint != nil && ds.Fingerprint.OptimalTTL > 0 {
+		ttlHint = ds.Fingerprint.OptimalTTL
+	}
+	// Binary search TTL
+	optimalTTL, speed := ds.findOptimalTTL(basePreset, ttlHint)
+	if optimalTTL == 0 {
+		log.Warnf("  No working TTL found for FakeSNI")
+		return basePreset
+	}
+
+	basePreset.Config.Faking.TTL = optimalTTL
+	basePreset.Name = fmt.Sprintf("fake-ttl%d-optimized", optimalTTL)
+
+	// Test strategy variations with optimal TTL
+	strategies := []string{"pastseq", "ttl", "randseq"}
+	var bestStrategy string = "pastseq"
+	var bestSpeed = speed
+
+	for _, strat := range strategies {
+		if strat == "pastseq" {
+			continue // Already tested
+		}
+
+		preset := basePreset
+		preset.Name = fmt.Sprintf("fake-%s-ttl%d", strat, optimalTTL)
+		preset.Config.Faking.Strategy = strat
+
+		result := ds.testPresetWithBestPayload(preset)
+		ds.storeResult(preset, result)
+
+		if result.Status == CheckStatusComplete && result.Speed > bestSpeed {
+			bestStrategy = strat
+			bestSpeed = result.Speed
+		}
+	}
+
+	basePreset.Config.Faking.Strategy = bestStrategy
+	basePreset.Name = fmt.Sprintf("fake-%s-ttl%d-optimized", bestStrategy, optimalTTL)
+
+	log.Infof("  Best FakeSNI: TTL=%d, strategy=%s (%.2f KB/s)", optimalTTL, bestStrategy, bestSpeed/1024)
+	return basePreset
+}
+
+func (ds *DiscoverySuite) optimizeTCPFrag() ConfigPreset {
+	log.Infof("  Optimizing TCPFrag with binary search")
+
+	// ~5 binary search iterations (log2(16)) + 1 middle test
+	ds.CheckSuite.mu.Lock()
+	ds.TotalChecks += 6
+	ds.CheckSuite.mu.Unlock()
+
+	base := baseConfig()
+	base.Fragmentation.Strategy = "tcp"
+	base.Fragmentation.ReverseOrder = true
+	base.Faking.SNI = true
+
+	base.Faking.TTL = 8
+	if ds.Fingerprint != nil && ds.Fingerprint.OptimalTTL > 0 {
+		base.Faking.TTL = ds.Fingerprint.OptimalTTL
+	}
+
+	base.Faking.Strategy = "pastseq"
+	base.Faking.SNIType = ds.bestPayload
+
+	basePreset := ConfigPreset{
+		Name:   "tcp-optimize",
+		Family: FamilyTCPFrag,
+		Phase:  PhaseOptimize,
+		Config: base,
+	}
+
+	// Binary search position
+	optimalPos, speed := ds.findOptimalPosition(basePreset, 16)
+	if optimalPos == 0 {
+		optimalPos = 1
+	}
+
+	basePreset.Config.Fragmentation.SNIPosition = optimalPos
+	basePreset.Name = fmt.Sprintf("tcp-pos%d-optimized", optimalPos)
+
+	// Test middle SNI variant
+	middlePreset := basePreset
+	middlePreset.Name = fmt.Sprintf("tcp-pos%d-middle", optimalPos)
+	middlePreset.Config.Fragmentation.MiddleSNI = true
+
+	result := ds.testPresetWithBestPayload(middlePreset)
+	ds.storeResult(middlePreset, result)
+
+	if result.Status == CheckStatusComplete && result.Speed > speed {
+		basePreset = middlePreset
+		speed = result.Speed
+		log.Infof("  MiddleSNI improves speed: %.2f KB/s", result.Speed/1024)
+	}
+
+	log.Infof("  Best TCPFrag: position=%d (%.2f KB/s)", optimalPos, speed/1024)
+	return basePreset
+}
+
+func (ds *DiscoverySuite) optimizeTLSRec() ConfigPreset {
+	log.Infof("  Optimizing TLSRec with binary search")
+
+	// ~6 binary search iterations (log2(64))
+	ds.CheckSuite.mu.Lock()
+	ds.TotalChecks += 6
+	ds.CheckSuite.mu.Unlock()
+
+	base := baseConfig()
+	base.Fragmentation.Strategy = "tls"
+	base.Faking.SNI = true
+	base.Faking.TTL = 8
+	if ds.Fingerprint != nil && ds.Fingerprint.OptimalTTL > 0 {
+		base.Faking.TTL = ds.Fingerprint.OptimalTTL
+	}
+	base.Faking.Strategy = "pastseq"
+	base.Faking.SNIType = ds.bestPayload
+
+	basePreset := ConfigPreset{
+		Name:   "tls-optimize",
+		Family: FamilyTLSRec,
+		Phase:  PhaseOptimize,
+		Config: base,
+	}
+
+	// Binary search TLS record position
+	low, high := 1, 64
+	var bestPos int
+	var bestSpeed float64
+
+	for low < high {
+		mid := (low + high) / 2
+
+		preset := basePreset
+		preset.Name = fmt.Sprintf("tls-pos-search-%d", mid)
+		preset.Config.Fragmentation.TLSRecordPosition = mid
+
+		result := ds.testPresetWithBestPayload(preset)
+		ds.storeResult(preset, result)
+
+		if result.Status == CheckStatusComplete {
+			bestPos = mid
+			bestSpeed = result.Speed
+			high = mid
+		} else {
+			low = mid + 1
+		}
+	}
+
+	if bestPos > 0 {
+		basePreset.Config.Fragmentation.TLSRecordPosition = bestPos
+		basePreset.Name = fmt.Sprintf("tls-pos%d-optimized", bestPos)
+	}
+
+	log.Infof("  Best TLSRec: position=%d (%.2f KB/s)", bestPos, bestSpeed/1024)
+	return basePreset
+}
+
+func (ds *DiscoverySuite) optimizeWithPresets(family StrategyFamily) ConfigPreset {
+	presets := GetPhase2Presets(family)
+	if len(presets) == 0 {
+		return ConfigPreset{Family: family}
+	}
+
+	ds.CheckSuite.mu.Lock()
+	ds.TotalChecks += len(presets)
+	ds.CheckSuite.mu.Unlock()
+
+	log.Infof("  Optimizing %s with %d presets", family, len(presets))
+
+	var bestPreset ConfigPreset
+	var bestSpeed float64
+
+	for _, preset := range presets {
+		select {
+		case <-ds.cancel:
+			return bestPreset
+		default:
+		}
+
+		result := ds.testPresetWithBestPayload(preset)
+		ds.storeResult(preset, result)
+
+		if result.Status == CheckStatusComplete && result.Speed > bestSpeed {
+			bestSpeed = result.Speed
+			bestPreset = preset
+			bestPreset.Config.Faking.SNIType = ds.bestPayload
+		}
+	}
+
+	return bestPreset
 }
 
 func (ds *DiscoverySuite) runPhase3(workingFamilies []StrategyFamily, bestParams map[StrategyFamily]ConfigPreset) {
@@ -898,6 +1075,120 @@ func (ds *DiscoverySuite) runExtendedSearch() []StrategyFamily {
 	return workingFamilies
 }
 
+// FindOptimalTTL uses binary search to find minimum working TTL, then verifies speed
+func (ds *DiscoverySuite) findOptimalTTL(basePreset ConfigPreset, hint uint8) (uint8, float64) {
+	var bestTTL uint8
+	var bestSpeed float64
+	low, high := uint8(1), uint8(32)
+
+	// If hint provided, test it first and narrow search range
+	if hint > 0 {
+		preset := basePreset
+		preset.Name = fmt.Sprintf("ttl-hint-%d", hint)
+		preset.Config.Faking.TTL = hint
+
+		result := ds.testPresetWithBestPayload(preset)
+		ds.storeResult(preset, result)
+
+		if result.Status == CheckStatusComplete {
+			bestTTL = hint
+			bestSpeed = result.Speed
+			log.Infof("  TTL hint %d: SUCCESS (%.2f KB/s) - narrowing search", hint, result.Speed/1024)
+
+			// Narrow search: find minimum between 1 and hint
+			high = hint
+			if hint > 8 {
+				low = hint - 8 // Don't search too far below
+			}
+		} else {
+			log.Infof("  TTL hint %d: FAILED - falling back to full search", hint)
+		}
+	}
+
+	log.Infof("Binary search for optimal TTL (range %d-%d)", low, high)
+
+	for low < high {
+		mid := (low + high) / 2
+
+		preset := basePreset
+		preset.Name = fmt.Sprintf("ttl-search-%d", mid)
+		preset.Config.Faking.TTL = mid
+
+		result := ds.testPresetWithBestPayload(preset)
+		ds.storeResult(preset, result)
+
+		if result.Status == CheckStatusComplete {
+			bestTTL = mid
+			bestSpeed = result.Speed
+			high = mid
+			log.Infof("  TTL %d: SUCCESS (%.2f KB/s)", mid, result.Speed/1024)
+		} else {
+			low = mid + 1
+			log.Tracef("  TTL %d: FAILED", mid)
+		}
+	}
+
+	if bestTTL == 0 {
+		return 0, 0
+	}
+
+	// Test slightly higher TTLs - sometimes better speed
+	for _, offset := range []uint8{2, 4} {
+		testTTL := bestTTL + offset
+		if testTTL > 32 {
+			continue
+		}
+
+		preset := basePreset
+		preset.Name = fmt.Sprintf("ttl-verify-%d", testTTL)
+		preset.Config.Faking.TTL = testTTL
+
+		result := ds.testPresetWithBestPayload(preset)
+		ds.storeResult(preset, result)
+
+		if result.Status == CheckStatusComplete && result.Speed > bestSpeed*1.1 {
+			bestTTL = testTTL
+			bestSpeed = result.Speed
+			log.Infof("  TTL %d: Better (%.2f KB/s)", testTTL, result.Speed/1024)
+		}
+	}
+
+	log.Infof("Optimal TTL found: %d (%.2f KB/s)", bestTTL, bestSpeed/1024)
+	return bestTTL, bestSpeed
+}
+
+// FindOptimalPosition binary searches for minimum working fragmentation position
+func (ds *DiscoverySuite) findOptimalPosition(basePreset ConfigPreset, maxPos int) (int, float64) {
+	low, high := 1, maxPos
+	var bestPos int
+	var bestSpeed float64
+
+	log.Infof("Binary search for optimal position (range %d-%d)", low, high)
+
+	for low < high {
+		mid := (low + high) / 2
+
+		preset := basePreset
+		preset.Name = fmt.Sprintf("pos-search-%d", mid)
+		preset.Config.Fragmentation.SNIPosition = mid
+
+		result := ds.testPresetWithBestPayload(preset)
+		ds.storeResult(preset, result)
+
+		if result.Status == CheckStatusComplete {
+			bestPos = mid
+			bestSpeed = result.Speed
+			high = mid
+			log.Infof("  Position %d: SUCCESS (%.2f KB/s)", mid, result.Speed/1024)
+		} else {
+			low = mid + 1
+			log.Tracef("  Position %d: FAILED", mid)
+		}
+	}
+
+	return bestPos, bestSpeed
+}
+
 func analyzeFailure(result CheckResult) FailureMode {
 	if result.Error == "" {
 		return FailureUnknown
@@ -959,7 +1250,7 @@ func (ds *DiscoverySuite) measureNetworkBaseline() float64 {
 	timeout := time.Duration(ds.cfg.System.Checker.DiscoveryTimeoutSec) * time.Second
 	referenceDomain := ds.cfg.System.Checker.ReferenceDomain
 	if referenceDomain == "" {
-		referenceDomain = "max.ru"
+		referenceDomain = config.DefaultConfig.System.Checker.ReferenceDomain
 	}
 
 	log.Infof("Measuring network baseline using %s", referenceDomain)

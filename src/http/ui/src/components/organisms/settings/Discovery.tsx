@@ -55,11 +55,11 @@ export const CheckerSettings: React.FC<CheckerSettingsProps> = ({
         <Grid size={{ xs: 12, lg: 6 }}>
           <B4TextField
             label="Reference Domain"
-            value={config.system.checker.reference_domain || "max.ru"}
+            value={config.system.checker.reference_domain || "yandex.ru"}
             onChange={(e) =>
               onChange("system.checker.reference_domain", e.target.value)
             }
-            placeholder="max.ru"
+            placeholder="yandex.ru"
             helperText="Fast domain to measure your network baseline speed"
           />
         </Grid>
