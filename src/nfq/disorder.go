@@ -78,13 +78,15 @@ func (w *Worker) sendDisorderFragments(cfg *config.SetConfig, packet []byte, dst
 		segments = append(segments, segment{data: seg, seqOff: uint32(start), order: i})
 	}
 
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
 	if len(segments) > 2 {
 		for i := len(segments) - 1; i > 1; i-- {
-			j := 1 + rand.Intn(i)
+			j := 1 + r.Intn(i)
 			segments[i], segments[j] = segments[j], segments[i]
 		}
-		if rand.Intn(2) == 0 {
-			j := rand.Intn(len(segments))
+		if r.Intn(2) == 0 {
+			j := r.Intn(len(segments))
 			segments[0], segments[j] = segments[j], segments[0]
 		}
 	} else if len(segments) == 2 {
@@ -96,10 +98,10 @@ func (w *Worker) sendDisorderFragments(cfg *config.SetConfig, packet []byte, dst
 		_ = w.sock.SendIPv4(seg.data, dst)
 		if i < len(segments)-1 {
 			if seg2d > 0 {
-				jitter := rand.Intn(seg2d/2 + 1)
+				jitter := r.Intn(seg2d/2 + 1)
 				time.Sleep(time.Duration(seg2d+jitter) * time.Millisecond)
 			} else {
-				time.Sleep(time.Duration(1000+rand.Intn(2000)) * time.Microsecond)
+				time.Sleep(time.Duration(1000+r.Intn(2000)) * time.Microsecond)
 			}
 		}
 	}

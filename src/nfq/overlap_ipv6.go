@@ -59,7 +59,7 @@ func (w *Worker) sendOverlapFragmentsV6(cfg *config.SetConfig, packet []byte, ds
 	sock.FixTCPChecksumV6(seg1)
 
 	// Segment 2: Starts BEFORE seg1 ends (overlap), contains real SNI
-	overlapStart := sniStart - 2
+	overlapStart := sniStart - 8
 	if overlapStart < 0 {
 		overlapStart = 0
 	}
