@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"math/rand"
 	"net"
+	"sort"
 	"time"
 
 	"github.com/daniellavrushin/b4/config"
@@ -150,13 +151,6 @@ func uniqueSorted(splits []int, maxVal int) []int {
 		}
 	}
 
-	for i := 0; i < len(result)-1; i++ {
-		for j := i + 1; j < len(result); j++ {
-			if result[j] < result[i] {
-				result[i], result[j] = result[j], result[i]
-			}
-		}
-	}
-
+	sort.Ints(result)
 	return result
 }
