@@ -51,9 +51,10 @@ func (w *Worker) sendFirstByteDesync(cfg *config.SetConfig, packet []byte, dst n
 	_ = w.sock.SendIPv4(seg1, dst)
 
 	delay := cfg.TCP.Seg2Delay
-	if delay < 50 {
-		delay = 100
+	if delay < 10 {
+		delay = 30
 	}
+
 	jitter := int(id0) % (delay/3 + 1)
 	time.Sleep(time.Duration(delay+jitter) * time.Millisecond)
 

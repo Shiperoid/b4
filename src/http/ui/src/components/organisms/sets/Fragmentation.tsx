@@ -23,6 +23,8 @@ import { colors } from "@design";
 import { ComboSettings } from "./frags/Combo";
 import { DisorderSettings } from "./frags/Disorder";
 import { OverlapSettings } from "./frags/Overlap";
+import { ExtSplitSettings } from "./frags/ExtSplit";
+import { FirstByteSettings } from "./frags/FirstByte";
 
 interface FragmentationSettingsProps {
   config: B4SetConfig;
@@ -300,6 +302,12 @@ export const FragmentationSettings = ({
         {strategy === "overlap" && (
           <OverlapSettings config={config} onChange={onChange} />
         )}
+
+        {/* ExtSplit Settings */}
+        {strategy === "extsplit" && <ExtSplitSettings />}
+
+        {/* FirstByte Settings */}
+        {strategy === "firstbyte" && <FirstByteSettings config={config} />}
 
         {/* OOB Settings */}
         {isOob && (
