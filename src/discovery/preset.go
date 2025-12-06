@@ -441,6 +441,141 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 			},
 		},
+		// 14. Disorder - out-of-order segments
+		{
+			Name:        "disorder-basic",
+			Description: "Out-of-order TCP segments with timing jitter",
+			Family:      FamilyDisorder,
+			Phase:       PhaseStrategy,
+			Priority:    14,
+			Config: config.SetConfig{
+				TCP: config.TCPConfig{
+					ConnBytesLimit: 19,
+					Seg2Delay:      5,
+				},
+				UDP: defaultUDP(),
+				Fragmentation: config.FragmentationConfig{
+					Strategy: "disorder",
+				},
+				Faking: config.FakingConfig{
+					SNI:          true,
+					TTL:          8,
+					Strategy:     "pastseq",
+					SeqOffset:    10000,
+					SNISeqLength: 1,
+					SNIType:      config.FakePayloadDefault1,
+				},
+			},
+		},
+
+		// 15. Overlap - overlapping segments with fake SNI first
+		{
+			Name:        "overlap-basic",
+			Description: "Overlapping TCP segments exploiting reassembly",
+			Family:      FamilyOverlap,
+			Phase:       PhaseStrategy,
+			Priority:    15,
+			Config: config.SetConfig{
+				TCP: config.TCPConfig{
+					ConnBytesLimit: 19,
+					Seg2Delay:      10,
+				},
+				UDP: defaultUDP(),
+				Fragmentation: config.FragmentationConfig{
+					Strategy: "overlap",
+				},
+				Faking: config.FakingConfig{
+					SNI:          true,
+					TTL:          8,
+					Strategy:     "pastseq",
+					SeqOffset:    10000,
+					SNISeqLength: 1,
+					SNIType:      config.FakePayloadDefault1,
+				},
+			},
+		},
+
+		// 16. ExtSplit - split before SNI extension
+		{
+			Name:        "extsplit-basic",
+			Description: "Split TLS ClientHello before SNI extension",
+			Family:      FamilyExtSplit,
+			Phase:       PhaseStrategy,
+			Priority:    16,
+			Config: config.SetConfig{
+				TCP: config.TCPConfig{
+					ConnBytesLimit: 19,
+					Seg2Delay:      5,
+				},
+				UDP: defaultUDP(),
+				Fragmentation: config.FragmentationConfig{
+					Strategy:     "extsplit",
+					ReverseOrder: true,
+				},
+				Faking: config.FakingConfig{
+					SNI:          true,
+					TTL:          8,
+					Strategy:     "pastseq",
+					SeqOffset:    10000,
+					SNISeqLength: 1,
+					SNIType:      config.FakePayloadDefault1,
+				},
+			},
+		},
+
+		// 17. FirstByte - single byte desync
+		{
+			Name:        "firstbyte-basic",
+			Description: "First byte desync exploiting DPI timeouts",
+			Family:      FamilyFirstByte,
+			Phase:       PhaseStrategy,
+			Priority:    17,
+			Config: config.SetConfig{
+				TCP: config.TCPConfig{
+					ConnBytesLimit: 19,
+					Seg2Delay:      100,
+				},
+				UDP: defaultUDP(),
+				Fragmentation: config.FragmentationConfig{
+					Strategy: "firstbyte",
+				},
+				Faking: config.FakingConfig{
+					SNI:          true,
+					TTL:          8,
+					Strategy:     "pastseq",
+					SeqOffset:    10000,
+					SNISeqLength: 1,
+					SNIType:      config.FakePayloadDefault1,
+				},
+			},
+		},
+
+		// 18. Combo - multi-technique (recommended)
+		{
+			Name:        "combo-multi",
+			Description: "Multi-technique: firstbyte + extsplit + SNI split + disorder",
+			Family:      FamilyCombo,
+			Phase:       PhaseStrategy,
+			Priority:    18,
+			Config: config.SetConfig{
+				TCP: config.TCPConfig{
+					ConnBytesLimit: 19,
+					Seg2Delay:      100,
+				},
+				UDP: defaultUDP(),
+				Fragmentation: config.FragmentationConfig{
+					Strategy: "combo",
+				},
+				Faking: config.FakingConfig{
+					SNI:          true,
+					TTL:          8,
+					Strategy:     "pastseq",
+					SeqOffset:    10000,
+					SNISeqLength: 1,
+					SNIType:      config.FakePayloadDefault1,
+				},
+			},
+		},
 	}
 }
 
@@ -462,6 +597,107 @@ func GetPhase2Presets(family StrategyFamily) []ConfigPreset {
 	presets := []ConfigPreset{}
 
 	switch family {
+	case FamilyDisorder:
+		delays := []int{0, 5, 10, 20, 50}
+		for _, d := range delays {
+			presets = append(presets, ConfigPreset{
+				Name:     formatName("disorder-delay%d", d),
+				Family:   FamilyDisorder,
+				Phase:    PhaseOptimize,
+				Priority: d,
+				Config: withTCP(withFragmentation(base, config.FragmentationConfig{
+					Strategy: "disorder",
+				}), config.TCPConfig{
+					ConnBytesLimit: 19,
+					Seg2Delay:      d,
+				}),
+			})
+		}
+
+	case FamilyOverlap:
+		delays := []int{5, 10, 20, 50}
+		for _, d := range delays {
+			presets = append(presets, ConfigPreset{
+				Name:     formatName("overlap-delay%d", d),
+				Family:   FamilyOverlap,
+				Phase:    PhaseOptimize,
+				Priority: d,
+				Config: withTCP(withFragmentation(base, config.FragmentationConfig{
+					Strategy: "overlap",
+				}), config.TCPConfig{
+					ConnBytesLimit: 19,
+					Seg2Delay:      d,
+				}),
+			})
+		}
+
+	case FamilyExtSplit:
+		for _, reverse := range []bool{false, true} {
+			name := "extsplit"
+			if reverse {
+				name += "-rev"
+			}
+			presets = append(presets, ConfigPreset{
+				Name:     name,
+				Family:   FamilyExtSplit,
+				Phase:    PhaseOptimize,
+				Priority: 1,
+				Config: withFragmentation(base, config.FragmentationConfig{
+					Strategy:     "extsplit",
+					ReverseOrder: reverse,
+				}),
+			})
+		}
+		// Also test with different delays
+		for _, d := range []int{0, 5, 10} {
+			presets = append(presets, ConfigPreset{
+				Name:     formatName("extsplit-delay%d", d),
+				Family:   FamilyExtSplit,
+				Phase:    PhaseOptimize,
+				Priority: d + 10,
+				Config: withTCP(withFragmentation(base, config.FragmentationConfig{
+					Strategy:     "extsplit",
+					ReverseOrder: true,
+				}), config.TCPConfig{
+					ConnBytesLimit: 19,
+					Seg2Delay:      d,
+				}),
+			})
+		}
+
+	case FamilyFirstByte:
+		delays := []int{50, 100, 150, 200, 300}
+		for _, d := range delays {
+			presets = append(presets, ConfigPreset{
+				Name:     formatName("firstbyte-delay%d", d),
+				Family:   FamilyFirstByte,
+				Phase:    PhaseOptimize,
+				Priority: d,
+				Config: withTCP(withFragmentation(base, config.FragmentationConfig{
+					Strategy: "firstbyte",
+				}), config.TCPConfig{
+					ConnBytesLimit: 19,
+					Seg2Delay:      d,
+				}),
+			})
+		}
+
+	case FamilyCombo:
+		delays := []int{50, 100, 150, 200}
+		for _, d := range delays {
+			presets = append(presets, ConfigPreset{
+				Name:     formatName("combo-delay%d", d),
+				Family:   FamilyCombo,
+				Phase:    PhaseOptimize,
+				Priority: d,
+				Config: withTCP(withFragmentation(base, config.FragmentationConfig{
+					Strategy: "combo",
+				}), config.TCPConfig{
+					ConnBytesLimit: 19,
+					Seg2Delay:      d,
+				}),
+			})
+		}
 	case FamilyTCPFrag:
 		positions := []int{1, 2, 3, 5, 10}
 		for _, pos := range positions {

@@ -43,7 +43,14 @@ type StrategyFamily =
   | "ip_frag"
   | "fake_sni"
   | "sack"
-  | "syn_fake";
+  | "syn_fake"
+  | "desync"
+  | "delay"
+  | "disorder"
+  | "overlap"
+  | "extsplit"
+  | "firstbyte"
+  | "combo";
 
 type DiscoveryPhase =
   | "fingerprint"
@@ -136,8 +143,14 @@ const familyNames: Record<StrategyFamily, string> = {
   fake_sni: "Fake SNI",
   sack: "SACK Drop",
   syn_fake: "SYN Fake",
+  desync: "Desync",
+  delay: "Delay",
+  disorder: "Disorder",
+  overlap: "Overlap",
+  extsplit: "Extension Split",
+  firstbyte: "First-Byte",
+  combo: "Combo",
 };
-
 // Friendly names for phases
 const phaseNames: Record<DiscoveryPhase, string> = {
   fingerprint: "DPI Fingerprinting",

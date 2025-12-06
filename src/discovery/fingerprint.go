@@ -785,14 +785,21 @@ func (p *DPIProber) identifyDPIType(fp *DPIFingerprint) {
 func (p *DPIProber) generateRecommendations(fp *DPIFingerprint) {
 	recommendations := make([]StrategyFamily, 0)
 
+	// Combo is generally most effective - test first
+	recommendations = append(recommendations, FamilyCombo)
+
 	// Priority based on vulnerabilities
 	if fp.VulnerableToDesync {
 		recommendations = append(recommendations, FamilyDesync)
+		recommendations = append(recommendations, FamilyFirstByte)
 	}
 
 	if fp.VulnerableToFrag {
+		recommendations = append(recommendations, FamilyDisorder)
+		recommendations = append(recommendations, FamilyOverlap)
 		recommendations = append(recommendations, FamilyTCPFrag)
 		if fp.InspectionDepth == InspectionSNIOnly {
+			recommendations = append(recommendations, FamilyExtSplit)
 			recommendations = append(recommendations, FamilyTLSRec)
 		}
 	}
@@ -808,22 +815,24 @@ func (p *DPIProber) generateRecommendations(fp *DPIFingerprint) {
 	// Type-specific recommendations
 	switch fp.Type {
 	case DPITypeTSPU:
-		// TSPU responds well to fragmentation + fake
-		if !contains(recommendations, FamilyTCPFrag) {
-			recommendations = append([]StrategyFamily{FamilyTCPFrag}, recommendations...)
+		// TSPU responds well to combo and disorder
+		if !contains(recommendations, FamilyDisorder) {
+			recommendations = append(recommendations, FamilyDisorder)
 		}
 		recommendations = append(recommendations, FamilySACK)
 
 	case DPITypeSandvine:
-		// Sandvine needs more aggressive techniques
+		// Sandvine needs timing-based attacks
+		recommendations = append(recommendations, FamilyFirstByte)
 		recommendations = append(recommendations, FamilySynFake)
 		recommendations = append(recommendations, FamilyDelay)
 
 	case DPITypeHuawei, DPITypeFortigate:
-		// Enterprise DPI - try everything
+		// Enterprise DPI - overlap and extsplit often work
+		recommendations = append(recommendations, FamilyOverlap)
+		recommendations = append(recommendations, FamilyExtSplit)
 		recommendations = append(recommendations, FamilyIPFrag)
 	}
-
 	// Ensure we have at least some recommendations
 	if len(recommendations) == 0 {
 		recommendations = []StrategyFamily{

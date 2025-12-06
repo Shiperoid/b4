@@ -30,18 +30,23 @@ const (
 type StrategyFamily string
 
 const (
-	FamilyNone     StrategyFamily = "none"
-	FamilyTCPFrag  StrategyFamily = "tcp_frag"
-	FamilyTLSRec   StrategyFamily = "tls_record"
-	FamilyOOB      StrategyFamily = "oob"
-	FamilyIPFrag   StrategyFamily = "ip_frag"
-	FamilyFakeSNI  StrategyFamily = "fake_sni"
-	FamilySACK     StrategyFamily = "sack"
-	FamilySynFake  StrategyFamily = "syn_fake"
-	FamilyDesync   StrategyFamily = "desync"
-	FamilyWindow   StrategyFamily = "window"
-	FamilyDelay    StrategyFamily = "delay"
-	FamilyMutation StrategyFamily = "mutation"
+	FamilyNone      StrategyFamily = "none"
+	FamilyTCPFrag   StrategyFamily = "tcp_frag"
+	FamilyTLSRec    StrategyFamily = "tls_record"
+	FamilyOOB       StrategyFamily = "oob"
+	FamilyIPFrag    StrategyFamily = "ip_frag"
+	FamilyFakeSNI   StrategyFamily = "fake_sni"
+	FamilySACK      StrategyFamily = "sack"
+	FamilySynFake   StrategyFamily = "syn_fake"
+	FamilyDesync    StrategyFamily = "desync"
+	FamilyWindow    StrategyFamily = "window"
+	FamilyDelay     StrategyFamily = "delay"
+	FamilyMutation  StrategyFamily = "mutation"
+	FamilyDisorder  StrategyFamily = "disorder"
+	FamilyOverlap   StrategyFamily = "overlap"
+	FamilyExtSplit  StrategyFamily = "extsplit"
+	FamilyFirstByte StrategyFamily = "firstbyte"
+	FamilyCombo     StrategyFamily = "combo"
 )
 
 type CheckResult struct {

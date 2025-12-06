@@ -1042,6 +1042,11 @@ func (ds *DiscoverySuite) logDiscoverySummary() {
 
 func (ds *DiscoverySuite) runExtendedSearch() []StrategyFamily {
 	families := []StrategyFamily{
+		FamilyCombo,
+		FamilyDisorder,
+		FamilyOverlap,
+		FamilyExtSplit,
+		FamilyFirstByte,
 		FamilyTCPFrag,
 		FamilyTLSRec,
 		FamilyOOB,
