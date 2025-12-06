@@ -22,10 +22,14 @@ import { B4SetConfig, FragmentationStrategy } from "@models/Config";
 import { colors } from "@design";
 import { ComboSettings } from "./frags/Combo";
 import { DisorderSettings } from "./frags/Disorder";
+import { OverlapSettings } from "./frags/Overlap";
 
 interface FragmentationSettingsProps {
   config: B4SetConfig;
-  onChange: (field: string, value: string | boolean | number) => void;
+  onChange: (
+    field: string,
+    value: string | boolean | number | string[]
+  ) => void;
 }
 
 const fragmentationOptions: { label: string; value: FragmentationStrategy }[] =
@@ -290,6 +294,11 @@ export const FragmentationSettings = ({
         {/* Disorder Settings */}
         {strategy === "disorder" && (
           <DisorderSettings config={config} onChange={onChange} />
+        )}
+
+        {/* Overlap Settings */}
+        {strategy === "overlap" && (
+          <OverlapSettings config={config} onChange={onChange} />
         )}
 
         {/* OOB Settings */}

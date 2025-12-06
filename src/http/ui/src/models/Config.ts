@@ -61,6 +61,7 @@ export interface FragmentationConfig {
 
   combo: ComboFragConfig;
   disorder: DisorderFragConfig;
+  overlap: OverlapFragConfig;
 }
 
 export enum LogLevel {
@@ -204,6 +205,10 @@ export interface DisorderFragConfig {
   shuffle_mode: DisorderShuffleMode;
   min_jitter_us: number;
   max_jitter_us: number;
+}
+
+export interface OverlapFragConfig {
+  fake_snis: string[];
 }
 
 export const MAIN_SET_ID = "11111111-1111-1111-1111-111111111111";

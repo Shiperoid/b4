@@ -65,7 +65,10 @@ func (w *Worker) sendOverlapFragmentsV6(cfg *config.SetConfig, packet []byte, ds
 	copy(seg2[payloadStart:], payload[:seg2End])
 
 	sniLen := sniEnd - sniStart
-	fakeDomains := []string{"ya.ru", "yandex.ru", "vk.com", "max.ru", "dzen.ru"}
+	fakeDomains := cfg.Fragmentation.Overlap.FakeSNIs
+	if len(fakeDomains) == 0 {
+		fakeDomains = config.DefaultSetConfig.Fragmentation.Overlap.FakeSNIs
+	}
 	fakeSNI := []byte(fakeDomains[int(seq0)%len(fakeDomains)])
 	if len(fakeSNI) < sniLen {
 		fakeSNI = append(fakeSNI, bytes.Repeat([]byte{'.'}, sniLen-len(fakeSNI))...)

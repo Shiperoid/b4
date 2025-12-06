@@ -73,6 +73,10 @@ var DefaultSetConfig = SetConfig{
 			MinJitterUs: 1000,
 			MaxJitterUs: 3000,
 		},
+
+		Overlap: OverlapFragConfig{
+			FakeSNIs: []string{"ya.ru", "vk.com", "max.ru", "dzen.ru", "mail.ru"},
+		},
 	},
 
 	Faking: FakingConfig{

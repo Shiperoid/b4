@@ -63,6 +63,7 @@ type FragmentationConfig struct {
 
 	Combo    ComboFragConfig    `json:"combo" bson:"combo"`
 	Disorder DisorderFragConfig `json:"disorder" bson:"disorder"`
+	Overlap  OverlapFragConfig  `json:"overlap" bson:"overlap"`
 }
 
 type FakingConfig struct {
@@ -156,4 +157,8 @@ type DisorderFragConfig struct {
 	ShuffleMode string `json:"shuffle_mode" bson:"shuffle_mode"` // "full", "reverse"
 	MinJitterUs int    `json:"min_jitter_us" bson:"min_jitter_us"`
 	MaxJitterUs int    `json:"max_jitter_us" bson:"max_jitter_us"`
+}
+
+type OverlapFragConfig struct {
+	FakeSNIs []string `json:"fake_snis" bson:"fake_snis"`
 }

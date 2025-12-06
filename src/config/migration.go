@@ -31,6 +31,7 @@ func migrateV5to6(c *Config) error {
 	for _, set := range c.Sets {
 		set.Fragmentation.Combo = DefaultSetConfig.Fragmentation.Combo
 		set.Fragmentation.Disorder = DefaultSetConfig.Fragmentation.Disorder
+		set.Fragmentation.Overlap = DefaultSetConfig.Fragmentation.Overlap
 	}
 	return nil
 }
