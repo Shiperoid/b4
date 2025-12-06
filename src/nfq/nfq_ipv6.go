@@ -113,6 +113,14 @@ func (w *Worker) dropAndInjectTCPv6(cfg *config.SetConfig, raw []byte, dst net.I
 		w.sendOOBFragmentsV6(cfg, raw, dst)
 	case "tls":
 		w.sendTLSFragmentsV6(cfg, raw, dst)
+	case "disorder":
+		w.sendDisorderFragmentsV6(cfg, raw, dst)
+	case "overlap":
+		w.sendOverlapFragmentsV6(cfg, raw, dst)
+	case "extsplit":
+		w.sendExtSplitFragmentsV6(cfg, raw, dst)
+	case "combo":
+		w.sendComboFragmentsV6(cfg, raw, dst)
 	case "none":
 		_ = w.sock.SendIPv6(raw, dst)
 	default:
