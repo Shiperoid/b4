@@ -76,7 +76,14 @@ func (ds *DiscoverySuite) RunDiscovery() {
 
 	ds.setStatus(CheckStatusRunning)
 
+	// Set initial estimate for UI progress display
+	phase1Count := len(GetPhase1Presets())
+	ds.CheckSuite.mu.Lock()
+	ds.TotalChecks = phase1Count
+	ds.CheckSuite.mu.Unlock()
+
 	ds.cfg = ds.pool.GetFirstWorkerConfig()
+
 	if ds.cfg == nil {
 		log.Errorf("Failed to get original configuration")
 		ds.setStatus(CheckStatusFailed)
@@ -1016,9 +1023,12 @@ func (ds *DiscoverySuite) finalize() {
 	ds.Status = CheckStatusComplete
 	ds.CheckSuite.mu.Unlock()
 
-	suitesMu.Lock()
-	delete(activeSuites, ds.Id)
-	suitesMu.Unlock()
+	go func() {
+		time.Sleep(30 * time.Second)
+		suitesMu.Lock()
+		delete(activeSuites, ds.Id)
+		suitesMu.Unlock()
+	}()
 }
 
 func (ds *DiscoverySuite) restoreConfig() {

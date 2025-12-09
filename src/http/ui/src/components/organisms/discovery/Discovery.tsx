@@ -57,6 +57,7 @@ type DiscoveryPhase =
   | "baseline"
   | "strategy_detection"
   | "optimization"
+  | "dns_detection"
   | "combination";
 
 type DPIType =
@@ -158,6 +159,7 @@ const phaseNames: Record<DiscoveryPhase, string> = {
   strategy_detection: "Strategy Detection",
   optimization: "Optimization",
   combination: "Combination Test",
+  dns_detection: "DNS Detection",
 };
 
 export const DiscoveryRunner: React.FC = () => {
@@ -402,6 +404,7 @@ export const DiscoveryRunner: React.FC = () => {
       optimization: [],
       combination: [],
       fingerprint: [],
+      dns_detection: [],
     };
 
     Object.values(results).forEach((result) => {
@@ -719,18 +722,22 @@ export const DiscoveryRunner: React.FC = () => {
                   )}
                   {suite.current_phase === "fingerprint"
                     ? "Analyzing DPI system..."
+                    : suite.current_phase === "dns_detection"
+                    ? "Checking DNS..."
                     : `${suite.completed_checks} of ${suite.total_checks} checks`}
                 </Typography>
               </Box>
-              {suite.current_phase !== "fingerprint" && (
-                <Typography variant="body2" color="text.secondary">
-                  {progress.toFixed(0)}%
-                </Typography>
-              )}
+              {suite.current_phase !== "fingerprint" &&
+                suite.current_phase !== "dns_detection" && (
+                  <Typography variant="body2" color="text.secondary">
+                    {isNaN(progress) ? "0" : progress.toFixed(0)}%
+                  </Typography>
+                )}
             </Box>
             <LinearProgress
               variant={
-                suite.current_phase === "fingerprint"
+                suite.current_phase === "fingerprint" ||
+                suite.current_phase === "dns_detection"
                   ? "indeterminate"
                   : "determinate"
               }
