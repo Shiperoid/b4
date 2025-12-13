@@ -83,9 +83,9 @@ export default function Domains() {
   const [availableSets, setAvailableSets] = useState<B4SetConfig[]>([]);
   const [ipInfoToken, setIpInfoToken] = useState<string>("");
 
-  const fetchSets = useCallback(async () => {
+  const fetchSets = useCallback(async (signal?: AbortSignal) => {
     try {
-      const response = await fetch("/api/config");
+      const response = await fetch("/api/config", { signal });
       if (response.ok) {
         const data = (await response.json()) as B4Config;
         if (data.sets && Array.isArray(data.sets)) {
@@ -96,12 +96,18 @@ export default function Domains() {
         }
       }
     } catch (error) {
-      console.error("Failed to fetch sets:", error);
+      if ((error as Error).name !== "AbortError") {
+        console.error("Failed to fetch sets:", error);
+      }
     }
   }, []);
 
   useEffect(() => {
-    void fetchSets();
+    const controller = new AbortController();
+    void fetchSets(controller.signal);
+    return () => {
+      controller.abort();
+    };
   }, [fetchSets]);
 
   const handleScrollStateChange = useCallback(() => {}, []);

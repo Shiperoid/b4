@@ -12,6 +12,7 @@ class AsnStorage {
   private cache: Record<string, AsnInfo> | null = null;
   private lookupCache = new Map<string, AsnInfo | null>();
   private cacheTimeout: NodeJS.Timeout | null = null;
+  private readonly MAX_CACHE_SIZE = 10000;
 
   private loadCache(): Record<string, AsnInfo> {
     if (this.cache === null) {
@@ -44,8 +45,13 @@ class AsnStorage {
   findAsnForIp(ip: string): AsnInfo | null {
     const cleanIp = ip.split(":")[0].replace(/[[\]]/g, "");
 
-    if (this.lookupCache.has(cleanIp)) {
-      return this.lookupCache.get(cleanIp)!;
+    const cached = this.lookupCache.get(cleanIp);
+    if (cached !== undefined) {
+      // LRU refresh: move to end
+      this.lookupCache.delete(cleanIp);
+      this.lookupCache.set(cleanIp, cached);
+      this.resetCacheTimeout();
+      return cached;
     }
 
     const cache = this.loadCache();
@@ -58,6 +64,12 @@ class AsnStorage {
           break outer;
         }
       }
+    }
+
+    // Enforce max size
+    if (this.lookupCache.size >= this.MAX_CACHE_SIZE) {
+      const firstKey = this.lookupCache.keys().next().value;
+      if (firstKey) this.lookupCache.delete(firstKey);
     }
 
     this.lookupCache.set(cleanIp, result);

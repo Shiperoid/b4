@@ -1,5 +1,9 @@
 # B4 - Bye Bye Big Bro
 
+## [1.2x.x] - 2025-12-13
+
+- IMPROVED: prevent memory leaks by adding fetch cancellation to Connections and implementing LRU cache eviction in ASN lookup utility.
+
 ## [1.22.1] - 2025-12-09
 
 - FIXED: `Discovery` UI showing "0 of 0 checks" and "NaN%" during DNS detection phase.
