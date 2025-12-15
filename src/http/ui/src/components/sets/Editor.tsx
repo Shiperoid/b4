@@ -22,7 +22,12 @@ import {
 import { B4Dialog, B4TextField } from "@b4.elements";
 
 import { colors } from "@design";
-import { B4Config, B4SetConfig, SystemConfig } from "@models/Config";
+import {
+  B4Config,
+  B4SetConfig,
+  MAIN_SET_ID,
+  SystemConfig,
+} from "@models/Config";
 
 import { TargetSettings } from "./Target";
 import { TcpSettings } from "./Tcp";
@@ -68,6 +73,8 @@ export const SetEditor = ({
 
   const [activeTab, setActiveTab] = useState<TABS>(TABS.TARGETS);
   const [editedSet, setEditedSet] = useState<B4SetConfig | null>(initialSet);
+
+  const mainSet = config.sets.find((s) => s.id === MAIN_SET_ID)!;
 
   useEffect(() => {
     setEditedSet(initialSet);
@@ -165,14 +172,22 @@ export const SetEditor = ({
         {/* TCP Settings */}
         <Box hidden={activeTab !== TABS.TCP}>
           <Stack spacing={2}>
-            <TcpSettings config={editedSet} onChange={handleChange} />
+            <TcpSettings
+              config={editedSet}
+              main={mainSet}
+              onChange={handleChange}
+            />
           </Stack>
         </Box>
 
         {/* UDP Settings */}
         <Box hidden={activeTab !== TABS.UDP}>
           <Stack spacing={2}>
-            <UdpSettings config={editedSet} onChange={handleChange} />
+            <UdpSettings
+              config={editedSet}
+              main={mainSet}
+              onChange={handleChange}
+            />
           </Stack>
         </Box>
 

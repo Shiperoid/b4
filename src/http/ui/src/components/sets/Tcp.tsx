@@ -22,6 +22,7 @@ import { useState } from "react";
 
 interface TcpSettingsProps {
   config: B4SetConfig;
+  main: B4SetConfig;
   onChange: (
     field: string,
     value: string | number | boolean | number[]
@@ -62,7 +63,7 @@ const windowModeDescriptions: Record<WindowMode, string> = {
   escalate: "Gradually increase: 0 → 100 → 500 → 1460 → 8192 → 32768 → 65535",
 };
 
-export const TcpSettings = ({ config, onChange }: TcpSettingsProps) => {
+export const TcpSettings = ({ config, main, onChange }: TcpSettingsProps) => {
   const [newWinValue, setNewWinValue] = useState("");
 
   const winValues = config.tcp.win_values || [0, 1460, 8192, 65535];
@@ -103,9 +104,13 @@ export const TcpSettings = ({ config, onChange }: TcpSettingsProps) => {
               onChange("tcp.conn_bytes_limit", value)
             }
             min={1}
-            max={100}
+            max={main.id === config.id ? 100 : main.tcp.conn_bytes_limit}
             step={1}
-            helperText="Process only first N bytes of each connection for bypass"
+            helperText={
+              main.id === config.id
+                ? "Main set limit (changing requires service restart to take effect)"
+                : `Max: ${main.tcp.conn_bytes_limit} (limited by main set)`
+            }
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>

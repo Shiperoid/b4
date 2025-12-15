@@ -5,6 +5,7 @@
 - ADDED: dd error logging functionality with configurable error log file (default is `/var/log/b4/errors.log`) for crash diagnostics.
 - ADDED: `ASN` filtering in `Connections` table - filter by ASN name globally or with `asn:` field filter.
 - IMPROVED: prevent memory leaks in UI.
+- IMPROVED: subordinate sets cannot exceed main set's TCP/UDP `connection byte limits` both iun UI and backend.
 
 ## [1.22.1] - 2025-12-09
 

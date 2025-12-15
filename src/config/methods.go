@@ -95,10 +95,16 @@ func (c *Config) Validate() error {
 	c.MainSet = nil
 	for _, set := range c.Sets {
 		if set.Id == MAIN_SET_ID {
-			c.MainSet = set
-			break
+			continue
+		}
+		if set.TCP.ConnBytesLimit > c.MainSet.TCP.ConnBytesLimit {
+			set.TCP.ConnBytesLimit = c.MainSet.TCP.ConnBytesLimit
+		}
+		if set.UDP.ConnBytesLimit > c.MainSet.UDP.ConnBytesLimit {
+			set.UDP.ConnBytesLimit = c.MainSet.UDP.ConnBytesLimit
 		}
 	}
+
 	if c.MainSet == nil {
 		defaultCopy := NewSetConfig()
 		c.MainSet = &defaultCopy
@@ -133,14 +139,6 @@ func (c *Config) Validate() error {
 			if set.Id == MAIN_SET_ID {
 				set.UDP.DPortFilter = utils.ValidatePorts(set.UDP.DPortFilter)
 				continue
-			}
-
-			if set.TCP.ConnBytesLimit > c.MainSet.TCP.ConnBytesLimit {
-				return fmt.Errorf("set '%s' has TCP ConnBytesLimit greater than main set", set.Name)
-			}
-
-			if set.UDP.ConnBytesLimit > c.MainSet.UDP.ConnBytesLimit {
-				return fmt.Errorf("set '%s' has UDP ConnBytesLimit greater than main set", set.Name)
 			}
 
 			set.UDP.DPortFilter = utils.ValidatePorts(set.UDP.DPortFilter)

@@ -129,7 +129,7 @@ export const B4Slider = ({
         <FormHelperText
           sx={{
             color: disabled ? colors.text.disabled : colors.text.secondary,
-            ml: 0.1,
+            pt: 0,
           }}
         >
           {helperText}

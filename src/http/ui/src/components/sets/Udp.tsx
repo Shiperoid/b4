@@ -13,6 +13,7 @@ import { B4SetConfig } from "@models/Config";
 
 interface UdpSettingsProps {
   config: B4SetConfig;
+  main: B4SetConfig;
   onChange: (field: string, value: string | boolean | number) => void;
 }
 
@@ -57,7 +58,7 @@ const UDP_FAKING_STRATEGIES = [
   { value: "checksum", label: "Checksum", description: "Corrupt UDP checksum" },
 ];
 
-export const UdpSettings = ({ config, onChange }: UdpSettingsProps) => {
+export const UdpSettings = ({ config, main, onChange }: UdpSettingsProps) => {
   const isQuicEnabled = config.udp.filter_quic !== "disabled";
   const hasPortFilter =
     config.udp.dport_filter && config.udp.dport_filter.trim() !== "";
@@ -164,9 +165,13 @@ export const UdpSettings = ({ config, onChange }: UdpSettingsProps) => {
                 value={config.udp.conn_bytes_limit}
                 onChange={(value) => onChange("udp.conn_bytes_limit", value)}
                 min={1}
-                max={20}
+                max={main.id === config.id ? 30 : main.udp.conn_bytes_limit}
                 step={1}
-                helperText="Process only first N packets per connection (recommended: 5-8)"
+                helperText={
+                  main.id === config.id
+                    ? "Main set limit (changing requires service restart to take effect)"
+                    : `Max: ${main.udp.conn_bytes_limit} (limited by main set)`
+                }
               />
             </Grid>
 
