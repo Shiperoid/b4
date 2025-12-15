@@ -14,7 +14,7 @@ import (
 )
 
 func (api *API) RegisterDiscoveryApi() {
-	api.mux.HandleFunc("/api/discovery", api.handleStartDiscovery)
+	api.mux.HandleFunc("/api/discovery/start", api.handleStartDiscovery)
 	api.mux.HandleFunc("/api/discovery/status/{id}", api.handleCheckStatus)
 	api.mux.HandleFunc("/api/discovery/cancel/{id}", api.handleCancelCheck)
 	api.mux.HandleFunc("/api/discovery/add", api.handleAddPresetAsSet)
