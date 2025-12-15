@@ -14,6 +14,7 @@ import {
   B4Select,
   B4Slider,
   B4TextField,
+  B4FormHeader,
 } from "@b4.elements";
 
 import { B4SetConfig, FakingPayloadType, MutationMode } from "@models/Config";
@@ -219,11 +220,7 @@ export const FakingSettings = ({ config, onChange }: FakingSettingsProps) => {
             <>
               {showGreaseSettings && (
                 <>
-                  <Grid size={{ xs: 12 }}>
-                    <Divider sx={{ my: 1 }}>
-                      <Chip label="GREASE Configuration" size="small" />
-                    </Divider>
-                  </Grid>
+                  <B4FormHeader label="GREASE Configuration" />
                   <Grid size={{ xs: 12 }}>
                     <B4Slider
                       label="GREASE Extension Count"
@@ -242,11 +239,7 @@ export const FakingSettings = ({ config, onChange }: FakingSettingsProps) => {
 
               {showPaddingSettings && (
                 <>
-                  <Grid size={{ xs: 12 }}>
-                    <Divider sx={{ my: 1 }}>
-                      <Chip label="Padding Configuration" size="small" />
-                    </Divider>
-                  </Grid>
+                  <B4FormHeader label="Padding Configuration" />
                   <Grid size={{ xs: 12 }}>
                     <B4Slider
                       label="Padding Size"
@@ -266,14 +259,7 @@ export const FakingSettings = ({ config, onChange }: FakingSettingsProps) => {
 
               {showFakeExtSettings && (
                 <>
-                  <Grid size={{ xs: 12 }}>
-                    <Divider sx={{ my: 1 }}>
-                      <Chip
-                        label="Fake Extensions Configuration"
-                        size="small"
-                      />
-                    </Divider>
-                  </Grid>
+                  <B4FormHeader label="Fake Extensions Configuration" />
                   <Grid size={{ xs: 12 }}>
                     <B4Slider
                       label="Fake Extension Count"
@@ -292,11 +278,7 @@ export const FakingSettings = ({ config, onChange }: FakingSettingsProps) => {
 
               {showFakeSniSettings && (
                 <>
-                  <Grid size={{ xs: 12 }}>
-                    <Divider sx={{ my: 1 }}>
-                      <Chip label="Fake SNI Configuration" size="small" />
-                    </Divider>
-                  </Grid>
+                  <B4FormHeader label="Fake SNI Configuration" />
                   <Grid size={{ xs: 12, md: 6 }}>
                     <Box
                       sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}

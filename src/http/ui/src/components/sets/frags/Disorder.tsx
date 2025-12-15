@@ -28,7 +28,7 @@ export const DisorderSettings = ({
 
   return (
     <>
-      <B4FormHeader label="Disorder Strategy" sx={{ mb: 0 }} />
+      <B4FormHeader label="Disorder Strategy" />
       <B4Alert sx={{ m: 0 }}>
         Disorder sends real TCP segments out of order with timing jitter. No
         fake packets — exploits DPI that expects sequential data.

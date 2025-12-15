@@ -1,16 +1,9 @@
 import { useState } from "react";
-import {
-  Box,
-  Chip,
-  Divider,
-  Grid,
-  IconButton,
-  Typography,
-} from "@mui/material";
+import { Box, Chip, Grid, IconButton, Typography } from "@mui/material";
 import { AddIcon, DiscoveryIcon } from "@b4.icons";
 import { B4Config } from "@models/Config";
 import { colors } from "@design";
-import { B4Slider, B4Section, B4TextField } from "@b4.elements";
+import { B4Slider, B4Section, B4TextField, B4FormHeader } from "@b4.elements";
 
 interface CheckerSettingsProps {
   config: B4Config;
@@ -87,11 +80,8 @@ export const CheckerSettings = ({ config, onChange }: CheckerSettingsProps) => {
             helperText="Fast domain to measure your network baseline speed"
           />
         </Grid>
-        <Grid size={{ xs: 12 }}>
-          <Divider sx={{ my: 1 }}>
-            <Chip label="DNS Configuration" size="small" />
-          </Divider>
-        </Grid>
+
+        <B4FormHeader label="DNS Configuration" />
         <Grid size={{ xs: 12, md: 6 }}>
           <Box sx={{ display: "flex", gap: 1, alignItems: "flex-start" }}>
             <B4TextField

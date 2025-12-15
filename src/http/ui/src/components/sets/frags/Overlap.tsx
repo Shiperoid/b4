@@ -42,7 +42,7 @@ export const OverlapSettings = ({ config, onChange }: OverlapSettingsProps) => {
 
   return (
     <>
-      <B4FormHeader label="Overlap Strategy" sx={{ mb: 0 }} />
+      <B4FormHeader label="Overlap Strategy" />
 
       <B4Alert severity="info" sx={{ m: 0 }}>
         Exploits RFC 793: server keeps FIRST received data for overlapping

@@ -1,9 +1,10 @@
-import { Grid, Divider, Chip, Box, Typography } from "@mui/material";
+import { Grid, Box, Typography } from "@mui/material";
 
 import { B4Slider, B4Switch } from "@b4.fields";
 import { B4SetConfig } from "@models/Config";
 import { colors } from "@design";
 import { B4Alert } from "@components/common/B4Alert";
+import { B4FormHeader } from "@b4.elements";
 
 interface TcpIpSettingsProps {
   config: B4SetConfig;
@@ -23,12 +24,7 @@ export const TcpIpSettings = ({ config, onChange }: TcpIpSettingsProps) => {
 
   return (
     <>
-      <Grid size={{ xs: 12 }}>
-        <Divider sx={{ my: 1 }}>
-          <Chip label="Where to Split" size="small" />
-        </Divider>
-      </Grid>
-      
+      <B4FormHeader label="Where to Split" />
 
       <Grid size={{ xs: 12 }}>
         <B4Switch

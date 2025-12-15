@@ -1,4 +1,4 @@
-import { Grid, Divider, Chip, Typography, Box } from "@mui/material";
+import { Grid, Typography, Box } from "@mui/material";
 import { FragIcon } from "@b4.icons";
 import {
   B4Section,
@@ -98,7 +98,7 @@ export const FragmentationSettings = ({
 
         {isOob && (
           <>
-            <B4FormHeader label="OOB (Out-of-Band) Strategy" sx={{ mb: 0 }} />
+            <B4FormHeader label="OOB (Out-of-Band) Strategy" />
 
             <B4Alert>
               Inserts a byte with TCP URG flag. Server ignores it, but stateful
@@ -140,11 +140,7 @@ export const FragmentationSettings = ({
         {/* TLS Record Settings */}
         {isTls && (
           <>
-            <Grid size={{ xs: 12 }}>
-              <Divider sx={{ my: 1 }}>
-                <Chip label="TLS Record Configuration" size="small" />
-              </Divider>
-            </Grid>
+            <B4FormHeader label="TLS Record Splitting Strategy" />
 
             <B4Alert>
               Splits ClientHello into multiple TLS records. DPI expecting

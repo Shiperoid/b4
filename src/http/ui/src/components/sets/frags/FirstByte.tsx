@@ -10,7 +10,7 @@ interface FirstByteSettingsProps {
 export const FirstByteSettings = ({ config }: FirstByteSettingsProps) => {
   return (
     <>
-      <B4FormHeader label="First-Byte Desync" sx={{ mb: 0 }} />
+      <B4FormHeader label="First-Byte Desync" />
 
       <B4Alert severity="info" sx={{ m: 0 }}>
         Sends just 1 byte, waits, then sends the rest. Exploits DPI timeout —

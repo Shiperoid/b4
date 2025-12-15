@@ -1,4 +1,4 @@
-import { Grid, Divider, Chip } from "@mui/material";
+import { Grid } from "@mui/material";
 import { DnsIcon, WarningIcon } from "@b4.icons";
 import {
   B4Slider,
@@ -7,6 +7,7 @@ import {
   B4TextField,
   B4Section,
   B4Alert,
+  B4FormHeader,
 } from "@b4.elements";
 import { B4SetConfig } from "@models/Config";
 
@@ -82,11 +83,7 @@ export const UdpSettings = ({ config, onChange }: UdpSettingsProps) => {
       icon={<DnsIcon />}
     >
       <Grid container spacing={3}>
-        <Grid size={{ xs: 12 }}>
-          <Divider sx={{ mb: 2 }}>
-            <Chip label="What UDP Traffic to Process" size="small" />
-          </Divider>
-        </Grid>
+        <B4FormHeader label="What UDP Traffic to Process" />
 
         <Grid size={{ xs: 12, md: 6 }}>
           <B4Select
@@ -144,11 +141,7 @@ export const UdpSettings = ({ config, onChange }: UdpSettingsProps) => {
         {/* Section 2: Action Settings (only if traffic will be processed) */}
         {showActionSettings && (
           <>
-            <Grid size={{ xs: 12 }}>
-              <Divider sx={{ my: 2 }}>
-                <Chip label="How to Handle Matched Traffic" size="small" />
-              </Divider>
-            </Grid>
+            <B4FormHeader label="How to Handle Matched Traffic" />
 
             {/* UDP Mode */}
             <Grid size={{ xs: 12, md: 6 }}>
@@ -199,11 +192,7 @@ export const UdpSettings = ({ config, onChange }: UdpSettingsProps) => {
         {/* Section 3: Fake Mode Settings (only if fake mode is enabled) */}
         {showFakeSettings && (
           <>
-            <Grid size={{ xs: 12 }}>
-              <Divider sx={{ my: 2 }}>
-                <Chip label="Fake Packet Configuration" size="small" />
-              </Divider>
-            </Grid>
+            <B4FormHeader label="Fake Packet Configuration" />
 
             <Grid size={{ xs: 12, md: 6 }}>
               <B4Select

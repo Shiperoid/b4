@@ -5,7 +5,7 @@ import { B4Alert, B4FormHeader } from "@b4.elements";
 export const ExtSplitSettings = () => {
   return (
     <>
-      <B4FormHeader label="Extension Split" sx={{ mb: 0 }} />
+      <B4FormHeader label="Extension Split" />
       <B4Alert severity="info" sx={{ m: 0 }}>
         Automatically splits TLS ClientHello just before the SNI extension. DPI
         sees incomplete extension list and fails to parse SNI.
