@@ -14,23 +14,12 @@ import { DomainIcon, DownloadIcon, SuccessIcon } from "@b4.icons";
 import { B4Alert, B4FormHeader, B4Section, B4TextField } from "@b4.elements";
 import { useState, useEffect, useCallback } from "react";
 import { colors } from "@design";
+import { geodatApi, GeodatSource, GeoFileInfo } from "@b4.settings";
 
 export interface GeoSettingsProps {
   config: B4Config;
   onChange: (field: string, value: boolean | string | number) => void;
   loadConfig: () => void;
-}
-
-interface GeodatSource {
-  name: string;
-  geosite_url: string;
-  geoip_url: string;
-}
-
-interface FileInfo {
-  exists: boolean;
-  size?: number;
-  last_modified?: string;
 }
 
 export const GeoSettings = ({ config, loadConfig }: GeoSettingsProps) => {
@@ -41,8 +30,10 @@ export const GeoSettings = ({ config, loadConfig }: GeoSettingsProps) => {
   const [downloading, setDownloading] = useState(false);
   const [downloadStatus, setDownloadStatus] = useState<string>("");
   const [destPath, setDestPath] = useState<string>("/etc/b4");
-  const [geositeInfo, setGeositeInfo] = useState<FileInfo>({ exists: false });
-  const [geoipInfo, setGeoipInfo] = useState<FileInfo>({ exists: false });
+  const [geositeInfo, setGeositeInfo] = useState<GeoFileInfo>({
+    exists: false,
+  });
+  const [geoipInfo, setGeoipInfo] = useState<GeoFileInfo>({ exists: false });
 
   useEffect(() => {
     void loadSources();
@@ -52,15 +43,8 @@ export const GeoSettings = ({ config, loadConfig }: GeoSettingsProps) => {
   const checkFileStatus = useCallback(async () => {
     if (config.system.geo.sitedat_path) {
       try {
-        const response = await fetch(
-          `/api/geodat/info?path=${encodeURIComponent(
-            config.system.geo.sitedat_path
-          )}`
-        );
-        if (response.ok) {
-          const info = (await response.json()) as FileInfo;
-          setGeositeInfo(info);
-        }
+        const info = await geodatApi.info(config.system.geo.sitedat_path);
+        setGeositeInfo(info);
       } catch {
         setGeositeInfo({ exists: false });
       }
@@ -68,15 +52,8 @@ export const GeoSettings = ({ config, loadConfig }: GeoSettingsProps) => {
 
     if (config.system.geo.ipdat_path) {
       try {
-        const response = await fetch(
-          `/api/geodat/info?path=${encodeURIComponent(
-            config.system.geo.ipdat_path
-          )}`
-        );
-        if (response.ok) {
-          const info = (await response.json()) as FileInfo;
-          setGeoipInfo(info);
-        }
+        const info = await geodatApi.info(config.system.geo.ipdat_path);
+        setGeoipInfo(info);
       } catch {
         setGeoipInfo({ exists: false });
       }
@@ -89,13 +66,10 @@ export const GeoSettings = ({ config, loadConfig }: GeoSettingsProps) => {
 
   const loadSources = async () => {
     try {
-      const response = await fetch("/api/geodat/sources");
-      if (response.ok) {
-        const data = (await response.json()) as GeodatSource[];
-        setSources(data);
-        if (data.length > 0) {
-          setSelectedSource(data[0].name);
-        }
+      const data = await geodatApi.sources();
+      setSources(data);
+      if (data.length > 0) {
+        setSelectedSource(data[0].name);
       }
     } catch (error) {
       console.error("Failed to load geodat sources:", error);
@@ -129,34 +103,13 @@ export const GeoSettings = ({ config, loadConfig }: GeoSettingsProps) => {
     setDownloadStatus("Downloading...");
 
     try {
-      const response = await fetch("/api/geodat/download", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          geosite_url: geositeURL,
-          geoip_url: geoipURL,
-          destination_path: destPath,
-        }),
-      });
-
-      if (response.ok) {
-        const result = (await response.json()) as {
-          success: boolean;
-          message: string;
-          geosite_path: string;
-          geoip_path: string;
-        };
-
-        setDownloadStatus(
-          `Downloaded successfully to ${extractDir(result.geosite_path)}`
-        );
-        loadConfig();
-        setTimeout(() => setDownloadStatus(""), 5000);
-        void checkFileStatus();
-      } else {
-        const error = await response.text();
-        setDownloadStatus(`Failed: ${error}`);
-      }
+      const result = await geodatApi.download(geositeURL, geoipURL, destPath);
+      setDownloadStatus(
+        `Downloaded successfully to ${extractDir(result.geosite_path)}`
+      );
+      loadConfig();
+      setTimeout(() => setDownloadStatus(""), 5000);
+      void checkFileStatus();
     } catch (error) {
       setDownloadStatus(`Error: ${String(error)}`);
     } finally {

@@ -1,11 +1,14 @@
 import { Grid } from "@mui/material";
 import { LogsIcon } from "@b4.icons";
-import { B4Section, B4Select, B4Switch } from "@b4.elements";
+import { B4Section, B4Select, B4Switch, B4TextField } from "@b4.elements";
 import { B4Config, LogLevel } from "@models/Config";
 
 interface LoggingSettingsProps {
   config: B4Config;
-  onChange: (field: string, value: number | boolean) => void;
+  onChange: (
+    field: string,
+    value: number | boolean | string | string[]
+  ) => void;
 }
 
 const LOG_LEVELS: Array<{ value: LogLevel; label: string }> = [
@@ -32,6 +35,15 @@ export const LoggingSettings = ({ config, onChange }: LoggingSettingsProps) => {
               onChange("system.logging.level", Number(e.target.value))
             }
             helperText="Set the verbosity of logging output"
+          />
+          <B4TextField
+            label="Error File Path"
+            value={config.system.logging.error_file}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              onChange("system.logging.error_file", e.target.value)
+            }
+            placeholder="/var/log/b4/errors.log"
+            helperText="Full path to error log file"
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6 }}>

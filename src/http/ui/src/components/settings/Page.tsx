@@ -41,6 +41,7 @@ import { ApiSettings } from "./Api";
 import { B4Config, B4SetConfig } from "@models/Config";
 import { colors, spacing } from "@design";
 import { B4Alert, B4Dialog } from "@b4.elements";
+import { configApi } from "@b4.settings";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -199,9 +200,7 @@ export function SettingsPage() {
   const loadConfig = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/config");
-      if (!response.ok) throw new Error("Failed to load configuration");
-      const data = (await response.json()) as B4Config;
+      const data = await configApi.get();
       setConfig(data);
       setOriginalConfig(structuredClone(data));
     } catch (error) {
@@ -221,17 +220,7 @@ export function SettingsPage() {
 
     try {
       setSaving(true);
-      const response = await fetch("/api/config", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(config),
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || "Failed to save configuration");
-      }
-
+      await configApi.save(config);
       setOriginalConfig(structuredClone(config));
 
       const requiresRestart = categoryHasChanges[0];

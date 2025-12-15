@@ -1,0 +1,53 @@
+export interface Capture {
+  protocol: string;
+  domain: string;
+  timestamp: string;
+  size: number;
+  filepath: string;
+  hex_data: string;
+}
+
+export interface GeodatSource {
+  name: string;
+  geosite_url: string;
+  geoip_url: string;
+}
+
+export interface GeoFileInfo {
+  exists: boolean;
+  size?: number;
+  last_modified?: string;
+}
+
+export interface GeodatDownloadResult {
+  success: boolean;
+  message: string;
+  geosite_path: string;
+  geoip_path: string;
+}
+
+export interface SystemInfo {
+  service_manager: string;
+  os: string;
+  arch: string;
+  can_restart: boolean;
+}
+
+export interface RestartResponse {
+  success: boolean;
+  message: string;
+  service_manager: string;
+  restart_command?: string;
+}
+
+export interface ResetResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface UpdateResponse {
+  success: boolean;
+  message: string;
+  service_manager: string;
+  update_command?: string;
+}
