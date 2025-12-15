@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import {
   Box,
   Button,
@@ -30,105 +30,16 @@ import { colors } from "@design";
 import { B4SetConfig } from "@models/Config";
 import { DiscoveryAddDialog } from "./AddDialog";
 import { B4Alert, B4Badge, B4Section, B4TextField } from "@b4.elements";
-
-type StrategyFamily =
-  | "none"
-  | "tcp_frag"
-  | "tls_record"
-  | "oob"
-  | "ip_frag"
-  | "fake_sni"
-  | "sack"
-  | "syn_fake"
-  | "desync"
-  | "delay"
-  | "disorder"
-  | "overlap"
-  | "extsplit"
-  | "firstbyte"
-  | "combo";
-
-type DiscoveryPhase =
-  | "fingerprint"
-  | "baseline"
-  | "strategy_detection"
-  | "optimization"
-  | "dns_detection"
-  | "combination";
-
-type DPIType =
-  | "unknown"
-  | "tspu"
-  | "sandvine"
-  | "huawei"
-  | "allot"
-  | "fortigate"
-  | "none";
-
-type BlockingMethod =
-  | "rst_inject"
-  | "timeout"
-  | "redirect"
-  | "content_inject"
-  | "tls_alert"
-  | "none";
-
-interface DPIFingerprint {
-  type: DPIType;
-  blocking_method: BlockingMethod;
-  inspection_depth: string;
-  rst_latency_ms: number;
-  dpi_hop_count: number;
-  is_inline: boolean;
-  confidence: number;
-  optimal_ttl: number;
-  vulnerable_to_ttl: boolean;
-  vulnerable_to_frag: boolean;
-  vulnerable_to_desync: boolean;
-  vulnerable_to_oob: boolean;
-  recommended_families: StrategyFamily[];
-}
-interface DomainPresetResult {
-  preset_name: string;
-  family?: StrategyFamily;
-  phase?: DiscoveryPhase;
-  status: "complete" | "failed";
-  duration: number;
-  speed: number;
-  bytes_read: number;
-  error?: string;
-  status_code: number;
-  set?: B4SetConfig;
-}
-
-interface DiscoveryResult {
-  domain: string;
-  best_preset: string;
-  best_speed: number;
-  best_success: boolean;
-  results: Record<string, DomainPresetResult>;
-  baseline_speed?: number;
-  improvement?: number;
-  fingerprint?: DPIFingerprint;
-}
-
-interface DiscoverySuite {
-  id: string;
-  status: "pending" | "running" | "complete" | "failed" | "canceled";
-  start_time: string;
-  end_time: string;
-  total_checks: number;
-  completed_checks: number;
-  current_phase?: DiscoveryPhase;
-  domain_discovery_results?: Record<string, DiscoveryResult>;
-  fingerprint?: DPIFingerprint;
-}
-
-interface DiscoveryResponse {
-  id: string;
-  estimated_tests: number;
-  message: string;
-}
+import {
+  useDiscovery,
+  StrategyFamily,
+  DiscoveryPhase,
+  DomainPresetResult,
+  DPIFingerprint,
+  DPIType,
+  BlockingMethod,
+} from "@b4.discovery";
+import { useSets } from "@hooks/useSets";
 
 // Friendly names for strategy families
 const familyNames: Record<StrategyFamily, string> = {
@@ -159,11 +70,19 @@ const phaseNames: Record<DiscoveryPhase, string> = {
 };
 
 export const DiscoveryRunner = () => {
-  const [running, setRunning] = useState(false);
-  const [suiteId, setSuiteId] = useState<string | null>(null);
-  const [suite, setSuite] = useState<DiscoverySuite | null>(null);
+  const {
+    startDiscovery,
+    cancelDiscovery,
+    resetDiscovery,
+    addPresetAsSet,
+    discoveryRunning: running,
+    suiteId,
+    suite,
+    error,
+  } = useDiscovery();
 
-  const [error, setError] = useState<string | null>(null);
+  const { addDomainToSet } = useSets();
+
   const [expandedDomains, setExpandedDomains] = useState<Set<string>>(
     new Set()
   );
@@ -208,134 +127,26 @@ export const DiscoveryRunner = () => {
     });
   };
 
-  useEffect(() => {
-    const savedSuiteId = localStorage.getItem("discovery_suiteId");
-    if (savedSuiteId) {
-      setSuiteId(savedSuiteId);
-      setRunning(true); // Will trigger polling, which will update status
-    }
-  }, []);
-
-  useEffect(() => {
-    if (suiteId) {
-      localStorage.setItem("discovery_suiteId", suiteId);
-    }
-  }, [suiteId]);
-
-  // Poll for discovery status
-  useEffect(() => {
-    if (!suiteId || !running) return;
-
-    const fetchStatus = async () => {
-      try {
-        const response = await fetch(`/api/discovery/status?id=${suiteId}`);
-        if (!response.ok) throw new Error("Failed to fetch discovery status");
-
-        const data = (await response.json()) as DiscoverySuite;
-        setSuite(data);
-
-        if (["complete", "failed", "canceled"].includes(data.status)) {
-          setRunning(false);
-          localStorage.removeItem("discovery_suiteId");
-        }
-      } catch (err) {
-        console.error("Failed to fetch discovery status:", err);
-        setError(err instanceof Error ? err.message : "Unknown error");
-        setRunning(false);
-      }
-    };
-
-    const interval = setInterval(() => {
-      void fetchStatus();
-    }, 1500); // Faster polling for better UX
-
-    return () => clearInterval(interval);
-  }, [suiteId, running]);
-
-  const startDiscovery = useCallback(async () => {
-    if (!domain.trim()) {
-      setError("Enter a domain to test");
-      return;
-    }
-
-    setError(null);
-    setRunning(true);
-    setSuite(null);
-
-    try {
-      const response = await fetch("/api/discovery", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          domain: domain.trim(),
-        }),
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || "Failed to start discovery");
-      }
-
-      const data = (await response.json()) as DiscoveryResponse;
-      setSuiteId(data.id);
-    } catch (err) {
-      console.error("Failed to start discovery:", err);
-      setError(
-        err instanceof Error ? err.message : "Failed to start discovery"
-      );
-      setRunning(false);
-    }
-  }, [domain]);
-
-  const cancelDiscovery = async () => {
-    if (!suiteId) return;
-
-    try {
-      await fetch(`/api/discovery/cancel?id=${suiteId}`, { method: "DELETE" });
-      setRunning(false);
-    } catch (err) {
-      console.error("Failed to cancel discovery:", err);
-    }
-  };
-
   const handleDomainKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key !== "Enter") return;
       if (!domain.trim()) return;
       e.preventDefault();
-      void startDiscovery();
+      void startDiscovery(domain);
     },
     [domain, startDiscovery]
   );
 
-  const resetDiscovery = () => {
-    localStorage.removeItem("discovery_suiteId");
-    setSuiteId(null);
-    setSuite(null);
-    setError(null);
-    setRunning(false);
-    setExpandedDomains(new Set());
-  };
-
   const handleAddNew = async (name: string, domain: string) => {
     if (!addDialog.setConfig) return;
     setAddingPreset(true);
-
-    try {
-      const configToAdd = {
-        ...addDialog.setConfig,
-        name,
-        targets: { ...addDialog.setConfig.targets, sni_domains: [domain] },
-      };
-
-      const response = await fetch("/api/discovery/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(configToAdd),
-      });
-
-      if (!response.ok) throw new Error("Failed to add configuration");
-
+    const configToAdd = {
+      ...addDialog.setConfig,
+      name,
+      targets: { ...addDialog.setConfig.targets, sni_domains: [domain] },
+    };
+    const res = await addPresetAsSet(configToAdd);
+    if (res.success) {
       setSnackbar({
         open: true,
         message: `Created set "${name}"`,
@@ -347,29 +158,20 @@ export const DiscoveryRunner = () => {
         presetName: "",
         setConfig: null,
       });
-    } catch {
+    } else {
       setSnackbar({
         open: true,
         message: "Failed to add configuration",
         severity: "error",
       });
-    } finally {
-      setAddingPreset(false);
     }
+    setAddingPreset(false);
   };
 
   const handleAddToExisting = async (setId: string, domain: string) => {
     setAddingPreset(true);
-
-    try {
-      const response = await fetch(`/api/config/sets/${setId}/domains`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ domain }),
-      });
-
-      if (!response.ok) throw new Error("Failed to add domain");
-
+    const res = await addDomainToSet(setId, domain);
+    if (res.success) {
       setSnackbar({
         open: true,
         message: `Added "${domain}" to existing set`,
@@ -381,16 +183,20 @@ export const DiscoveryRunner = () => {
         presetName: "",
         setConfig: null,
       });
-    } catch {
+    } else {
       setSnackbar({
         open: true,
         message: "Failed to add domain",
         severity: "error",
       });
-    } finally {
-      setAddingPreset(false);
     }
+    setAddingPreset(false);
   };
+
+  const handleReset = useCallback(() => {
+    resetDiscovery();
+    setExpandedDomains(new Set());
+  }, [resetDiscovery]);
 
   // Group results by phase for display
   const groupResultsByPhase = (results: Record<string, DomainPresetResult>) => {
@@ -578,7 +384,7 @@ export const DiscoveryRunner = () => {
               startIcon={<StartIcon />}
               variant="contained"
               onClick={() => {
-                void startDiscovery();
+                void startDiscovery(domain);
               }}
               disabled={!domain.trim()}
               sx={{
@@ -607,7 +413,7 @@ export const DiscoveryRunner = () => {
             <Button
               variant="outlined"
               startIcon={<RefreshIcon />}
-              onClick={resetDiscovery}
+              onClick={handleReset}
               sx={{
                 whiteSpace: "nowrap",
               }}

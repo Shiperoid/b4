@@ -13,6 +13,48 @@ func (api *API) RegisterSetsApi() {
 	api.mux.HandleFunc("/api/sets", api.handleSets)
 	api.mux.HandleFunc("/api/sets/{id}", api.handleSetById)
 	api.mux.HandleFunc("/api/sets/reorder", api.handleReorderSets)
+	api.mux.HandleFunc("/api/sets/{id}/add-domain", api.handleSetDomains)
+}
+
+func (api *API) handleSetDomains(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	setId := r.PathValue("id")
+
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Domain string `json:"domain"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	// Find set and add domain
+	for _, set := range api.cfg.Sets {
+		if set.Id == setId {
+			set.Targets.SNIDomains = append(set.Targets.SNIDomains, req.Domain)
+			set.Targets.DomainsToMatch = append(set.Targets.DomainsToMatch, req.Domain)
+
+			if err := api.saveAndPushConfig(api.cfg); err != nil {
+				http.Error(w, "Failed to save", http.StatusInternalServerError)
+				return
+			}
+
+			setJsonHeader(w)
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": true})
+			return
+		}
+	}
+
+	http.Error(w, "Set not found", http.StatusNotFound)
 }
 
 // GET /api/sets - list all, POST /api/sets - create new

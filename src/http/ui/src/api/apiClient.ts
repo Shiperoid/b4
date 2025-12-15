@@ -11,6 +11,12 @@ export const apiClient = new QueryClient({
   },
 });
 
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
 export class ApiError extends Error {
   constructor(
     public url: string,
@@ -69,7 +75,7 @@ export async function apiGet<T>(url: string, expect?: ContentType): Promise<T> {
 
 export async function apiPost<T>(
   url: string,
-  body: unknown,
+  body?: unknown,
   expect?: ContentType
 ): Promise<T> {
   return apiFetch<T>(url, {
@@ -77,7 +83,7 @@ export async function apiPost<T>(
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(body),
+    body: body !== undefined ? JSON.stringify(body) : undefined,
     expect,
   });
 }

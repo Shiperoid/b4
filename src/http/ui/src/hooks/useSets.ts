@@ -1,17 +1,10 @@
 import { useState, useCallback } from "react";
 import { B4SetConfig } from "@models/Config";
-import { ApiError } from "@api/apiClient";
+import { ApiError, ApiResponse } from "@api/apiClient";
 import { setsApi } from "@b4.sets";
-
-interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
 
 export function useSets() {
   const [loading, setLoading] = useState(false);
-
 
   const createSet = useCallback(
     async (set: Omit<B4SetConfig, "id">): Promise<ApiResponse<B4SetConfig>> => {
@@ -70,13 +63,13 @@ export function useSets() {
     []
   );
 
-const duplicateSet = useCallback(
-  async (set: B4SetConfig): Promise<ApiResponse<B4SetConfig>> => {
-    const { id: _, ...rest } = structuredClone(set);
-    return createSet({ ...rest, name: `${set.name} (copy)` });
-  },
-  [createSet]
-);
+  const duplicateSet = useCallback(
+    async (set: B4SetConfig): Promise<ApiResponse<B4SetConfig>> => {
+      const { id: _, ...rest } = structuredClone(set);
+      return createSet({ ...rest, name: `${set.name} (copy)` });
+    },
+    [createSet]
+  );
 
   const reorderSets = useCallback(
     async (setIds: string[]): Promise<ApiResponse<void>> => {
@@ -97,12 +90,31 @@ const duplicateSet = useCallback(
     []
   );
 
+  const addDomainToSet = useCallback(
+    async (setId: string, domain: string): Promise<ApiResponse<void>> => {
+      try {
+        await setsApi.addDomainToSet(setId, domain);
+        return { success: true };
+      } catch (e) {
+        if (e instanceof ApiError) {
+          return {
+            success: false,
+            error: JSON.stringify(e.body ?? e.message),
+          };
+        }
+        return { success: false, error: String(e) };
+      }
+    },
+    []
+  );
+
   return {
     createSet,
     updateSet,
     deleteSet,
     duplicateSet,
     reorderSets,
+    addDomainToSet,
     loading,
   };
 }
