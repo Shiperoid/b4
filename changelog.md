@@ -1,6 +1,6 @@
 # B4 - Bye Bye Big Bro
 
-## [1.23.x] - 2025-12-13
+## [1.23.0] - 2025-12-16
 
 - ADDED: dd error logging functionality with configurable error log file (default is `/var/log/b4/errors.log`) for crash diagnostics.
 - ADDED: `ASN` filtering in `Connections` table - filter by ASN name globally or with `asn:` field filter.
