@@ -1,7 +1,7 @@
-import { Autocomplete, CircularProgress, IconButton, Box } from "@mui/material";
-import { AddIcon } from "@b4.icons";
+import { Autocomplete, CircularProgress, Box } from "@mui/material";
 import { B4TextField } from "@b4.fields";
 import { colors } from "@design";
+import { B4PlusButton } from "@b4.elements";
 
 interface SettingAutocompleteProps {
   label: string;
@@ -107,23 +107,10 @@ const SettingAutocomplete = ({
         )}
       />
       {onSelect && (
-        <IconButton
+        <B4PlusButton
           onClick={handleAdd}
           disabled={!value.trim() || disabled}
-          sx={{
-            bgcolor: colors.accent.secondary,
-            color: colors.secondary,
-            "&:hover": {
-              bgcolor: colors.accent.secondaryHover,
-            },
-            "&:disabled": {
-              bgcolor: colors.accent.secondaryHover,
-              color: colors.accent.secondary,
-            },
-          }}
-        >
-          <AddIcon />
-        </IconButton>
+        />
       )}
     </Box>
   );

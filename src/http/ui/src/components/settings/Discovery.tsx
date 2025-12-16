@@ -1,9 +1,15 @@
 import { useState } from "react";
-import { Box, Chip, Grid, IconButton, Typography } from "@mui/material";
+import { Box, Grid, IconButton } from "@mui/material";
 import { AddIcon, DiscoveryIcon } from "@b4.icons";
 import { B4Config } from "@models/Config";
 import { colors } from "@design";
-import { B4Slider, B4Section, B4TextField, B4FormHeader } from "@b4.elements";
+import {
+  B4Slider,
+  B4Section,
+  B4TextField,
+  B4FormHeader,
+  B4ChipList,
+} from "@b4.elements";
 
 interface CheckerSettingsProps {
   config: B4Config;
@@ -109,40 +115,14 @@ export const CheckerSettings = ({ config, onChange }: CheckerSettingsProps) => {
             </IconButton>
           </Box>
         </Grid>
-        {(config.system.checker.reference_dns?.length ?? 0) > 0 && (
-          <Grid size={{ xs: 12, md: 6 }}>
-            <Typography variant="subtitle2" gutterBottom>
-              Active DNS servers to test:
-            </Typography>
-            <Box
-              sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 1,
-                p: 1,
-                border: `1px solid ${colors.border.default}`,
-                borderRadius: 1,
-                bgcolor: colors.background.paper,
-              }}
-            >
-              {config.system.checker.reference_dns.map((dns) => (
-                <Chip
-                  key={dns}
-                  label={dns}
-                  onDelete={() => handleRemoveDns(dns)}
-                  size="small"
-                  sx={{
-                    bgcolor: colors.accent.primary,
-                    color: colors.secondary,
-                    "& .MuiChip-deleteIcon": {
-                      color: colors.secondary,
-                    },
-                  }}
-                />
-              ))}
-            </Box>
-          </Grid>
-        )}
+        <B4ChipList
+          items={config.system.checker.reference_dns || []}
+          getKey={(d) => d}
+          getLabel={(d) => d}
+          onDelete={handleRemoveDns}
+          title="Active DNS servers to test:"
+          gridSize={{ xs: 12, md: 6 }}
+        />
       </Grid>
     </B4Section>
   );

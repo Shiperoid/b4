@@ -1,13 +1,5 @@
-import {
-  Grid,
-  FormControlLabel,
-  Switch,
-  Typography,
-  Chip,
-  Box,
-  IconButton,
-} from "@mui/material";
-import { DnsIcon, AddIcon } from "@b4.icons";
+import { Grid, FormControlLabel, Switch, Typography, Box } from "@mui/material";
+import { DnsIcon } from "@b4.icons";
 import { B4SetConfig, WindowMode, DesyncMode } from "@models/Config";
 import {
   B4Slider,
@@ -16,8 +8,9 @@ import {
   B4Section,
   B4Alert,
   B4FormHeader,
+  B4PlusButton,
+  B4ChipList,
 } from "@b4.elements";
-import { colors } from "@design";
 import { useState } from "react";
 
 interface TcpSettingsProps {
@@ -205,7 +198,6 @@ export const TcpSettings = ({ config, main, onChange }: TcpSettingsProps) => {
       </Grid>
 
       {/* TCP Window Configuration */}
-
       <B4FormHeader label="TCP Window Manipulation" />
       <Grid container spacing={3}>
         <B4Alert>
@@ -257,53 +249,22 @@ export const TcpSettings = ({ config, main, onChange }: TcpSettingsProps) => {
                     }}
                     type="number"
                   />
-                  <IconButton
+
+                  <B4PlusButton
                     onClick={handleAddWinValue}
-                    sx={{
-                      bgcolor: colors.accent.secondary,
-                      color: colors.secondary,
-                      "&:hover": { bgcolor: colors.accent.secondaryHover },
-                    }}
-                  >
-                    <AddIcon />
-                  </IconButton>
+                    disabled={!newWinValue}
+                  />
                 </Box>
               </Grid>
               <Grid size={{ xs: 12, md: 6 }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    gap: 1,
-                    mt: 1,
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    p: 1,
-                    border: `1px solid ${colors.border.default}`,
-                    borderRadius: 1,
-                    bgcolor: colors.background.paper,
-                    minHeight: 40,
-                  }}
-                >
-                  {winValues.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">
-                      No values configured - defaults will be used
-                    </Typography>
-                  ) : (
-                    winValues.map((val) => (
-                      <Chip
-                        key={val}
-                        label={val.toLocaleString()}
-                        onDelete={() => handleRemoveWinValue(val)}
-                        size="small"
-                        sx={{
-                          bgcolor: colors.accent.primary,
-                          color: colors.secondary,
-                          "& .MuiChip-deleteIcon": { color: colors.secondary },
-                        }}
-                      />
-                    ))
-                  )}
-                </Box>
+                <B4ChipList
+                  items={winValues}
+                  getKey={(v) => v}
+                  getLabel={(v) => v.toLocaleString()}
+                  onDelete={handleRemoveWinValue}
+                  emptyMessage="No values configured - defaults will be used"
+                  showEmpty
+                />
               </Grid>
             </Grid>
           </Grid>
@@ -311,7 +272,6 @@ export const TcpSettings = ({ config, main, onChange }: TcpSettingsProps) => {
       </Grid>
 
       {/* TCP Desync Configuration */}
-
       <B4FormHeader label="TCP Desync Attack" />
       <Grid container spacing={3}>
         <B4Alert>

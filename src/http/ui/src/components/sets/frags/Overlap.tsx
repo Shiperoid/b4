@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Grid, Chip, Box, Typography, IconButton } from "@mui/material";
-import { AddIcon } from "@b4.icons";
+import { Grid, Box, Typography } from "@mui/material";
 import { B4TextField } from "@b4.fields";
 import { B4SetConfig } from "@models/Config";
 import { colors } from "@design";
-import { B4Alert, B4FormHeader } from "@b4.elements";
+import { B4Alert, B4ChipList, B4FormHeader, B4PlusButton } from "@b4.elements";
 
 interface OverlapSettingsProps {
   config: B4SetConfig;
@@ -182,54 +181,22 @@ export const OverlapSettings = ({ config, onChange }: OverlapSettingsProps) => {
             placeholder="e.g., allowed-site.ru"
             size="small"
           />
-          <IconButton
+          <B4PlusButton
             onClick={handleAddDomain}
             disabled={!newDomain.trim()}
-            sx={{
-              bgcolor: colors.accent.primary,
-              "&:hover": { bgcolor: colors.accent.secondary },
-            }}
-          >
-            <AddIcon />
-          </IconButton>
+          />
         </Box>
       </Grid>
 
-      <Grid size={{ xs: 12, md: 6 }}>
-        <Box
-          sx={{
-            display: "flex",
-            gap: 1,
-            alignItems: "center",
-            flexWrap: "wrap",
-            p: 1,
-            border: `1px solid ${colors.border.default}`,
-            borderRadius: 1,
-            bgcolor: colors.background.paper,
-            minHeight: 40,
-          }}
-        >
-          {fakeSNIs.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              No domains configured - defaults will be used
-            </Typography>
-          ) : (
-            fakeSNIs.map((domain) => (
-              <Chip
-                key={domain}
-                label={domain}
-                onDelete={() => handleRemoveDomain(domain)}
-                size="small"
-                sx={{
-                  bgcolor: colors.accent.primary,
-                  color: colors.secondary,
-                  "& .MuiChip-deleteIcon": { color: colors.secondary },
-                }}
-              />
-            ))
-          )}
-        </Box>
-      </Grid>
+      <B4ChipList
+        items={fakeSNIs}
+        getKey={(d) => d}
+        getLabel={(d) => d}
+        onDelete={handleRemoveDomain}
+        emptyMessage="No domains configured - defaults will be used"
+        gridSize={{ xs: 12, md: 6 }}
+        showEmpty
+      />
 
       {fakeSNIs.length === 0 && (
         <B4Alert severity="warning" sx={{ m: 0 }}>

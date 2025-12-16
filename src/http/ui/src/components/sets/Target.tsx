@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import {
   Grid,
   Box,
-  Chip,
-  IconButton,
   Typography,
   Button,
   List,
@@ -17,7 +15,6 @@ import {
   DomainIcon,
   CategoryIcon,
   InfoIcon,
-  AddIcon,
   ClearIcon,
   IpIcon,
 } from "@b4.icons";
@@ -27,12 +24,12 @@ import {
   B4Section,
   B4Dialog,
   B4Alert,
-  B4Badge,
   B4Tabs,
   B4Tab,
+  B4ChipList,
+  B4PlusButton,
 } from "@b4.elements";
 import SettingAutocomplete from "@common/B4Autocomplete";
-import { colors } from "@design";
 import { B4SetConfig, GeoConfig } from "@models/Config";
 import { SetStats } from "./Manager";
 
@@ -136,7 +133,6 @@ export const TargetSettings = ({
     }
   };
 
-  // Bypass domain handlers
   const handleAddBypassDomain = () => {
     if (newBypassDomain.trim()) {
       onChange("targets.sni_domains", [
@@ -152,7 +148,6 @@ export const TargetSettings = ({
     if (!value) return;
 
     const ipRange = value.split(/[\s,|]+/).filter(Boolean);
-
     const existing = new Set(config.targets.ip);
     const next = [...config.targets.ip];
 
@@ -236,6 +231,32 @@ export const TargetSettings = ({
     }
   };
 
+  const renderCategoryLabel = (
+    category: string,
+    breakdown?: Record<string, number>
+  ) => {
+    const count = breakdown?.[category];
+    return (
+      <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+        <span>{category}</span>
+        {count && (
+          <Typography
+            component="span"
+            variant="caption"
+            sx={{
+              bgcolor: "action.selected",
+              px: 0.5,
+              borderRadius: 1,
+              fontWeight: 600,
+            }}
+          >
+            {count}
+          </Typography>
+        )}
+      </Box>
+    );
+  };
+
   return (
     <>
       <Stack spacing={3}>
@@ -253,6 +274,7 @@ export const TargetSettings = ({
               <B4Tab icon={<IpIcon />} label="Bypass IPs" inline />
             </B4Tabs>
           </Box>
+
           {/* DPI Bypass Tab */}
           <TabPanel value={tabValue} index={0}>
             <B4Alert severity="info" sx={{ m: 0 }}>
@@ -298,60 +320,26 @@ export const TargetSettings = ({
                       helperText="e.g., youtube.com, google.com"
                       placeholder="example.com"
                     />
-                    <IconButton
+                    <B4PlusButton
                       onClick={handleAddBypassDomain}
-                      sx={{
-                        bgcolor: colors.accent.secondary,
-                        color: colors.secondary,
-                        "&:hover": {
-                          bgcolor: colors.accent.secondaryHover,
-                        },
-                      }}
-                    >
-                      <AddIcon />
-                    </IconButton>
+                      disabled={!newBypassDomain.trim()}
+                    />
                   </Box>
                   <Box sx={{ mt: 2 }}>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Active manually added domains
-                    </Typography>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 1,
-                        p: 1,
-                        border: `1px solid ${colors.border.default}`,
-                        borderRadius: 1,
-                        bgcolor: colors.background.paper,
-                      }}
-                    >
-                      {config.targets.sni_domains.length === 0 ? (
-                        <Typography variant="body2" color="text.secondary">
-                          No bypass domains added
-                        </Typography>
-                      ) : (
-                        config.targets.sni_domains.map((domain) => (
-                          <B4Badge
-                            key={domain}
-                            label={domain}
-                            onDelete={() => handleRemoveBypassDomain(domain)}
-                            size="small"
-                            sx={{
-                              bgcolor: colors.accent.primary,
-                              color: colors.secondary,
-                              "& .MuiChip-deleteIcon": {
-                                color: colors.secondary,
-                              },
-                            }}
-                          />
-                        ))
-                      )}
-                    </Box>
+                    <B4ChipList
+                      items={config.targets.sni_domains}
+                      getKey={(d) => d}
+                      getLabel={(d) => d}
+                      onDelete={handleRemoveBypassDomain}
+                      title="Active manually added domains"
+                      emptyMessage="No bypass domains added"
+                      showEmpty
+                    />
                   </Box>
                 </Box>
               </Grid>
 
+              {/* GeoSite Categories */}
               {geo.sitedat_path && availableCategories.length > 0 && (
                 <Grid size={{ sm: 12, md: 6 }}>
                   <Box sx={{ mb: 2 }}>
@@ -381,79 +369,29 @@ export const TargetSettings = ({
                       helperText={`${availableCategories.length} categories available`}
                     />
 
-                    {config.targets.geosite_categories.length > 0 && (
-                      <Box sx={{ mt: 2 }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                          Active Bypass Categories
-                        </Typography>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: 1,
-                            p: 1,
-                            border: `1px solid ${colors.border.default}`,
-                            borderRadius: 1,
-                            bgcolor: colors.background.paper,
-                          }}
-                        >
-                          {config.targets.geosite_categories.map((category) => {
-                            const count =
-                              stats?.geosite_category_breakdown?.[category];
-                            return (
-                              <B4Badge
-                                size="small"
-                                key={category}
-                                label={
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 0.5,
-                                    }}
-                                  >
-                                    <span>{category}</span>
-                                    {count && (
-                                      <Typography
-                                        component="span"
-                                        variant="caption"
-                                        sx={{
-                                          bgcolor: "action.selected",
-                                          px: 0.5,
-                                          borderRadius: 1,
-                                          fontWeight: 600,
-                                        }}
-                                      >
-                                        {count}
-                                      </Typography>
-                                    )}
-                                  </Box>
-                                }
-                                onDelete={() =>
-                                  handleRemoveBypassCategory(category)
-                                }
-                                onClick={() => void previewCategory(category)}
-                                sx={{
-                                  bgcolor: colors.accent.primary,
-                                  color: colors.secondary,
-                                  cursor: "pointer",
-                                  "& .MuiChip-deleteIcon": {
-                                    color: colors.secondary,
-                                  },
-                                }}
-                              />
-                            );
-                          })}
-                        </Box>
-                      </Box>
-                    )}
+                    <Box sx={{ mt: 2 }}>
+                      <B4ChipList
+                        title="Active Bypass Categories"
+                        items={config.targets.geosite_categories}
+                        getKey={(c) => c}
+                        getLabel={(c) =>
+                          renderCategoryLabel(
+                            c,
+                            stats?.geosite_category_breakdown
+                          )
+                        }
+                        onDelete={handleRemoveBypassCategory}
+                        onClick={(c) => void previewCategory(c)}
+                      />
+                    </Box>
                   </Box>
                 </Grid>
               )}
             </Grid>
           </TabPanel>
+
+          {/* Bypass IPs Tab */}
           <TabPanel value={tabValue} index={1}>
-            {/* Bypass GeoIP Categories */}
             <B4Alert>
               IP ranges in these categories will use DPI bypass techniques
               (fragmentation, faking) when matched.
@@ -497,18 +435,10 @@ export const TargetSettings = ({
                       helperText="e.g. 192.168.1.1, 10.0.0.0/8"
                       placeholder="192.168.1.1"
                     />
-                    <IconButton
+                    <B4PlusButton
                       onClick={handleAddBypassIP}
-                      sx={{
-                        bgcolor: colors.accent.secondary,
-                        color: colors.secondary,
-                        "&:hover": {
-                          bgcolor: colors.accent.secondaryHover,
-                        },
-                      }}
-                    >
-                      <AddIcon />
-                    </IconButton>
+                      disabled={!newBypassIP}
+                    />
                   </Box>
                   <Box sx={{ mt: 2 }}>
                     <Box
@@ -532,44 +462,19 @@ export const TargetSettings = ({
                         </Button>
                       )}
                     </Box>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: 1,
-                        maxHeight: 200,
-                        overflowY: "auto",
-                        p: 1,
-                        border: `1px solid ${colors.border.default}`,
-                        borderRadius: 1,
-                        bgcolor: colors.background.paper,
-                      }}
-                    >
-                      {config.targets.ip.length === 0 ? (
-                        <Typography variant="body2" color="text.secondary">
-                          No bypass ip added
-                        </Typography>
-                      ) : (
-                        config.targets.ip.map((ip) => (
-                          <Chip
-                            key={ip}
-                            label={ip}
-                            onDelete={() => handleRemoveBypassIP(ip)}
-                            size="small"
-                            sx={{
-                              bgcolor: colors.accent.primary,
-                              color: colors.secondary,
-                              "& .MuiChip-deleteIcon": {
-                                color: colors.secondary,
-                              },
-                            }}
-                          />
-                        ))
-                      )}
-                    </Box>
+                    <B4ChipList
+                      items={config.targets.ip}
+                      getKey={(ip) => ip}
+                      getLabel={(ip) => ip}
+                      onDelete={handleRemoveBypassIP}
+                      emptyMessage="No bypass ip added"
+                      showEmpty
+                      maxHeight={200}
+                    />
                   </Box>
                 </Box>
               </Grid>
+
               {/* GeoIP Categories */}
               {geo.ipdat_path && availableGeoIPCategories.length > 0 && (
                 <Grid size={{ sm: 12, md: 6 }}>
@@ -600,70 +505,20 @@ export const TargetSettings = ({
                       helperText={`${availableGeoIPCategories.length} GeoIP categories available`}
                     />
 
-                    {config.targets.geoip_categories.length > 0 && (
-                      <Box sx={{ mt: 2 }}>
-                        <Typography variant="subtitle2" gutterBottom>
-                          Active Bypass GeoIP Categories
-                        </Typography>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: 1,
-                            p: 1,
-                            border: `1px solid ${colors.border.default}`,
-                            borderRadius: 1,
-                            bgcolor: colors.background.paper,
-                          }}
-                        >
-                          {config.targets.geoip_categories.map((category) => {
-                            const count =
-                              stats?.geoip_category_breakdown?.[category];
-                            return (
-                              <Chip
-                                key={category}
-                                label={
-                                  <Box
-                                    sx={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 0.5,
-                                    }}
-                                  >
-                                    <span>{category}</span>
-                                    {count && (
-                                      <Typography
-                                        component="span"
-                                        variant="caption"
-                                        sx={{
-                                          bgcolor: "action.selected",
-                                          px: 0.5,
-                                          borderRadius: 1,
-                                          fontWeight: 600,
-                                        }}
-                                      >
-                                        {count}
-                                      </Typography>
-                                    )}
-                                  </Box>
-                                }
-                                onDelete={() =>
-                                  handleRemoveBypassGeoIPCategory(category)
-                                }
-                                size="small"
-                                sx={{
-                                  bgcolor: colors.accent.primary,
-                                  color: colors.secondary,
-                                  "& .MuiChip-deleteIcon": {
-                                    color: colors.secondary,
-                                  },
-                                }}
-                              />
-                            );
-                          })}
-                        </Box>
-                      </Box>
-                    )}
+                    <Box sx={{ mt: 2 }}>
+                      <B4ChipList
+                        items={config.targets.geoip_categories}
+                        getKey={(c) => c}
+                        getLabel={(c) =>
+                          renderCategoryLabel(
+                            c,
+                            stats?.geoip_category_breakdown
+                          )
+                        }
+                        onDelete={handleRemoveBypassGeoIPCategory}
+                        title="Active Bypass GeoIP Categories"
+                      />
+                    </Box>
                   </Box>
                 </Grid>
               )}
@@ -692,44 +547,31 @@ export const TargetSettings = ({
           </Button>
         }
       >
-        <>
-          {(() => {
-            if (previewDialog.loading) {
-              return (
-                <Box sx={{ p: 2 }}>
-                  <Skeleton variant="text" />
-                  <Skeleton variant="text" />
-                  <Skeleton variant="text" />
-                </Box>
-              );
-            } else if (previewDialog.data) {
-              return (
-                <>
-                  <B4Alert severity="info" sx={{ mb: 2 }}>
-                    Total domains in category:
-                    {previewDialog.data.total_domains}
-                    {previewDialog.data.total_domains >
-                      previewDialog.data.preview_count &&
-                      ` (showing first ${previewDialog.data.preview_count})`}
-                  </B4Alert>
-                  <List dense sx={{ maxHeight: 600, overflow: "auto" }}>
-                    {previewDialog.data.preview.map((domain) => (
-                      <ListItem key={domain}>
-                        <ListItemText primary={domain} />
-                      </ListItem>
-                    ))}
-                  </List>
-                </>
-              );
-            } else {
-              return (
-                <B4Alert severity="error">
-                  Failed to load category preview
-                </B4Alert>
-              );
-            }
-          })()}
-        </>
+        {previewDialog.loading ? (
+          <Box sx={{ p: 2 }}>
+            <Skeleton variant="text" />
+            <Skeleton variant="text" />
+            <Skeleton variant="text" />
+          </Box>
+        ) : previewDialog.data ? (
+          <>
+            <B4Alert severity="info" sx={{ mb: 2 }}>
+              Total domains in category: {previewDialog.data.total_domains}
+              {previewDialog.data.total_domains >
+                previewDialog.data.preview_count &&
+                ` (showing first ${previewDialog.data.preview_count})`}
+            </B4Alert>
+            <List dense sx={{ maxHeight: 600, overflow: "auto" }}>
+              {previewDialog.data.preview.map((domain) => (
+                <ListItem key={domain}>
+                  <ListItemText primary={domain} />
+                </ListItem>
+              ))}
+            </List>
+          </>
+        ) : (
+          <B4Alert severity="error">Failed to load category preview</B4Alert>
+        )}
       </B4Dialog>
     </>
   );

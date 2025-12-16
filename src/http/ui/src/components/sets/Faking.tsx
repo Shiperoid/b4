@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Grid, Chip, IconButton, Box, Typography } from "@mui/material";
-import { SecurityIcon, AddIcon } from "@b4.icons";
+import { Grid, Box } from "@mui/material";
+import { SecurityIcon } from "@b4.icons";
 import {
   B4Section,
   B4Switch,
@@ -8,10 +8,11 @@ import {
   B4Slider,
   B4TextField,
   B4FormHeader,
+  B4ChipList,
+  B4PlusButton,
 } from "@b4.elements";
 
 import { B4SetConfig, FakingPayloadType, MutationMode } from "@models/Config";
-import { colors } from "@design";
 
 interface FakingSettingsProps {
   config: B4SetConfig;
@@ -289,52 +290,20 @@ export const FakingSettings = ({ config, onChange }: FakingSettingsProps) => {
                         placeholder="e.g., ya.ru, vk.com"
                         helperText="Additional SNI values to inject into ClientHello"
                       />
-                      <IconButton
+                      <B4PlusButton
                         onClick={handleAddFakeSni}
-                        sx={{
-                          bgcolor: colors.accent.secondary,
-                          color: colors.secondary,
-                          "&:hover": { bgcolor: colors.accent.secondaryHover },
-                        }}
-                      >
-                        <AddIcon />
-                      </IconButton>
+                        disabled={!newFakeSni.trim()}
+                      />
                     </Box>
                   </Grid>
-                  {(mutation.fake_snis?.length ?? 0) > 0 && (
-                    <Grid size={{ xs: 12, md: 6 }}>
-                      <Typography variant="subtitle2" gutterBottom>
-                        Active Fake SNIs
-                      </Typography>
-                      <Box
-                        sx={{
-                          display: "flex",
-                          flexWrap: "wrap",
-                          gap: 1,
-                          p: 1,
-                          border: `1px solid ${colors.border.default}`,
-                          borderRadius: 1,
-                          bgcolor: colors.background.paper,
-                        }}
-                      >
-                        {mutation.fake_snis.map((sni) => (
-                          <Chip
-                            key={sni}
-                            label={sni}
-                            onDelete={() => handleRemoveFakeSni(sni)}
-                            size="small"
-                            sx={{
-                              bgcolor: colors.accent.primary,
-                              color: colors.secondary,
-                              "& .MuiChip-deleteIcon": {
-                                color: colors.secondary,
-                              },
-                            }}
-                          />
-                        ))}
-                      </Box>
-                    </Grid>
-                  )}
+                  <B4ChipList
+                    items={mutation.fake_snis || []}
+                    getKey={(s) => s}
+                    getLabel={(s) => s}
+                    onDelete={handleRemoveFakeSni}
+                    title="Active Fake SNIs"
+                    gridSize={{ xs: 12, md: 6 }}
+                  />
                 </>
               )}
             </>
