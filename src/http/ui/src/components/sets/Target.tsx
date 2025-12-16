@@ -11,8 +11,6 @@ import {
   ListItemText,
   Skeleton,
   Tooltip,
-  Tabs,
-  Tab,
   Stack,
 } from "@mui/material";
 import {
@@ -30,6 +28,8 @@ import {
   B4Dialog,
   B4Alert,
   B4Badge,
+  B4Tabs,
+  B4Tab,
 } from "@b4.elements";
 import SettingAutocomplete from "@common/B4Autocomplete";
 import { colors } from "@design";
@@ -245,43 +245,13 @@ export const TargetSettings = ({
           icon={<DomainIcon />}
         >
           <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 0 }}>
-            <Tabs
+            <B4Tabs
               value={tabValue}
               onChange={(_, newValue: number) => setTabValue(newValue)}
-              sx={{
-                borderBottom: `1px solid ${colors.border.light}`,
-                "& .MuiTab-root": {
-                  color: colors.text.secondary,
-                  textTransform: "none",
-                  minHeight: 48,
-                  "&.Mui-selected": {
-                    color: colors.secondary,
-                  },
-                },
-                "& .MuiTabs-indicator": {
-                  bgcolor: colors.secondary,
-                },
-              }}
             >
-              <Tab
-                icon={<DomainIcon />}
-                iconPosition="start"
-                label={
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
-                    <span>Bypass Domains</span>
-                  </Box>
-                }
-              />
-              <Tab
-                icon={<IpIcon />}
-                iconPosition="start"
-                label={
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
-                    <span>Bypass IPs</span>
-                  </Box>
-                }
-              />
-            </Tabs>
+              <B4Tab icon={<DomainIcon />} label="Bypass Domains" inline />
+              <B4Tab icon={<IpIcon />} label="Bypass IPs" inline />
+            </B4Tabs>
           </Box>
           {/* DPI Bypass Tab */}
           <TabPanel value={tabValue} index={0}>

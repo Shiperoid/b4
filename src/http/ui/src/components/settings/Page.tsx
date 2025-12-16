@@ -7,8 +7,6 @@ import {
   Button,
   CircularProgress,
   Typography,
-  Tabs,
-  Tab,
   Paper,
   Chip,
   Fade,
@@ -40,7 +38,7 @@ import { ApiSettings } from "./Api";
 
 import { B4Config, B4SetConfig } from "@models/Config";
 import { colors, spacing } from "@design";
-import { B4Alert, B4Dialog } from "@b4.elements";
+import { B4Alert, B4Dialog, B4Tab, B4Tabs } from "@b4.elements";
 import { configApi } from "@b4.settings";
 
 interface TabPanelProps {
@@ -194,6 +192,9 @@ export function SettingsPage() {
       [TABS.API]:
         JSON.stringify(config.system.api) !==
         JSON.stringify(originalConfig.system.api),
+
+      // Capture
+      [TABS.CAPTURE]: false,
     };
   }, [config, originalConfig, hasChanges]);
 
@@ -380,52 +381,17 @@ export function SettingsPage() {
           </Stack>
 
           {/* Tabs */}
-          <Tabs
-            value={validTab}
-            onChange={handleTabChange}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{
-              borderBottom: `1px solid ${colors.border.light}`,
-              "& .MuiTab-root": {
-                color: colors.text.secondary,
-                textTransform: "none",
-                minHeight: 48,
-                "&.Mui-selected": {
-                  color: colors.secondary,
-                },
-              },
-              "& .MuiTabs-indicator": {
-                bgcolor: colors.secondary,
-              },
-            }}
-          >
-            {SETTING_CATEGORIES.sort(
-              (a, b) => (a.id as number) - (b.id as number)
-            ).map((category) => (
-              <Tab
-                key={category.id}
-                label={
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    {category.icon}
-                    <span>{category.label}</span>
-                    {(categoryHasChanges as Record<number, boolean>)[
-                      category.id
-                    ] && (
-                      <Box
-                        sx={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: "50%",
-                          bgcolor: colors.secondary,
-                        }}
-                      />
-                    )}
-                  </Stack>
-                }
+          <B4Tabs value={validTab} onChange={handleTabChange}>
+            {SETTING_CATEGORIES.sort((a, b) => a.id - b.id).map((cat) => (
+              <B4Tab
+                key={cat.id}
+                icon={cat.icon}
+                label={cat.label}
+                inline
+                hasChanges={categoryHasChanges[cat.id]}
               />
             ))}
-          </Tabs>
+          </B4Tabs>
         </Box>
       </Paper>
 

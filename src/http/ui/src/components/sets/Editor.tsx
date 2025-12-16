@@ -1,13 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Box,
-  Stack,
-  Button,
-  Tabs,
-  Tab,
-  Paper,
-  CircularProgress,
-} from "@mui/material";
+import { Box, Stack, Button, Paper, CircularProgress } from "@mui/material";
 
 import {
   DomainIcon,
@@ -19,7 +11,7 @@ import {
   ImportExportIcon,
 } from "@b4.icons";
 
-import { B4Dialog, B4TextField } from "@b4.elements";
+import { B4Dialog, B4Tab, B4Tabs, B4TextField } from "@b4.elements";
 
 import { colors } from "@design";
 import {
@@ -139,34 +131,15 @@ export const SetEditor = ({
           />
         </Box>
         {/* Configuration Tabs */}
-        <Tabs
-          value={activeTab}
-          onChange={(_, v: number) => setActiveTab(v)}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{
-            borderBottom: `1px solid ${colors.border.light}`,
-            "& .MuiTab-root": {
-              color: colors.text.secondary,
-              textTransform: "none",
-              minHeight: 48,
-              "&.Mui-selected": {
-                color: colors.secondary,
-              },
-            },
-            "& .MuiTabs-indicator": {
-              bgcolor: colors.secondary,
-            },
-          }}
-        >
-          <Tab label="Targets" icon={<DomainIcon />} />
-          <Tab label="TCP" icon={<TcpIcon />} />
-          <Tab label="UDP" icon={<UdpIcon />} />
-          <Tab label="DNS" icon={<DnsIcon />} />
-          <Tab label="Fragmentation" icon={<FragIcon />} />
-          <Tab label="Faking" icon={<FakingIcon />} />
-          <Tab label="Import/Export" icon={<ImportExportIcon />} />
-        </Tabs>
+        <B4Tabs value={activeTab} onChange={(_, v: number) => setActiveTab(v)}>
+          <B4Tab icon={<DomainIcon />} label="Targets" />
+          <B4Tab icon={<TcpIcon />} label="TCP" />
+          <B4Tab icon={<UdpIcon />} label="UDP" />
+          <B4Tab icon={<DnsIcon />} label="DNS" />
+          <B4Tab icon={<FragIcon />} label="Fragmentation" />
+          <B4Tab icon={<FakingIcon />} label="Faking" />
+          <B4Tab icon={<ImportExportIcon />} label="Import/Export" />
+        </B4Tabs>
       </Paper>
       <Box>
         {/* TCP Settings */}
