@@ -6,14 +6,27 @@ import {
   B4Section,
   B4Switch,
   B4Alert,
+  B4Badge,
 } from "@b4.elements";
+import { Box, Typography } from "@mui/material";
 
 interface FeatureSettingsProps {
   config: B4Config;
-  onChange: (field: string, value: boolean | string | number) => void;
+  onChange: (
+    field: string,
+    value: boolean | string | number | string[]
+  ) => void;
 }
 
 export const FeatureSettings = ({ config, onChange }: FeatureSettingsProps) => {
+  const handleInterfaceToggle = (iface: string) => {
+    const current = config.queue.interfaces || [];
+    const updated = current.includes(iface)
+      ? current.filter((i) => i !== iface)
+      : [...current, iface];
+    onChange("queue.interfaces", updated);
+  };
+
   return (
     <B4Section
       title="Feature Flags"
@@ -72,6 +85,39 @@ export const FeatureSettings = ({ config, onChange }: FeatureSettingsProps) => {
             )
           }
         />
+        <B4FormGroup label="Network Interfaces" columns={1}>
+          <Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+              Select interfaces to monitor (empty = all interfaces)
+            </Typography>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+              {config.available_ifaces.map((iface) => {
+                const isSelected = (config.queue.interfaces || []).includes(
+                  iface
+                );
+                return (
+                  <B4Badge
+                    key={iface}
+                    label={iface}
+                    onClick={() => handleInterfaceToggle(iface)}
+                    variant={isSelected ? "filled" : "outlined"}
+                    color={isSelected ? "primary" : "primary"}
+                  />
+                );
+              })}
+            </Box>
+            {config.available_ifaces.length === 0 && (
+              <B4Alert severity="warning" sx={{ mt: 2 }}>
+                No interfaces detected
+              </B4Alert>
+            )}
+            {config.queue.interfaces?.length === 0 && (
+              <B4Alert severity="info" sx={{ mt: 2 }}>
+                B4 will listen on all available interfaces if none are selected.
+              </B4Alert>
+            )}
+          </Box>
+        </B4FormGroup>
       </B4FormGroup>
     </B4Section>
   );

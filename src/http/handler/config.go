@@ -4,7 +4,9 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
+	"sort"
 
 	"github.com/daniellavrushin/b4/config"
 	"github.com/daniellavrushin/b4/log"
@@ -88,14 +90,37 @@ func (a *API) getConfig(w http.ResponseWriter) {
 		}
 	}
 
+	//get list of interfaces from system
+	ifaces, err := getSystemInterfaces()
+	if err != nil {
+		log.Errorf("Failed to get system interfaces: %v", err)
+		http.Error(w, "Failed to get system interfaces", http.StatusInternalServerError)
+		return
+	}
+	sort.Strings(ifaces)
+
 	response := ConfigResponse{
-		Config:  a.cfg,
-		Sets:    setsWithStats,
-		Success: true,
-		Message: "Configuration retrieved successfully",
+		Config:              a.cfg,
+		Sets:                setsWithStats,
+		AvailableInterfaces: ifaces,
+		Success:             true,
+		Message:             "Configuration retrieved successfully",
 	}
 	enc := json.NewEncoder(w)
 	_ = enc.Encode(response)
+}
+
+func getSystemInterfaces() ([]string, error) {
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+
+	var ifaceNames []string
+	for _, iface := range ifaces {
+		ifaceNames = append(ifaceNames, iface.Name)
+	}
+	return ifaceNames, nil
 }
 
 func (a *API) updateConfig(w http.ResponseWriter, r *http.Request) {

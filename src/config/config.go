@@ -123,6 +123,7 @@ var DefaultConfig = Config{
 		Threads:     4,
 		IPv4Enabled: true,
 		IPv6Enabled: false,
+		Interfaces:  []string{},
 	},
 
 	Sets: []*SetConfig{},

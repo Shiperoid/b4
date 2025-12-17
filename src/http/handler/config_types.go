@@ -8,8 +8,9 @@ type ConfigRequest struct {
 
 type ConfigResponse struct {
 	*config.Config
-	Success  bool           `json:"success"`
-	Message  string         `json:"message"`
-	Sets     []SetWithStats `json:"sets"`
-	Warnings []string       `json:"warnings,omitempty"`
+	Success             bool           `json:"success"`
+	Message             string         `json:"message"`
+	Sets                []SetWithStats `json:"sets"`
+	Warnings            []string       `json:"warnings,omitempty"`
+	AvailableInterfaces []string       `json:"available_ifaces,omitempty"`
 }

@@ -65,6 +65,12 @@ func (w *Worker) Start() error {
 				return 0
 			}
 
+			// Interface filtering
+			if !w.matchesInterface(a) {
+				_ = q.SetVerdict(id, nfqueue.NfAccept)
+				return 0
+			}
+
 			select {
 			case <-w.ctx.Done():
 				return 0

@@ -1,8 +1,10 @@
 # B4 - Bye Bye Big Bro
 
-## [1.2x.x] - 2025-12-17
+## [1.24.0] - 2025-12-17
 
 - ADDED: `--skip-local-traffic` option to exclude router-originated traffic from processing, enabling compatibility with transparent proxies (Xray, Clash, Sing-Box etc.) running on the same device. By default is `on`. Can be found in `Core` settings. Requires service restart when changing.
+- ADDED: Network interface filtering — optionally restrict B4 to specific interfaces (e.g., `eth0`, `tun0`). Empty selection = all interfaces. Configurable via UI without service restart (can be found in `Core` settings).
+- FIXED: ensure only `Panic` errors are logged into errors.log.
 
 ## [1.23.1] - 2025-12-16
 

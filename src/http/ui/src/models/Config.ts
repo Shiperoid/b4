@@ -121,6 +121,7 @@ export interface QueueConfig {
   mark: number;
   ipv4: boolean;
   ipv6: boolean;
+  interfaces: string[];
 }
 
 export interface DiscoveryConfig {
@@ -181,6 +182,7 @@ export interface B4Config {
   queue: QueueConfig;
   system: SystemConfig;
   sets: B4SetConfig[];
+  available_ifaces: string[];
 }
 
 export interface B4SetConfig {

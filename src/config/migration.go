@@ -33,6 +33,7 @@ func migrateV9to10(c *Config) error {
 	log.Tracef("Migration v9->v10: Adding error log file setting")
 
 	c.System.Tables.SkipLocalTraffic = true
+	c.Queue.Interfaces = []string{}
 	return nil
 
 }
