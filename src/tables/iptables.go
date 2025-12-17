@@ -206,10 +206,6 @@ func (manager *IPTablesManager) buildManifest() (Manifest, error) {
 		ch := Chain{manager: manager, IPT: ipt, Table: "mangle", Name: chainName}
 		chains = append(chains, ch)
 
-		rules = append(rules,
-			Rule{manager: manager, IPT: ipt, Table: "mangle", Chain: chainName, Action: "I", Spec: []string{"-m", "mark", "--mark", markAccept, "-j", "RETURN"}},
-		)
-
 		tcpConnbytesRange := fmt.Sprintf("0:%d", cfg.MainSet.TCP.ConnBytesLimit)
 		udpConnbytesRange := fmt.Sprintf("0:%d", cfg.MainSet.UDP.ConnBytesLimit)
 
@@ -230,10 +226,20 @@ func (manager *IPTablesManager) buildManifest() (Manifest, error) {
 			[]string{"-p", "udp", "--dport", "53"},
 			manager.buildNFQSpec(queueNum, threads)...,
 		)
-		dnsResponseSpec := append(
-			[]string{"-p", "udp", "--sport", "53"},
-			manager.buildNFQSpec(queueNum, threads)...,
-		)
+
+		var dnsResponseSpec []string
+
+		if cfg.System.Tables.SkipLocalTraffic {
+			dnsResponseSpec = append(
+				[]string{"-m", "addrtype", "!", "--src-type", "LOCAL", "-p", "udp", "--sport", "53"},
+				manager.buildNFQSpec(queueNum, threads)...,
+			)
+		} else {
+			dnsResponseSpec = append(
+				[]string{"-p", "udp", "--sport", "53"},
+				manager.buildNFQSpec(queueNum, threads)...,
+			)
+		}
 
 		rules = append(rules,
 			Rule{manager: manager, IPT: ipt, Table: "mangle", Chain: chainName, Action: "A", Spec: tcpSpec},
@@ -242,8 +248,14 @@ func (manager *IPTablesManager) buildManifest() (Manifest, error) {
 			Rule{manager: manager, IPT: ipt, Table: "mangle", Chain: "POSTROUTING", Action: "I", Spec: []string{"-j", chainName}},
 			Rule{manager: manager, IPT: ipt, Table: "mangle", Chain: "PREROUTING", Action: "I", Spec: dnsResponseSpec},
 
-			Rule{manager: manager, IPT: ipt, Table: "mangle", Chain: "OUTPUT", Action: "I", Spec: []string{"-m", "mark", "--mark", markAccept, "-j", "ACCEPT"}},
+			Rule{manager: manager, IPT: ipt, Table: "mangle", Chain: chainName, Action: "I", Spec: []string{"-m", "mark", "--mark", markAccept, "-j", "RETURN"}},
 		)
+
+		if cfg.System.Tables.SkipLocalTraffic {
+			rules = append(rules,
+				Rule{manager: manager, IPT: ipt, Table: "mangle", Chain: chainName, Action: "I", Spec: []string{"-m", "addrtype", "--src-type", "LOCAL", "-j", "RETURN"}},
+			)
+		}
 
 	}
 

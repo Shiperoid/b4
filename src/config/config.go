@@ -138,8 +138,9 @@ var DefaultConfig = Config{
 		},
 
 		Tables: TablesConfig{
-			MonitorInterval: 10,
-			SkipSetup:       false,
+			MonitorInterval:  10,
+			SkipSetup:        false,
+			SkipLocalTraffic: true,
 		},
 
 		WebServer: WebServerConfig{

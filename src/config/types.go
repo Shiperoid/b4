@@ -106,8 +106,9 @@ type SystemConfig struct {
 }
 
 type TablesConfig struct {
-	MonitorInterval int  `json:"monitor_interval" bson:"monitor_interval"`
-	SkipSetup       bool `json:"skip_setup" bson:"skip_setup"`
+	MonitorInterval  int  `json:"monitor_interval" bson:"monitor_interval"`
+	SkipSetup        bool `json:"skip_setup" bson:"skip_setup"`
+	SkipLocalTraffic bool `json:"skip_local_traffic" bson:"skip_local_traffic"`
 }
 
 type WebServerConfig struct {

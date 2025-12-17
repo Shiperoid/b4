@@ -25,6 +25,16 @@ var migrationRegistry = map[int]MigrationFunc{
 	6: migrateV6to7, // Add TCP syn TTL and drop SACK settings
 	7: migrateV7to8, // Add DNS redirect settings
 	8: migrateV8to9,
+	9: migrateV9to10,
+}
+
+// Migration: v9 -> v10 (add error log file setting)
+func migrateV9to10(c *Config) error {
+	log.Tracef("Migration v9->v10: Adding error log file setting")
+
+	c.System.Tables.SkipLocalTraffic = true
+	return nil
+
 }
 
 // Migration: v8 -> v9

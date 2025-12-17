@@ -1,5 +1,9 @@
 # B4 - Bye Bye Big Bro
 
+## [1.2x.x] - 2025-12-17
+
+- ADDED: `--skip-local-traffic` option to exclude router-originated traffic from processing, enabling compatibility with transparent proxies (Xray, Clash, Sing-Box etc.) running on the same device. By default is `on`. Can be found in `Core` settings. Requires service restart when changing.
+
 ## [1.23.1] - 2025-12-16
 
 - FIXED: crash in `overlap` fragmentation strategy when SNI extends beyond payload bounds (index out of range panic).

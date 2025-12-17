@@ -143,6 +143,11 @@ func (n *NFTablesManager) Apply() error {
 		return err
 	}
 
+	if cfg.System.Tables.SkipLocalTraffic {
+		if err := n.addRuleArgs(nftChainName, "fib", "saddr", "type", "local", "return"); err != nil {
+			return err
+		}
+	}
 	tcpLimit := fmt.Sprintf("%d", cfg.MainSet.TCP.ConnBytesLimit+1)
 	udpLimit := fmt.Sprintf("%d", cfg.MainSet.UDP.ConnBytesLimit+1)
 
@@ -158,7 +163,12 @@ func (n *NFTablesManager) Apply() error {
 		return err
 	}
 
-	dnsResponseArgs := []string{"udp", "sport", "53", "counter"}
+	var dnsResponseArgs []string
+	if cfg.System.Tables.SkipLocalTraffic {
+		dnsResponseArgs = []string{"fib", "saddr", "type", "!=", "local", "udp", "sport", "53", "counter"}
+	} else {
+		dnsResponseArgs = []string{"udp", "sport", "53", "counter"}
+	}
 	dnsResponseArgs = append(dnsResponseArgs, strings.Fields(n.buildNFQueueAction())...)
 	if err := n.addRuleArgs("prerouting", dnsResponseArgs...); err != nil {
 		return err
