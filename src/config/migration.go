@@ -16,16 +16,25 @@ var (
 )
 
 var migrationRegistry = map[int]MigrationFunc{
-	0: migrateV0to1, // Add enabled field to sets
-	1: migrateV1to2,
-	2: migrateV2to3,
-	3: migrateV3to4,
-	4: migrateV4to5,
-	5: migrateV5to6,
-	6: migrateV6to7, // Add TCP syn TTL and drop SACK settings
-	7: migrateV7to8, // Add DNS redirect settings
-	8: migrateV8to9,
-	9: migrateV9to10,
+	0:  migrateV0to1, // Add enabled field to sets
+	1:  migrateV1to2,
+	2:  migrateV2to3,
+	3:  migrateV3to4,
+	4:  migrateV4to5,
+	5:  migrateV5to6,
+	6:  migrateV6to7, // Add TCP syn TTL and drop SACK settings
+	7:  migrateV7to8, // Add DNS redirect settings
+	8:  migrateV8to9,
+	9:  migrateV9to10,
+	10: migrateV10to11,
+}
+
+// Migration: v10 -> v11 (add devices config to queue)
+func migrateV10to11(c *Config) error {
+	log.Tracef("Migration v10->v11: Adding devices config to queue")
+
+	c.Queue.Devices = DefaultConfig.Queue.Devices
+	return nil
 }
 
 // Migration: v9 -> v10 (add error log file setting)

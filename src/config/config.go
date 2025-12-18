@@ -124,6 +124,11 @@ var DefaultConfig = Config{
 		IPv4Enabled: true,
 		IPv6Enabled: false,
 		Interfaces:  []string{},
+		Devices: DevicesConfig{
+			Enabled:      false,
+			WhiteIsBlack: false,
+			Mac:          []string{},
+		},
 	},
 
 	Sets: []*SetConfig{},

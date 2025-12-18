@@ -14,12 +14,19 @@ type ApiConfig struct {
 }
 
 type QueueConfig struct {
-	StartNum    int      `json:"start_num" bson:"start_num"`
-	Threads     int      `json:"threads" bson:"threads"`
-	Mark        uint     `json:"mark" bson:"mark"`
-	IPv4Enabled bool     `json:"ipv4" bson:"ipv4"`
-	IPv6Enabled bool     `json:"ipv6" bson:"ipv6"`
-	Interfaces  []string `json:"interfaces" bson:"interfaces"`
+	StartNum    int           `json:"start_num" bson:"start_num"`
+	Threads     int           `json:"threads" bson:"threads"`
+	Mark        uint          `json:"mark" bson:"mark"`
+	IPv4Enabled bool          `json:"ipv4" bson:"ipv4"`
+	IPv6Enabled bool          `json:"ipv6" bson:"ipv6"`
+	Interfaces  []string      `json:"interfaces" bson:"interfaces"`
+	Devices     DevicesConfig `json:"devices" bson:"devices"`
+}
+
+type DevicesConfig struct {
+	Enabled      bool     `json:"enabled" bson:"enabled"`
+	WhiteIsBlack bool     `json:"wisb" bson:"wisb"`
+	Mac          []string `json:"mac" bson:"mac"`
 }
 
 type TCPConfig struct {

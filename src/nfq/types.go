@@ -5,6 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/daniellavrushin/b4/dhcp"
 	"github.com/daniellavrushin/b4/sock"
 	"github.com/florianl/go-nfqueue"
 )
@@ -12,6 +13,7 @@ import (
 type Pool struct {
 	Workers  []*Worker
 	configMu sync.Mutex
+	Dhcp     *dhcp.Manager
 }
 
 type Worker struct {
@@ -24,4 +26,5 @@ type Worker struct {
 	wg               sync.WaitGroup
 	matcher          atomic.Value
 	sock             *sock.Sender
+	ipToMac          atomic.Value
 }

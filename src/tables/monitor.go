@@ -1,6 +1,7 @@
 package tables
 
 import (
+	"strings"
 	"sync"
 	"time"
 
@@ -8,7 +9,6 @@ import (
 	"github.com/daniellavrushin/b4/log"
 )
 
-// Monitor watches for removed iptables/nftables rules and restores them
 type Monitor struct {
 	cfg      *config.Config
 	stop     chan struct{}
@@ -17,7 +17,6 @@ type Monitor struct {
 	backend  string
 }
 
-// NewMonitor creates a new tables monitor
 func NewMonitor(cfg *config.Config) *Monitor {
 	interval := time.Duration(cfg.System.Tables.MonitorInterval) * time.Second
 	if interval < time.Second {
@@ -99,10 +98,32 @@ func (m *Monitor) checkIPTablesRules() bool {
 
 	for _, ipt := range ipts {
 		if _, err := run(ipt, "-w", "-t", "mangle", "-S", "B4"); err != nil {
+			log.Tracef("Monitor: B4 chain missing")
 			return false
 		}
 
-		if _, err := run(ipt, "-w", "-t", "mangle", "-C", "POSTROUTING", "-j", "B4"); err != nil {
+		if m.cfg.Queue.Devices.Enabled && len(m.cfg.Queue.Devices.Mac) > 0 {
+			out, _ := run(ipt, "-w", "-t", "mangle", "-S", "FORWARD")
+			if !strings.Contains(out, "B4") {
+				log.Tracef("Monitor: FORWARD->B4 rule missing")
+				return false
+			}
+		} else {
+			if _, err := run(ipt, "-w", "-t", "mangle", "-C", "POSTROUTING", "-j", "B4"); err != nil {
+				log.Tracef("Monitor: POSTROUTING->B4 rule missing")
+				return false
+			}
+		}
+
+		out, _ := run(ipt, "-w", "-t", "mangle", "-S", "PREROUTING")
+		if !strings.Contains(out, "sport 53") {
+			log.Tracef("Monitor: PREROUTING DNS response rule missing")
+			return false
+		}
+
+		out, _ = run(ipt, "-w", "-t", "mangle", "-S", "OUTPUT")
+		if !strings.Contains(out, "0x8000") {
+			log.Tracef("Monitor: OUTPUT mark accept rule missing")
 			return false
 		}
 	}
@@ -112,7 +133,40 @@ func (m *Monitor) checkIPTablesRules() bool {
 
 func (m *Monitor) checkNFTablesRules() bool {
 	nft := NewNFTablesManager(m.cfg)
-	return nft.tableExists()
+
+	if !nft.tableExists() {
+		log.Tracef("Monitor: nftables table missing")
+		return false
+	}
+
+	if !nft.chainExists(nftChainName) {
+		log.Tracef("Monitor: b4_chain missing")
+		return false
+	}
+
+	if m.cfg.Queue.Devices.Enabled && len(m.cfg.Queue.Devices.Mac) > 0 {
+		if !nft.chainExists("forward") {
+			log.Tracef("Monitor: forward chain missing")
+			return false
+		}
+	} else {
+		if !nft.chainExists("postrouting") {
+			log.Tracef("Monitor: postrouting chain missing")
+			return false
+		}
+	}
+
+	if !nft.chainExists("prerouting") {
+		log.Tracef("Monitor: prerouting chain missing")
+		return false
+	}
+
+	if !nft.chainExists("output") {
+		log.Tracef("Monitor: output chain missing")
+		return false
+	}
+
+	return true
 }
 
 func (m *Monitor) restoreRules() error {

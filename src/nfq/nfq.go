@@ -144,6 +144,8 @@ func (w *Worker) Start() error {
 			srcStr := src.String()
 			dstStr := dst.String()
 
+			srcMac := w.getMacByIp(srcStr)
+
 			matched, st := matcher.MatchIP(dst)
 			if matched {
 				set = st
@@ -233,7 +235,7 @@ func (w *Worker) Start() error {
 					sniTarget = set.Name
 				}
 
-				log.Infof(",TCP,%s,%s,%s:%d,%s,%s:%d", sniTarget, host, srcStr, sport, ipTarget, dstStr, dport)
+				log.Infof(",TCP,%s,%s,%s:%d,%s,%s:%d,%s", sniTarget, host, srcStr, sport, ipTarget, dstStr, dport, srcMac)
 
 				if matched {
 					metrics := metrics.GetMetricsCollector()
@@ -349,7 +351,7 @@ func (w *Worker) Start() error {
 				matched = shouldHandle
 
 				// Log ALL UDP packets (this runs before verdict)
-				log.Infof(",UDP,%s,%s,%s:%d,%s,%s:%d", sniTarget, host, srcStr, sport, ipTarget, dstStr, dport)
+				log.Infof(",UDP,%s,%s,%s:%d,%s,%s:%d,%s", sniTarget, host, srcStr, sport, ipTarget, dstStr, dport, srcMac)
 
 				// Early exit for STUN
 				if isSTUN && set.UDP.FilterSTUN {
@@ -797,6 +799,14 @@ func (w *Worker) sendFakeSNISequence(cfg *config.SetConfig, original []byte, dst
 			}
 		}
 	}
+}
+
+func (w *Worker) getMacByIp(ip string) string {
+
+	if ipToMac := w.ipToMac.Load(); ipToMac != nil {
+		return ipToMac.(map[string]string)[ip]
+	}
+	return ""
 }
 
 // locateSNI returns start and end (relative to payload start) of the SNI hostname bytes.

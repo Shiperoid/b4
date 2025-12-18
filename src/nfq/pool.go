@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/daniellavrushin/b4/config"
+	"github.com/daniellavrushin/b4/dhcp"
 	"github.com/daniellavrushin/b4/log"
 	"github.com/daniellavrushin/b4/sni"
 )
@@ -33,13 +34,34 @@ func NewPool(cfg *config.Config) *Pool {
 
 	matcher := buildMatcher(cfg)
 
+	dhcpMgr := dhcp.NewManager()
+
 	ws := make([]*Worker, 0, threads)
 	for i := 0; i < threads; i++ {
 		w := NewWorkerWithQueue(cfg, start+uint16(i))
 		w.matcher.Store(matcher)
+		w.ipToMac.Store(make(map[string]string))
 		ws = append(ws, w)
 	}
-	return &Pool{Workers: ws}
+
+	pool := &Pool{Workers: ws, Dhcp: dhcpMgr}
+
+	dhcpMgr.OnUpdate(func(ipToMAC map[string]string) {
+		for _, w := range pool.Workers {
+			w.ipToMac.Store(ipToMAC)
+		}
+		log.Infof("DHCP: updated %d IP->MAC mappings", len(ipToMAC))
+	})
+
+	dhcpMgr.Start()
+
+	initialMappings := dhcpMgr.GetAllMappings()
+	for _, w := range pool.Workers {
+		w.ipToMac.Store(initialMappings)
+	}
+	log.Infof("DHCP: initial load %d IP->MAC mappings", len(initialMappings))
+
+	return pool
 }
 
 func (p *Pool) Start() error {
