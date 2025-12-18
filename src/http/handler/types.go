@@ -11,4 +11,5 @@ type API struct {
 	cfg            *config.Config
 	mux            *http.ServeMux
 	geodataManager *geodat.GeodataManager
+	deviceAliases  *config.DeviceAliases
 }

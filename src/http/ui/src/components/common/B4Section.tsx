@@ -20,6 +20,9 @@ export const B4Section = ({
         p: 3,
         bgcolor: colors.background.paper,
         border: `1px solid ${colors.border.default}`,
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
       }}
       variant="outlined"
     >

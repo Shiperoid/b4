@@ -398,29 +398,30 @@ export function SettingsPage() {
         </Box>
       </Paper>
 
-      {/* Tab Content */}
       <Box sx={{ flex: 1, overflow: "auto", pb: 2 }}>
-        {/* Core Settings */}
         <TabPanel value={validTab} index={TABS.GENERAL}>
-          <Grid container spacing={spacing.lg}>
-            <Grid size={{ xs: 12, md: 12 }}>
+          <Grid container spacing={spacing.lg} alignItems="stretch">
+            <Grid size={{ xs: 12 }}>
               <NetworkSettings config={config} onChange={handleChange} />
             </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <Stack spacing={spacing.lg}>
-                <ControlSettings
-                  loadConfig={() => {
-                    void loadConfig();
-                  }}
-                />
+
+            <Grid size={{ xs: 12, md: 6 }} sx={{ display: "flex" }}>
+              <Box sx={{ width: "100%" }}>
+                <ControlSettings loadConfig={() => void loadConfig()} />
+              </Box>
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }} sx={{ display: "flex" }}>
+              <Box sx={{ width: "100%" }}>
                 <LoggingSettings config={config} onChange={handleChange} />
-              </Stack>
+              </Box>
             </Grid>
-            <Grid size={{ xs: 12, md: 6 }}>
-              <DevicesSettings config={config} onChange={handleChange} />
-            </Grid>
+
             <Grid size={{ xs: 12, md: 6 }}>
               <FeatureSettings config={config} onChange={handleChange} />
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 6 }}>
+              <DevicesSettings config={config} onChange={handleChange} />
             </Grid>
           </Grid>
         </TabPanel>

@@ -34,6 +34,7 @@ type DeviceInfo struct {
 	Country    string `json:"country"`
 	DeviceType string `json:"device_type"`
 	IsPrivate  bool   `json:"is_private"`
+	Alias      string `json:"alias,omitempty"`
 }
 type DevicesResponse struct {
 	Available bool         `json:"available"`
@@ -44,6 +45,72 @@ type DevicesResponse struct {
 func (api *API) RegisterDevicesApi() {
 	api.mux.HandleFunc("/api/devices", api.handleDevices)
 	api.mux.HandleFunc("/api/devices/{mac}/vendor", api.handleDeviceVendor)
+	api.mux.HandleFunc("/api/devices/{mac}/alias", api.handleDeviceAlias)
+}
+
+func (api *API) handleDeviceAlias(w http.ResponseWriter, r *http.Request) {
+	mac := r.PathValue("mac")
+	if mac == "" {
+		http.Error(w, "MAC address required", http.StatusBadRequest)
+		return
+	}
+
+	mac = normalizeMAC(mac)
+	if len(mac) == 12 {
+		mac = fmt.Sprintf("%s:%s:%s:%s:%s:%s", mac[0:2], mac[2:4], mac[4:6], mac[6:8], mac[8:10], mac[10:12])
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		alias, ok := api.deviceAliases.Get(mac)
+		setJsonHeader(w)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"mac":       mac,
+			"alias":     alias,
+			"has_alias": ok,
+		})
+
+	case http.MethodPut, http.MethodPost:
+		var req struct {
+			Alias string `json:"alias"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, "Invalid request", http.StatusBadRequest)
+			return
+		}
+
+		if req.Alias == "" {
+			http.Error(w, "Alias cannot be empty", http.StatusBadRequest)
+			return
+		}
+
+		if err := api.deviceAliases.Set(mac, req.Alias); err != nil {
+			http.Error(w, "Failed to save alias", http.StatusInternalServerError)
+			return
+		}
+
+		setJsonHeader(w)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": true,
+			"mac":     mac,
+			"alias":   req.Alias,
+		})
+
+	case http.MethodDelete:
+		if err := api.deviceAliases.Delete(mac); err != nil {
+			http.Error(w, "Failed to delete alias", http.StatusInternalServerError)
+			return
+		}
+
+		setJsonHeader(w)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": true,
+			"mac":     mac,
+		})
+
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
 }
 
 func (api *API) handleDeviceVendor(w http.ResponseWriter, r *http.Request) {
@@ -97,11 +164,15 @@ func (api *API) handleDevices(w http.ResponseWriter, r *http.Request) {
 			vendor = info.Company
 			country = info.Country
 		}
+
+		alias, _ := api.deviceAliases.Get(macAddr)
+
 		devices = append(devices, DeviceInfo{
 			MAC:      macAddr,
 			IP:       ip,
 			Hostname: "",
 			Vendor:   vendor,
+			Alias:    alias,
 			Country:  country,
 		})
 	}
@@ -112,7 +183,6 @@ func (api *API) handleDevices(w http.ResponseWriter, r *http.Request) {
 		Devices:   devices,
 	})
 }
-
 func getVendorLookup() *VendorLookup {
 	once.Do(func() {
 		instance = &VendorLookup{

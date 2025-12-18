@@ -13,8 +13,15 @@ import {
   TableRow,
   Checkbox,
   Paper,
+  TextField,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import { DeviceUnknowIcon, RefreshIcon } from "@b4.icons";
+import EditIcon from "@mui/icons-material/Edit";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
+import RestoreIcon from "@mui/icons-material/Restore";
 import { B4Config } from "@models/config";
 import { colors } from "@design";
 import {
@@ -30,6 +37,7 @@ interface DeviceInfo {
   ip: string;
   hostname: string;
   vendor: string;
+  alias?: string;
   country: string;
 }
 
@@ -49,6 +57,9 @@ export const DevicesSettings = ({ config, onChange }: DevicesSettingsProps) => {
   const [loading, setLoading] = useState(false);
   const [available, setAvailable] = useState(false);
   const [source, setSource] = useState<string>("");
+  const [editingMac, setEditingMac] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const selectedMacs = config.queue.devices?.mac || [];
   const enabled = config.queue.devices?.enabled || false;
@@ -85,6 +96,74 @@ export const DevicesSettings = ({ config, onChange }: DevicesSettingsProps) => {
   };
 
   const isSelected = (mac: string) => selectedMacs.includes(mac);
+
+  const startEditing = (device: DeviceInfo, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingMac(device.mac);
+    setEditValue(device.alias || device.vendor || "");
+  };
+
+  const cancelEditing = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingMac(null);
+    setEditValue("");
+  };
+
+  const saveAlias = async (mac: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!editValue.trim()) return;
+
+    setSaving(true);
+    try {
+      const resp = await fetch(
+        `/api/devices/${encodeURIComponent(mac)}/alias`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alias: editValue.trim() }),
+        }
+      );
+
+      if (resp.ok) {
+        setDevices((prev) =>
+          prev.map((d) =>
+            d.mac === mac ? { ...d, alias: editValue.trim() } : d
+          )
+        );
+        setEditingMac(null);
+        setEditValue("");
+      }
+    } catch (err) {
+      console.error("Failed to save alias:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetAlias = async (mac: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSaving(true);
+    try {
+      const resp = await fetch(
+        `/api/devices/${encodeURIComponent(mac)}/alias`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (resp.ok) {
+        setDevices((prev) =>
+          prev.map((d) => (d.mac === mac ? { ...d, alias: undefined } : d))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to reset alias:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getDisplayName = (device: DeviceInfo) => device.alias || device.vendor;
 
   return (
     <B4Section
@@ -222,7 +301,7 @@ export const DevicesSettings = ({ config, onChange }: DevicesSettingsProps) => {
                             color: colors.text.secondary,
                           }}
                         >
-                          Vendor
+                          Name
                         </TableCell>
                       </TableRow>
                     </TableHead>
@@ -265,24 +344,115 @@ export const DevicesSettings = ({ config, onChange }: DevicesSettingsProps) => {
                             >
                               {device.ip}
                             </TableCell>
-                            <TableCell>
-                              {device.vendor ? (
-                                <B4Badge
-                                  label={device.vendor}
-                                  color="primary"
-                                  variant={
-                                    isSelected(device.mac)
-                                      ? "filled"
-                                      : "outlined"
-                                  }
-                                />
-                              ) : (
-                                <Typography
-                                  variant="caption"
-                                  color="text.secondary"
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              {editingMac === device.mac ? (
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.5,
+                                  }}
                                 >
-                                  Unknown
-                                </Typography>
+                                  <TextField
+                                    size="small"
+                                    value={editValue}
+                                    onChange={(e) =>
+                                      setEditValue(e.target.value)
+                                    }
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        void saveAlias(
+                                          device.mac,
+                                          e as unknown as React.MouseEvent
+                                        );
+                                      } else if (e.key === "Escape") {
+                                        setEditingMac(null);
+                                      }
+                                    }}
+                                    autoFocus
+                                    sx={{
+                                      width: 150,
+                                      "& .MuiInputBase-input": {
+                                        py: 0.5,
+                                        fontSize: "0.85rem",
+                                      },
+                                    }}
+                                    disabled={saving}
+                                  />
+                                  <IconButton
+                                    size="small"
+                                    onClick={(e) =>
+                                      void saveAlias(device.mac, e)
+                                    }
+                                    disabled={saving || !editValue.trim()}
+                                    color="success"
+                                  >
+                                    <CheckIcon fontSize="small" />
+                                  </IconButton>
+                                  <IconButton
+                                    size="small"
+                                    onClick={cancelEditing}
+                                    disabled={saving}
+                                  >
+                                    <CloseIcon fontSize="small" />
+                                  </IconButton>
+                                </Box>
+                              ) : (
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.5,
+                                  }}
+                                >
+                                  {getDisplayName(device) ? (
+                                    <B4Badge
+                                      label={getDisplayName(device)}
+                                      color="primary"
+                                      variant={
+                                        isSelected(device.mac)
+                                          ? "filled"
+                                          : "outlined"
+                                      }
+                                    />
+                                  ) : (
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      Unknown
+                                    </Typography>
+                                  )}
+                                  <Tooltip title="Edit name">
+                                    <IconButton
+                                      size="small"
+                                      onClick={(e) => startEditing(device, e)}
+                                      sx={{
+                                        opacity: 0.6,
+                                        "&:hover": { opacity: 1 },
+                                      }}
+                                    >
+                                      <EditIcon sx={{ fontSize: 16 }} />
+                                    </IconButton>
+                                  </Tooltip>
+                                  {device.alias && (
+                                    <Tooltip title="Reset to vendor name">
+                                      <IconButton
+                                        size="small"
+                                        onClick={(e) =>
+                                          void resetAlias(device.mac, e)
+                                        }
+                                        sx={{
+                                          opacity: 0.6,
+                                          "&:hover": { opacity: 1 },
+                                        }}
+                                        disabled={saving}
+                                      >
+                                        <RestoreIcon sx={{ fontSize: 16 }} />
+                                      </IconButton>
+                                    </Tooltip>
+                                  )}
+                                </Box>
                               )}
                             </TableCell>
                           </TableRow>

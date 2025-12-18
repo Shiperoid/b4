@@ -72,6 +72,7 @@ func NewAPIHandler(cfg *config.Config) *API {
 	return &API{
 		cfg:            cfg,
 		geodataManager: geodataManager,
+		deviceAliases:  config.NewDeviceAliases(cfg.ConfigPath),
 	}
 }
 func (api *API) RegisterEndpoints(mux *http.ServeMux, cfg *config.Config) {
