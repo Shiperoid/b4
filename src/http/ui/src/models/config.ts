@@ -122,6 +122,13 @@ export interface QueueConfig {
   ipv4: boolean;
   ipv6: boolean;
   interfaces: string[];
+  devices: DevicesConfig;
+}
+
+export interface DevicesConfig {
+  mac: string[];
+  enabled: boolean;
+  wisb: boolean;
 }
 
 export interface DiscoveryConfig {

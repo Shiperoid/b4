@@ -33,6 +33,7 @@ import { LoggingSettings } from "./Logging";
 import { FeatureSettings } from "./Feature";
 import { CheckerSettings } from "./Discovery";
 import { ControlSettings } from "./Control";
+import { DevicesSettings } from "./Devices";
 import { GeoSettings } from "./Geo";
 import { ApiSettings } from "./Api";
 
@@ -176,7 +177,9 @@ export function SettingsPage() {
         JSON.stringify(config.system.web_server) !==
           JSON.stringify(originalConfig.system.web_server) ||
         JSON.stringify(config.system.tables) !==
-          JSON.stringify(originalConfig.system.tables),
+          JSON.stringify(originalConfig.system.tables) ||
+        JSON.stringify(config.queue.devices) !==
+          JSON.stringify(originalConfig.queue.devices),
 
       // Geosite Settings
       [TABS.DOMAINS]:
@@ -412,6 +415,9 @@ export function SettingsPage() {
                 />
                 <LoggingSettings config={config} onChange={handleChange} />
               </Stack>
+            </Grid>
+            <Grid size={{ xs: 12, md: 6 }}>
+              <DevicesSettings config={config} onChange={handleChange} />
             </Grid>
             <Grid size={{ xs: 12, md: 6 }}>
               <FeatureSettings config={config} onChange={handleChange} />
