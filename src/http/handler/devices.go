@@ -213,7 +213,7 @@ func (v *VendorLookup) Lookup(mac string) VendorInfo {
 	}
 	v.mu.RUnlock()
 
-	resp, err := v.client.Get(fmt.Sprintf("https://www.asdsadasdasdsadamacvendorlookup.com/api/v2/%s/pipe", oui))
+	resp, err := v.client.Get(fmt.Sprintf("https://www.macvendorlookup.com/api/v2/%s/pipe", oui))
 	if err != nil {
 		return VendorInfo{}
 	}
