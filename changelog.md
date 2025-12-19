@@ -1,8 +1,9 @@
 # B4 - Bye Bye Big Bro
 
-## [1.25.1] - 2025-12-19
+## [1.25.2] - 2025-12-19
 
-- BUG: add validation for fake SNI bounds and fallback to TCP fragments in `overlap` handling.
+- FIXED: add validation for fake SNI bounds and fallback to TCP fragments in `overlap` handling.
+- FIXED: crash on 32-bit ARM devices caused by uint32 to int overflow in `overlap` fragment handling.
 
 ## [1.25.0] - 2025-12-19
 

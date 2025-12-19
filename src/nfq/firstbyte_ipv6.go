@@ -56,7 +56,7 @@ func (w *Worker) sendFirstByteDesyncV6(cfg *config.SetConfig, packet []byte, dst
 		delay = 30
 	}
 
-	jitter := int(seq0) % (delay/3 + 1)
+	jitter := int(seq0 % uint32(delay/3+1))
 	time.Sleep(time.Duration(delay+jitter) * time.Millisecond)
 
 	_ = w.sock.SendIPv6(seg2, dst)

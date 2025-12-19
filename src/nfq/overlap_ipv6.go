@@ -72,7 +72,7 @@ func (w *Worker) sendOverlapFragmentsV6(cfg *config.SetConfig, packet []byte, ds
 		w.sendTCPSegmentsv6(cfg, packet, dst)
 		return
 	}
-	fakeSNI := []byte(fakeDomains[int(seq0)%len(fakeDomains)])
+	fakeSNI := []byte(fakeDomains[seq0%uint32(len(fakeDomains))])
 	if len(fakeSNI) < sniLen {
 		fakeSNI = append(fakeSNI, bytes.Repeat([]byte{'.'}, sniLen-len(fakeSNI))...)
 	}
