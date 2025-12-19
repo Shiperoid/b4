@@ -1,48 +1,222 @@
 package handler
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/daniellavrushin/b4/log"
 )
 
-var (
-	instance *VendorLookup
-	once     sync.Once
+const (
+	ouiURL    = "https://standards-oui.ieee.org/oui/oui.txt"
+	ouiMaxAge = 30 * 24 * time.Hour // refresh monthly
 )
 
 type VendorInfo struct {
 	Company string `json:"company"`
-	Country string `json:"country"`
 }
 
-type VendorLookup struct {
-	cache  map[string]VendorInfo
-	mu     sync.RWMutex
-	client *http.Client
+type OUIDatabase struct {
+	data      map[string]string // OUI -> Company
+	mu        sync.RWMutex
+	cachePath string
+	loading   bool
+	loadingMu sync.Mutex
 }
 
 type DeviceInfo struct {
-	MAC        string `json:"mac"`
-	IP         string `json:"ip"`
-	Hostname   string `json:"hostname"`
-	Vendor     string `json:"vendor"`
-	Country    string `json:"country"`
-	DeviceType string `json:"device_type"`
-	IsPrivate  bool   `json:"is_private"`
-	Alias      string `json:"alias,omitempty"`
+	MAC       string `json:"mac"`
+	IP        string `json:"ip"`
+	Hostname  string `json:"hostname"`
+	Vendor    string `json:"vendor"`
+	IsPrivate bool   `json:"is_private"`
+	Alias     string `json:"alias,omitempty"`
 }
+
 type DevicesResponse struct {
 	Available bool         `json:"available"`
 	Source    string       `json:"source,omitempty"`
 	Devices   []DeviceInfo `json:"devices"`
 }
 
+var (
+	ouiDB   *OUIDatabase
+	ouiOnce sync.Once
+)
+
+func initOUIDatabase(configPath string) *OUIDatabase {
+	log.Infof("Initializing OUI database: %s", configPath)
+	ouiOnce.Do(func() {
+		cachePath := "/tmp/b4_oui.txt" // fallback
+		if configPath != "" {
+			cachePath = filepath.Join(filepath.Dir(configPath), "oui.txt")
+		}
+
+		ouiDB = &OUIDatabase{
+			data:      make(map[string]string),
+			cachePath: cachePath,
+		}
+		go ouiDB.ensureLoaded()
+	})
+	return ouiDB
+}
+
+func (db *OUIDatabase) ensureLoaded() {
+	db.loadingMu.Lock()
+	if db.loading {
+		db.loadingMu.Unlock()
+		return
+	}
+	db.loading = true
+	db.loadingMu.Unlock()
+
+	defer func() {
+		db.loadingMu.Lock()
+		db.loading = false
+		db.loadingMu.Unlock()
+	}()
+
+	// Check if cache exists and is fresh
+	if info, err := os.Stat(db.cachePath); err == nil {
+		if time.Since(info.ModTime()) < ouiMaxAge {
+			if err := db.loadFromFile(); err == nil {
+				log.Infof("OUI database loaded from cache: %d entries", len(db.data))
+				return
+			}
+		}
+	}
+
+	// Download fresh copy
+	if err := db.download(); err != nil {
+		log.Errorf("Failed to download OUI database: %v", err)
+		// Try loading stale cache as fallback
+		if err := db.loadFromFile(); err == nil {
+			log.Infof("OUI database loaded from stale cache: %d entries", len(db.data))
+		}
+		return
+	}
+
+	if err := db.loadFromFile(); err != nil {
+		log.Errorf("Failed to load OUI database: %v", err)
+		return
+	}
+
+	log.Infof("OUI database refreshed: %d entries", len(db.data))
+}
+
+func (db *OUIDatabase) download() error {
+	client := &http.Client{Timeout: 60 * time.Second}
+
+	req, err := http.NewRequest("GET", ouiURL, nil)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+
+	// IEEE blocks requests without a browser-like User-Agent
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("download: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("download status: %d", resp.StatusCode)
+	}
+
+	tmpPath := db.cachePath + ".tmp"
+	f, err := os.Create(tmpPath)
+	if err != nil {
+		return fmt.Errorf("create temp file: %w", err)
+	}
+
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		f.WriteString(scanner.Text() + "\n")
+	}
+	f.Close()
+
+	if err := scanner.Err(); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("read response: %w", err)
+	}
+
+	if err := os.Rename(tmpPath, db.cachePath); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("rename: %w", err)
+	}
+
+	return nil
+}
+
+func (db *OUIDatabase) loadFromFile() error {
+	f, err := os.Open(db.cachePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	newData := make(map[string]string)
+	scanner := bufio.NewScanner(f)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		// Format: "XX-XX-XX   (hex)		Company Name"
+		if !strings.Contains(line, "(hex)") {
+			continue
+		}
+
+		parts := strings.SplitN(line, "(hex)", 2)
+		if len(parts) != 2 {
+			continue
+		}
+
+		oui := normalizeMAC(strings.TrimSpace(parts[0]))
+		if len(oui) != 6 {
+			continue
+		}
+
+		company := strings.TrimSpace(parts[1])
+		if company != "" {
+			newData[oui] = company
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	db.mu.Lock()
+	db.data = newData
+	db.mu.Unlock()
+
+	return nil
+}
+
+func (db *OUIDatabase) Lookup(mac string) string {
+	normalized := normalizeMAC(mac)
+	if len(normalized) < 6 {
+		return ""
+	}
+
+	db.mu.RLock()
+	company := db.data[normalized[:6]]
+	db.mu.RUnlock()
+
+	return company
+}
+
 func (api *API) RegisterDevicesApi() {
+	initOUIDatabase(api.cfg.ConfigPath)
+
 	api.mux.HandleFunc("/api/devices", api.handleDevices)
 	api.mux.HandleFunc("/api/devices/{mac}/vendor", api.handleDeviceVendor)
 	api.mux.HandleFunc("/api/devices/{mac}/alias", api.handleDeviceAlias)
@@ -120,17 +294,15 @@ func (api *API) handleDeviceVendor(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mac := r.PathValue("mac")
-
 	if mac == "" {
 		http.Error(w, "MAC address required", http.StatusBadRequest)
 		return
 	}
 
-	vendorLookup := getVendorLookup()
-	info := vendorLookup.Lookup(mac)
+	company := ouiDB.Lookup(mac)
 
 	setJsonHeader(w)
-	json.NewEncoder(w).Encode(info)
+	json.NewEncoder(w).Encode(VendorInfo{Company: company})
 }
 
 func (api *API) handleDevices(w http.ResponseWriter, r *http.Request) {
@@ -151,29 +323,27 @@ func (api *API) handleDevices(w http.ResponseWriter, r *http.Request) {
 
 	sourceName, _ := globalPool.Dhcp.SourceInfo()
 	mappings := globalPool.Dhcp.GetAllMappings()
-
-	vendorLookup := getVendorLookup()
 	devices := make([]DeviceInfo, 0, len(mappings))
 
 	for ip, macAddr := range mappings {
-		var vendor, country string
+		var vendor string
+		var isPrivate bool
+
 		if isPrivateMAC(macAddr) {
 			vendor = "Private"
+			isPrivate = true
 		} else {
-			info := vendorLookup.Lookup(macAddr)
-			vendor = info.Company
-			country = info.Country
+			vendor = ouiDB.Lookup(macAddr)
 		}
 
 		alias, _ := api.deviceAliases.Get(macAddr)
 
 		devices = append(devices, DeviceInfo{
-			MAC:      macAddr,
-			IP:       ip,
-			Hostname: "",
-			Vendor:   vendor,
-			Alias:    alias,
-			Country:  country,
+			MAC:       macAddr,
+			IP:        ip,
+			Vendor:    vendor,
+			IsPrivate: isPrivate,
+			Alias:     alias,
 		})
 	}
 
@@ -183,86 +353,9 @@ func (api *API) handleDevices(w http.ResponseWriter, r *http.Request) {
 		Devices:   devices,
 	})
 }
-func getVendorLookup() *VendorLookup {
-	once.Do(func() {
-		instance = &VendorLookup{
-			cache: make(map[string]VendorInfo),
-			client: &http.Client{
-				Timeout: 3 * time.Second,
-			},
-		}
-	})
-	return instance
-}
 
 func normalizeMAC(mac string) string {
 	return strings.ToUpper(strings.ReplaceAll(strings.ReplaceAll(mac, ":", ""), "-", ""))
-}
-
-func (v *VendorLookup) Lookup(mac string) VendorInfo {
-	normalized := normalizeMAC(mac)
-	if len(normalized) < 6 {
-		return VendorInfo{}
-	}
-	oui := normalized[:6]
-
-	v.mu.RLock()
-	if info, ok := v.cache[oui]; ok {
-		v.mu.RUnlock()
-		return info
-	}
-	v.mu.RUnlock()
-
-	resp, err := v.client.Get(fmt.Sprintf("https://www.macvendorlookup.com/api/v2/%s/pipe", oui))
-	if err != nil {
-		return VendorInfo{}
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusNoContent {
-		v.mu.Lock()
-		v.cache[oui] = VendorInfo{}
-		v.mu.Unlock()
-		return VendorInfo{}
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return VendorInfo{}
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return VendorInfo{}
-	}
-
-	// Format: startHex|endHex|startDec|endDec|company|addr1|addr2|addr3|country|type
-	parts := strings.Split(string(body), "|")
-	if len(parts) < 9 {
-		return VendorInfo{}
-	}
-
-	info := VendorInfo{
-		Company: parts[4],
-		Country: parts[8],
-	}
-
-	v.mu.Lock()
-	v.cache[oui] = info
-	v.mu.Unlock()
-
-	return info
-}
-
-func (v *VendorLookup) BulkLookup(macs []string) map[string]VendorInfo {
-	result := make(map[string]VendorInfo)
-
-	for i, mac := range macs {
-		result[mac] = v.Lookup(mac)
-		if i < len(macs)-1 {
-			time.Sleep(500 * time.Millisecond)
-		}
-	}
-	return result
 }
 
 func isPrivateMAC(mac string) bool {
