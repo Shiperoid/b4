@@ -42,7 +42,7 @@ export const DomainsControlBar = ({
       <Stack direction="row" spacing={2} alignItems="center">
         <TextField
           size="small"
-          placeholder="Filter entries (use `+` to combine, e.g. `tcp+domain2`, or `tcp+domain:exmpl1+domain:exmpl2`)"
+          placeholder="Filter (combine with +, exclude with !, e.g. tcp+!domain:google.com)"
           value={filter}
           onChange={(e) => onFilterChange(e.target.value)}
           sx={{ flex: 1 }}

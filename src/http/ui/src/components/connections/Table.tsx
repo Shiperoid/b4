@@ -44,20 +44,13 @@ const TableRowMemo = memo<{
   log: ParsedLog;
   onDomainClick: (domain: string) => void;
   onIpClick: (ip: string) => void;
-  deviceMap: Record<string, string>;
 }>(
-  ({ log, onDomainClick, onIpClick, deviceMap }) => {
+  ({ log, onDomainClick, onIpClick }) => {
     const asnName = useMemo(() => {
       if (!log.destination) return null;
       const asn = asnStorage.findAsnForIp(log.destination);
       return asn?.name || null;
     }, [log.destination]);
-
-    const deviceName = useMemo(() => {
-      if (!log.sourceAlias) return null;
-      const normalized = log.sourceAlias.toUpperCase().replace(/-/g, ":");
-      return deviceMap[normalized] || null;
-    }, [log.sourceAlias, deviceMap]);
 
     return (
       <TableRow
@@ -144,8 +137,8 @@ const TableRowMemo = memo<{
           }}
         >
           <Tooltip title={log.source} placement="top" arrow>
-            {deviceName ? (
-              <B4Badge label={deviceName || log.source} color="primary" />
+            {log.deviceName ? (
+              <B4Badge label={log.deviceName} color="primary" />
             ) : (
               <span>{log.source}</span>
             )}
@@ -220,25 +213,6 @@ export const DomainsTable = ({
   const startIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
   const visibleCount = Math.ceil(containerHeight / ROW_HEIGHT) + OVERSCAN * 2;
   const endIndex = Math.min(data.length, startIndex + visibleCount);
-  const [deviceMap, setDeviceMap] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    fetch("/api/devices")
-      .then((r) => r.json())
-      .then(
-        (data: {
-          devices?: Array<{ mac: string; alias?: string; vendor?: string }>;
-        }) => {
-          const map: Record<string, string> = {};
-          for (const d of data.devices || []) {
-            const normalized = d.mac.toUpperCase().replace(/-/g, ":");
-            map[normalized] = d.alias || d.vendor || "";
-          }
-          setDeviceMap(map);
-        }
-      )
-      .catch(() => {});
-  }, []);
 
   const visibleData = useMemo(
     () => data.slice(startIndex, endIndex),
@@ -277,7 +251,6 @@ export const DomainsTable = ({
     const container = containerRef.current;
     if (!container) return;
 
-    // Use a small delay to let the DOM update with new rows
     requestAnimationFrame(() => {
       const isAtBottom =
         container.scrollHeight - container.scrollTop - container.clientHeight <
@@ -359,7 +332,6 @@ export const DomainsTable = ({
             </TableRow>
           ) : (
             <>
-              {/* Spacer for items above viewport */}
               {startIndex > 0 && (
                 <TableRow>
                   <TableCell
@@ -373,18 +345,15 @@ export const DomainsTable = ({
                 </TableRow>
               )}
 
-              {/* Visible rows */}
               {visibleData.map((log) => (
                 <TableRowMemo
                   key={log.raw}
                   log={log}
                   onDomainClick={onDomainClick}
                   onIpClick={onIpClick}
-                  deviceMap={deviceMap}
                 />
               ))}
 
-              {/* Spacer for items below viewport */}
               {endIndex < data.length && (
                 <TableRow>
                   <TableCell

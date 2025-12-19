@@ -7,6 +7,7 @@ import { SortDirection } from "@common/SortableTableCell";
 import {
   useDomainActions,
   useParsedLogs,
+  useEnrichedLogs,
   useFilteredLogs,
   useSortedLogs,
 } from "@hooks/useDomainActions";
@@ -58,6 +59,10 @@ export function ConnectionsPage() {
   } = useIpActions();
   const { showSuccess } = useSnackbar();
 
+  const [availableSets, setAvailableSets] = useState<B4SetConfig[]>([]);
+  const [ipInfoToken, setIpInfoToken] = useState<string>("");
+  const [deviceMap, setDeviceMap] = useState<Record<string, string>>({});
+
   useEffect(() => {
     saveSortState(sortColumn, sortDirection);
   }, [sortColumn, sortDirection]);
@@ -69,11 +74,27 @@ export function ConnectionsPage() {
   );
 
   const parsedLogs = useParsedLogs(recentDomains, showAll);
-  const filteredLogs = useFilteredLogs(parsedLogs, filter);
+  const enrichedLogs = useEnrichedLogs(parsedLogs, deviceMap);
+  const filteredLogs = useFilteredLogs(enrichedLogs, filter);
   const sortedData = useSortedLogs(filteredLogs, sortColumn, sortDirection);
 
-  const [availableSets, setAvailableSets] = useState<B4SetConfig[]>([]);
-  const [ipInfoToken, setIpInfoToken] = useState<string>("");
+  useEffect(() => {
+    fetch("/api/devices")
+      .then((r) => r.json())
+      .then(
+        (data: {
+          devices?: Array<{ mac: string; alias?: string; vendor?: string }>;
+        }) => {
+          const map: Record<string, string> = {};
+          for (const d of data.devices || []) {
+            const normalized = d.mac.toUpperCase().replace(/-/g, ":");
+            map[normalized] = d.alias || d.vendor || "";
+          }
+          setDeviceMap(map);
+        }
+      )
+      .catch(() => {});
+  }, []);
 
   const fetchSets = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -211,7 +232,7 @@ export function ConnectionsPage() {
         <DomainsControlBar
           filter={filter}
           onFilterChange={setFilter}
-          totalCount={parsedLogs.length}
+          totalCount={enrichedLogs.length}
           filteredCount={filteredLogs.length}
           sortColumn={sortColumn}
           paused={pauseDomains}

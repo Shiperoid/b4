@@ -6,6 +6,22 @@ export interface ParsedLog {
   domain: string;
   source: string;
   sourceAlias: string;
+  deviceName: string;
   destination: string;
   raw: string;
+}
+
+export type SortColumn =
+  | "timestamp"
+  | "set"
+  | "protocol"
+  | "domain"
+  | "source"
+  | "destination";
+
+export interface DomainModalState {
+  open: boolean;
+  domain: string;
+  variants: string[];
+  selected: string;
 }

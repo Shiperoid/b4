@@ -22,6 +22,7 @@ export interface ParsedLog {
   destination: string;
   raw: string;
   sourceAlias: string;
+  deviceName: string;
 }
 
 interface DomainModalState {
@@ -39,7 +40,6 @@ class ParseCache {
   get(key: string): ParsedLog | null | undefined {
     const value = this.cache.get(key);
     if (value !== undefined) {
-      // Move to end (most recently used)
       this.cache.delete(key);
       this.cache.set(key, value);
     }
@@ -48,7 +48,6 @@ class ParseCache {
 
   set(key: string, value: ParsedLog | null): void {
     if (this.cache.size >= this.maxSize) {
-      // Delete oldest (first) entry
       const firstKey = this.cache.keys().next().value;
       if (firstKey) this.cache.delete(firstKey);
     }
@@ -80,7 +79,6 @@ export function getAsnForIp(destination: string): string | null {
 
   asnLookupCache.set(destination, result);
 
-  // Limit cache size
   if (asnLookupCache.size > 2000) {
     const entries = Array.from(asnLookupCache.entries());
     asnLookupCache.clear();
@@ -96,7 +94,6 @@ export function clearAsnLookupCache(): void {
 
 // Parse a single log line with caching
 function parseSniLogLine(line: string): ParsedLog | null {
-  // Check cache first
   const cached = parseCache.get(line);
   if (cached !== undefined) return cached;
 
@@ -127,6 +124,7 @@ function parseSniLogLine(line: string): ParsedLog | null {
     destination,
     raw: line,
     sourceAlias,
+    deviceName: "",
   };
 
   parseCache.set(line, result);
@@ -203,7 +201,7 @@ export function useDomainActions() {
   };
 }
 
-// Optimized hook to parse logs - uses stable reference tracking
+// Optimized hook to parse logs
 export function useParsedLogs(lines: string[], showAll: boolean): ParsedLog[] {
   const prevLinesRef = useRef<string[]>([]);
   const prevResultRef = useRef<ParsedLog[]>([]);
@@ -213,7 +211,6 @@ export function useParsedLogs(lines: string[], showAll: boolean): ParsedLog[] {
     const prevLines = prevLinesRef.current;
     const prevResult = prevResultRef.current;
 
-    // If showAll changed, refilter from cached parsed results
     if (prevShowAllRef.current !== showAll && prevLines === lines) {
       prevShowAllRef.current = showAll;
       const filtered = showAll
@@ -224,11 +221,9 @@ export function useParsedLogs(lines: string[], showAll: boolean): ParsedLog[] {
 
     prevShowAllRef.current = showAll;
 
-    // Check if we can do incremental update
     if (prevLines.length > 0 && lines.length > prevLines.length) {
-      // Check if this is an append operation
       let isAppend = true;
-      const checkLength = Math.min(prevLines.length, 100); // Check last 100 items
+      const checkLength = Math.min(prevLines.length, 100);
       for (let i = 0; i < checkLength; i++) {
         const prevIdx = prevLines.length - checkLength + i;
         const currIdx =
@@ -244,7 +239,6 @@ export function useParsedLogs(lines: string[], showAll: boolean): ParsedLog[] {
       }
 
       if (isAppend) {
-        // Only parse new lines
         const newLines = lines.slice(prevLines.length);
         const newParsed = newLines
           .map(parseSniLogLine)
@@ -260,7 +254,6 @@ export function useParsedLogs(lines: string[], showAll: boolean): ParsedLog[] {
       }
     }
 
-    // Full parse needed
     const parsed = lines
       .map(parseSniLogLine)
       .filter((log): log is ParsedLog => log !== null);
@@ -270,6 +263,24 @@ export function useParsedLogs(lines: string[], showAll: boolean): ParsedLog[] {
 
     return showAll ? parsed : parsed.filter((log) => log.domain !== "");
   }, [lines, showAll]);
+}
+
+// Enrich logs with device names
+export function useEnrichedLogs(
+  parsedLogs: ParsedLog[],
+  deviceMap: Record<string, string>
+): ParsedLog[] {
+  return useMemo(() => {
+    if (Object.keys(deviceMap).length === 0) return parsedLogs;
+
+    return parsedLogs.map((log) => {
+      const normalized =
+        log.sourceAlias?.toUpperCase().replace(/-/g, ":") || "";
+      const deviceName = deviceMap[normalized] || "";
+      if (deviceName === log.deviceName) return log;
+      return { ...log, deviceName };
+    });
+  }, [parsedLogs, deviceMap]);
 }
 
 // Optimized filtering with memoization
@@ -288,44 +299,79 @@ export function useFilteredLogs(
     if (filters.length === 0) return parsedLogs;
 
     const fieldFilters: Record<string, string[]> = {};
+    const fieldExcludes: Record<string, string[]> = {};
     const globalFilters: string[] = [];
+    const globalExcludes: string[] = [];
 
     for (const filterTerm of filters) {
-      const colonIndex = filterTerm.indexOf(":");
+      const isExclude = filterTerm.startsWith("!");
+      const term = isExclude ? filterTerm.slice(1) : filterTerm;
+
+      const colonIndex = term.indexOf(":");
       if (colonIndex > 0) {
-        const field = filterTerm.substring(0, colonIndex);
-        const value = filterTerm.substring(colonIndex + 1);
-        if (!fieldFilters[field]) fieldFilters[field] = [];
-        fieldFilters[field].push(value);
+        const field = term.substring(0, colonIndex);
+        const value = term.substring(colonIndex + 1);
+        if (isExclude) {
+          if (!fieldExcludes[field]) fieldExcludes[field] = [];
+          fieldExcludes[field].push(value);
+        } else {
+          if (!fieldFilters[field]) fieldFilters[field] = [];
+          fieldFilters[field].push(value);
+        }
       } else {
-        globalFilters.push(filterTerm);
+        if (isExclude) {
+          globalExcludes.push(term);
+        } else {
+          globalFilters.push(term);
+        }
       }
     }
 
+    const getFieldValue = (log: ParsedLog, field: string): string => {
+      if (field === "asn") {
+        return getAsnForIp(log.destination)?.toLowerCase() || "";
+      }
+      if (field === "alias" || field === "device") {
+        return `${log.sourceAlias || ""} ${log.deviceName || ""}`.toLowerCase();
+      }
+      return log[field as keyof typeof log]?.toString().toLowerCase() || "";
+    };
+
+    const getSearchableValues = (log: ParsedLog): (string | null)[] => [
+      log.hostSet,
+      log.ipSet,
+      log.domain,
+      log.source,
+      log.sourceAlias,
+      log.deviceName,
+      log.protocol,
+      log.destination,
+      getAsnForIp(log.destination),
+    ];
+
     return parsedLogs.filter((log: ParsedLog) => {
       for (const [field, values] of Object.entries(fieldFilters)) {
-        let fieldValue: string;
-        if (field === "asn") {
-          fieldValue = getAsnForIp(log.destination)?.toLowerCase() || "";
-        } else {
-          fieldValue =
-            log[field as keyof typeof log]?.toString().toLowerCase() || "";
-        }
+        const fieldValue = getFieldValue(log, field);
         if (!values.some((value) => fieldValue.includes(value))) return false;
       }
 
+      for (const [field, values] of Object.entries(fieldExcludes)) {
+        const fieldValue = getFieldValue(log, field);
+        if (values.some((value) => fieldValue.includes(value))) return false;
+      }
+
       for (const filterTerm of globalFilters) {
-        const asnName = getAsnForIp(log.destination);
-        const matches = [
-          log.hostSet,
-          log.ipSet,
-          log.domain,
-          log.source,
-          log.protocol,
-          log.destination,
-          asnName,
-        ].some((value) => value?.toLowerCase().includes(filterTerm));
+        const matches = getSearchableValues(log).some((value) =>
+          value?.toLowerCase().includes(filterTerm)
+        );
         if (!matches) return false;
+      }
+
+      for (const excludeTerm of globalExcludes) {
+        const matches = getSearchableValues(log).some((value) =>
+          value?.toLowerCase().includes(excludeTerm)
+        );
+        if (matches) return false;
       }
 
       return true;
