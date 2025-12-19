@@ -3,10 +3,15 @@
 ## [1.25.0] - 2025-12-19
 
 - REMOVED: `--skip-local-traffic` as it did actually nothing causing connection issues and solving real problem.
+- ADDED: Device names in `Connections` - identify which device (phone, laptop, etc.) is making each connection, with optional per-device filtering (whitelist/blacklist) in `Settings`.
 - ADDED: DHCP Device names:
   - **Device Names**: See which device (phone, laptop, TV) is making each connection instead of cryptic IP addresses
   - **Device Filtering**: Choose which devices on your network should use DPI bypass (whitelist or blacklist mode)
   - **Custom Names**: Give your devices friendly names in `Settings → Devices`
+- ADDED: Advanced `Connections` table filtering:
+  - Combine filters with `+` (e.g., `tcp+youtube`)
+  - Exclude with `!` prefix (e.g., `!google` or `tcp+!udp`)
+  - Field-specific filters: `domain:`, `asn:`, `device:` (e.g., `domain:youtube+!asn:cloudflare`)
 
 ## [1.24.0] - 2025-12-17
 
