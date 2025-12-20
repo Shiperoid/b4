@@ -1,5 +1,9 @@
 # B4 - Bye Bye Big Bro
 
+## [1.25.3] - 2025-12-21
+
+- FIXED: `nftables` forwarded traffic not working on `OpenWRT` - changed hook from `POSTROUTING` to `FORWARD` to capture packets before NAT.
+
 ## [1.25.2] - 2025-12-19
 
 - FIXED: add validation for fake SNI bounds and fallback to TCP fragments in `overlap` handling.
