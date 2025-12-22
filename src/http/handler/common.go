@@ -19,7 +19,8 @@ var (
 )
 
 var (
-	globalPool *nfq.Pool
+	globalPool        *nfq.Pool
+	tablesRefreshFunc func() error
 )
 
 func setJsonHeader(w http.ResponseWriter) {
@@ -102,4 +103,8 @@ func sendResponse(w http.ResponseWriter, response interface{}) {
 	if f, ok := w.(http.Flusher); ok {
 		f.Flush()
 	}
+}
+
+func SetTablesRefreshFunc(fn func() error) {
+	tablesRefreshFunc = fn
 }

@@ -12,6 +12,7 @@ import (
 	"github.com/daniellavrushin/b4/config"
 	"github.com/daniellavrushin/b4/log"
 	"github.com/daniellavrushin/b4/metrics"
+	"github.com/daniellavrushin/b4/utils"
 )
 
 func (api *API) RegisterConfigApi() {
@@ -311,6 +312,7 @@ func (a *API) resetConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *API) saveAndPushConfig(cfg *config.Config) error {
+
 	if globalPool != nil {
 		err := globalPool.UpdateConfig(cfg)
 		if err != nil {
@@ -323,7 +325,16 @@ func (a *API) saveAndPushConfig(cfg *config.Config) error {
 		return fmt.Errorf("failed to save config to file: %v", err)
 	}
 
+	oldPorts := a.cfg.CollectUDPPorts()
 	*a.cfg = *cfg
+	newPorts := a.cfg.CollectUDPPorts()
+
+	if !a.cfg.System.Tables.SkipSetup && !utils.SlicesAreEqual(oldPorts, newPorts) && tablesRefreshFunc != nil {
+		log.Infof("UDP ports changed (%s -> %s), refreshing firewall rules", oldPorts, newPorts)
+		if err := tablesRefreshFunc(); err != nil {
+			log.Errorf("Failed to refresh tables: %v", err)
+		}
+	}
 
 	return nil
 }

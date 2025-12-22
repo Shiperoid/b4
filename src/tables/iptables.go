@@ -219,7 +219,7 @@ func (manager *IPTablesManager) buildManifest() (Manifest, error) {
 			manager.buildNFQSpec(queueNum, threads)...,
 		)
 
-		udpPorts := collectUDPPorts(cfg)
+		udpPorts := cfg.CollectUDPPorts()
 		udpPortSpec := []string{"-p", "udp", "-m", "multiport", "--dports", strings.Join(udpPorts, ",")}
 		udpSpec := append(
 			append(udpPortSpec,

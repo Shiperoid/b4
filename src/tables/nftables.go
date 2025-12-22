@@ -193,7 +193,7 @@ func (n *NFTablesManager) Apply() error {
 		return err
 	}
 
-	udpPorts := collectUDPPorts(cfg)
+	udpPorts := cfg.CollectUDPPorts()
 	var udpPortExpr string
 	if len(udpPorts) == 1 {
 		udpPortExpr = udpPorts[0]
