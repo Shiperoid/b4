@@ -16,17 +16,15 @@ const (
 	nftChainName = "b4_chain"
 )
 
-// NFTablesManager handles nftables operations
 type NFTablesManager struct {
-	cfg *config.Config
+	cfg             *config.Config
+	ipVersionFilter string
 }
 
-// NewNFTablesManager creates a new nftables manager
 func NewNFTablesManager(cfg *config.Config) *NFTablesManager {
 	return &NFTablesManager{cfg: cfg}
 }
 
-// runNft executes nft command
 func (n *NFTablesManager) runNft(args ...string) (string, error) {
 	var out bytes.Buffer
 	cmd := exec.Command("nft", args...)
@@ -36,7 +34,6 @@ func (n *NFTablesManager) runNft(args ...string) (string, error) {
 	return out.String(), err
 }
 
-// tableExists checks if the b4 table exists
 func (n *NFTablesManager) tableExists() bool {
 	out, err := n.runNft("list", "tables")
 	if err != nil {
@@ -45,13 +42,11 @@ func (n *NFTablesManager) tableExists() bool {
 	return strings.Contains(out, nftTableName)
 }
 
-// chainExists checks if a chain exists in the table
 func (n *NFTablesManager) chainExists(chain string) bool {
 	_, err := n.runNft("list", "chain", "inet", nftTableName, chain)
 	return err == nil
 }
 
-// createTable creates the b4 table if it doesn't exist
 func (n *NFTablesManager) createTable() error {
 	if n.tableExists() {
 		return nil
@@ -64,19 +59,16 @@ func (n *NFTablesManager) createTable() error {
 	return nil
 }
 
-// createChain creates a chain if it doesn't exist
-func (n *NFTablesManager) createChain(chain string, hook string, priority int, policy string) error {
+func (n *NFTablesManager) createChain(chain, hook string, priority int, policy string) error {
 	if n.chainExists(chain) {
 		return nil
 	}
 
 	var cmd []string
 	if hook != "" {
-		// Base chain with netfilter hook
 		cmd = []string{"add", "chain", "inet", nftTableName, chain,
 			fmt.Sprintf("{ type filter hook %s priority %d ; policy %s ; }", hook, priority, policy)}
 	} else {
-		// Regular chain
 		cmd = []string{"add", "chain", "inet", nftTableName, chain}
 	}
 
@@ -88,14 +80,32 @@ func (n *NFTablesManager) createChain(chain string, hook string, priority int, p
 	return nil
 }
 
-// buildNFQueueAction builds the nfqueue action string
 func (n *NFTablesManager) buildNFQueueAction() string {
 	if n.cfg.Queue.Threads > 1 {
-		start := n.cfg.Queue.StartNum
-		end := n.cfg.Queue.StartNum + n.cfg.Queue.Threads - 1
-		return fmt.Sprintf("queue num %d-%d bypass", start, end)
+		return fmt.Sprintf("queue num %d-%d bypass", n.cfg.Queue.StartNum, n.cfg.Queue.StartNum+n.cfg.Queue.Threads-1)
 	}
 	return fmt.Sprintf("queue num %d bypass", n.cfg.Queue.StartNum)
+}
+
+func (n *NFTablesManager) addRule(chain string, args ...string) error {
+	cmd := append([]string{"add", "rule", "inet", nftTableName, chain}, args...)
+	_, err := n.runNft(cmd...)
+	if err != nil {
+		return fmt.Errorf("failed to add rule to %s: %w", chain, err)
+	}
+	return nil
+}
+
+func (n *NFTablesManager) addFilteredRule(chain string, args ...string) error {
+	if n.ipVersionFilter != "" {
+		args = append(strings.Fields(n.ipVersionFilter), args...)
+	}
+	return n.addRule(chain, args...)
+}
+
+func (n *NFTablesManager) addQueueRule(chain string, args ...string) error {
+	args = append(args, strings.Fields(n.buildNFQueueAction())...)
+	return n.addFilteredRule(chain, args...)
 }
 
 func (n *NFTablesManager) Apply() error {
@@ -107,7 +117,16 @@ func (n *NFTablesManager) Apply() error {
 	log.Tracef("NFTABLES: adding rules")
 	loadKernelModules()
 
-	// Create table
+	// Set IP version filter
+	switch {
+	case cfg.Queue.IPv4Enabled && cfg.Queue.IPv6Enabled:
+		n.ipVersionFilter = ""
+	case cfg.Queue.IPv4Enabled:
+		n.ipVersionFilter = "meta nfproto ipv4"
+	case cfg.Queue.IPv6Enabled:
+		n.ipVersionFilter = "meta nfproto ipv6"
+	}
+
 	if err := n.createTable(); err != nil {
 		return err
 	}
@@ -115,16 +134,14 @@ func (n *NFTablesManager) Apply() error {
 	if err := n.createChain("output", "output", 149, "accept"); err != nil {
 		return err
 	}
-
 	if err := n.createChain("prerouting", "prerouting", -150, "accept"); err != nil {
 		return err
 	}
-
 	if err := n.createChain(nftChainName, "", 0, ""); err != nil {
 		return err
 	}
 
-	markAccept := fmt.Sprintf("0x%x", n.cfg.Queue.Mark)
+	markAccept := fmt.Sprintf("0x%x", cfg.Queue.Mark)
 
 	if cfg.Queue.Devices.Enabled && len(cfg.Queue.Devices.Mac) > 0 {
 		if err := n.createChain("forward", "forward", -1, "accept"); err != nil {
@@ -133,25 +150,21 @@ func (n *NFTablesManager) Apply() error {
 
 		if cfg.Queue.Devices.WhiteIsBlack {
 			for _, mac := range cfg.Queue.Devices.Mac {
-				mac = strings.ToUpper(strings.TrimSpace(mac))
-				if mac == "" {
-					continue
-				}
-				if err := n.addRuleArgs("forward", "ether", "saddr", mac, "return"); err != nil {
-					return err
+				if mac = strings.ToUpper(strings.TrimSpace(mac)); mac != "" {
+					if err := n.addRule("forward", "ether", "saddr", mac, "return"); err != nil {
+						return err
+					}
 				}
 			}
-			if err := n.addRuleArgs("forward", "jump", nftChainName); err != nil {
+			if err := n.addRule("forward", "jump", nftChainName); err != nil {
 				return err
 			}
 		} else {
 			for _, mac := range cfg.Queue.Devices.Mac {
-				mac = strings.ToUpper(strings.TrimSpace(mac))
-				if mac == "" {
-					continue
-				}
-				if err := n.addRuleArgs("forward", "ether", "saddr", mac, "jump", nftChainName); err != nil {
-					return err
+				if mac = strings.ToUpper(strings.TrimSpace(mac)); mac != "" {
+					if err := n.addRule("forward", "ether", "saddr", mac, "jump", nftChainName); err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -159,40 +172,37 @@ func (n *NFTablesManager) Apply() error {
 		if err := n.createChain("postrouting", "postrouting", 149, "accept"); err != nil {
 			return err
 		}
-		if err := n.addRuleArgs("postrouting", "jump", nftChainName); err != nil {
+		if err := n.addRule("postrouting", "jump", nftChainName); err != nil {
 			return err
 		}
 	}
 
-	if err := n.addRuleArgs("output", "meta", "mark", markAccept, "accept"); err != nil {
+	if err := n.addRule("output", "meta", "mark", markAccept, "accept"); err != nil {
 		return err
 	}
-
-	if err := n.addRuleArgs(nftChainName, "meta", "mark", markAccept, "return"); err != nil {
+	if err := n.addRule(nftChainName, "meta", "mark", markAccept, "return"); err != nil {
 		return err
 	}
 
 	tcpLimit := fmt.Sprintf("%d", cfg.MainSet.TCP.ConnBytesLimit+1)
 	udpLimit := fmt.Sprintf("%d", cfg.MainSet.UDP.ConnBytesLimit+1)
 
-	tcpRuleArgs := []string{"tcp", "dport", "443", "ct", "original", "packets", "<", tcpLimit, "counter"}
-	tcpRuleArgs = append(tcpRuleArgs, strings.Fields(n.buildNFQueueAction())...)
-	if err := n.addRuleArgs(nftChainName, tcpRuleArgs...); err != nil {
+	// TCP 443
+	if err := n.addQueueRule(nftChainName, "tcp", "dport", "443", "ct", "original", "packets", "<", tcpLimit, "counter"); err != nil {
 		return err
 	}
 
-	dnsRuleArgs := []string{"udp", "dport", "53", "counter"}
-	dnsRuleArgs = append(dnsRuleArgs, strings.Fields(n.buildNFQueueAction())...)
-	if err := n.addRuleArgs(nftChainName, dnsRuleArgs...); err != nil {
+	// DNS query
+	if err := n.addQueueRule(nftChainName, "udp", "dport", "53", "counter"); err != nil {
 		return err
 	}
 
-	dnsResponseArgs := []string{"udp", "sport", "53", "counter"}
-	dnsResponseArgs = append(dnsResponseArgs, strings.Fields(n.buildNFQueueAction())...)
-	if err := n.addRuleArgs("prerouting", dnsResponseArgs...); err != nil {
+	// DNS response
+	if err := n.addQueueRule("prerouting", "udp", "sport", "53", "counter"); err != nil {
 		return err
 	}
 
+	// UDP ports
 	udpPorts := cfg.CollectUDPPorts()
 	var udpPortExpr string
 	if len(udpPorts) == 1 {
@@ -200,34 +210,21 @@ func (n *NFTablesManager) Apply() error {
 	} else {
 		udpPortExpr = "{ " + strings.Join(udpPorts, ", ") + " }"
 	}
-	udpRuleArgs := []string{"udp", "dport", udpPortExpr, "ct", "original", "packets", "<", udpLimit, "counter"}
-	udpRuleArgs = append(udpRuleArgs, strings.Fields(n.buildNFQueueAction())...)
-	if err := n.addRuleArgs(nftChainName, udpRuleArgs...); err != nil {
+	if err := n.addQueueRule(nftChainName, "udp", "dport", udpPortExpr, "ct", "original", "packets", "<", udpLimit, "counter"); err != nil {
 		return err
 	}
 
-	// Set sysctls
 	setSysctlOrProc("net.netfilter.nf_conntrack_checksum", "0")
 	setSysctlOrProc("net.netfilter.nf_conntrack_tcp_be_liberal", "1")
 
 	if log.Level(log.CurLevel.Load()) >= log.LevelTrace {
-		nftables_trace, _ := n.runNft("list", "table", "inet", nftTableName)
-		log.Tracef("Current nftables rules:\n%s", nftables_trace)
+		out, _ := n.runNft("list", "table", "inet", nftTableName)
+		log.Tracef("Current nftables rules:\n%s", out)
 	}
 
 	return nil
 }
 
-func (n *NFTablesManager) addRuleArgs(chain string, args ...string) error {
-	cmd := append([]string{"add", "rule", "inet", nftTableName, chain}, args...)
-	_, err := n.runNft(cmd...)
-	if err != nil {
-		return fmt.Errorf("failed to add rule: %w", err)
-	}
-	return nil
-}
-
-// Clear removes all nftables rules and tables
 func (n *NFTablesManager) Clear() error {
 	if !hasBinary("nft") {
 		return nil
@@ -235,16 +232,11 @@ func (n *NFTablesManager) Clear() error {
 
 	log.Tracef("NFTABLES: clearing rules")
 
-	// Flush and delete the table (this removes all chains and rules)
 	if n.tableExists() {
-		// First flush the table
 		if _, err := n.runNft("flush", "table", "inet", nftTableName); err != nil {
 			log.Errorf("Failed to flush nftables table: %v", err)
 		}
-
 		time.Sleep(30 * time.Millisecond)
-
-		// Then delete the table
 		if _, err := n.runNft("delete", "table", "inet", nftTableName); err != nil {
 			log.Errorf("Failed to delete nftables table: %v", err)
 		}

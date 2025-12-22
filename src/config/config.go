@@ -68,6 +68,9 @@ var DefaultSetConfig = SetConfig{
 		OOBChar:           'x',
 		TLSRecordPosition: 0,
 
+		SeqOverlapBytes:   []byte{},
+		SeqOverlapPattern: []string{},
+
 		Combo: ComboFragConfig{
 			FirstByteSplit: true,
 			ExtensionSplit: true,
@@ -95,6 +98,8 @@ var DefaultSetConfig = SetConfig{
 		CustomPayload: "",
 		Strategy:      "pastseq",
 		SeqOffset:     10000,
+		PayloadFile:   "",
+		PayloadData:   []byte{},
 
 		SNIMutation: SNIMutationConfig{
 			Mode:         "off", // "off", "random", "grease", "padding", "fakeext", "fakesni", "advanced"

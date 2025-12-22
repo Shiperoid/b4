@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/daniellavrushin/b4/geodat"
@@ -117,6 +118,15 @@ func (c *Config) Validate() error {
 		}
 		if set.UDP.ConnBytesLimit > c.MainSet.UDP.ConnBytesLimit {
 			set.UDP.ConnBytesLimit = c.MainSet.UDP.ConnBytesLimit
+		}
+
+		if len(set.Fragmentation.SeqOverlapPattern) > 0 {
+			set.Fragmentation.SeqOverlapBytes = make([]byte, len(set.Fragmentation.SeqOverlapPattern))
+			for i, s := range set.Fragmentation.SeqOverlapPattern {
+				s = strings.TrimPrefix(s, "0x")
+				b, _ := strconv.ParseUint(s, 16, 8)
+				set.Fragmentation.SeqOverlapBytes[i] = byte(b)
+			}
 		}
 	}
 

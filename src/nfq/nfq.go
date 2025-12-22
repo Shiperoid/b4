@@ -539,7 +539,7 @@ func (w *Worker) dropAndInjectTCP(cfg *config.SetConfig, raw []byte, dst net.IP)
 	case "none":
 		_ = w.sock.SendIPv4(raw, dst)
 	default:
-		w.sendDisorderFragments(cfg, raw, dst)
+		w.sendComboFragments(cfg, raw, dst)
 	}
 }
 

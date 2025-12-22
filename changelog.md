@@ -9,6 +9,7 @@
 - ADDED: Live firewall rule updates - changing UDP ports, connection limits, or other core settings in the web UI now takes effect immediately without restarting the service.
 - FIXED: B4 no longer crashes on startup when geodat files (`geosite.dat`/`geoip.dat`) were manually deleted.
 - FIXED: Re-downloading geodat files now properly reloads all domain and IP targets without requiring a service restart.
+- FIXED: `IPv6` bypass settings now work correctly - disabling IPv6 in config actually disables IPv6 packet processing.
 
 ## [1.25.4] - 2025-12-21
 

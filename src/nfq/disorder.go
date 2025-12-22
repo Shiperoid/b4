@@ -86,6 +86,55 @@ func (w *Worker) sendDisorderFragments(cfg *config.SetConfig, packet []byte, dst
 		segments = append(segments, segment{data: seg, seqOff: uint32(start), order: i})
 	}
 
+	seqOvl := len(cfg.Fragmentation.SeqOverlapBytes)
+	if seqOvl > 0 && len(segments) >= 2 {
+		// Disorder mode: apply to segment index 1 (second in original order, penultimate when sent reversed)
+		// Split mode: apply to segment index 0 (first segment)
+		targetIdx := 1 // disorder
+		if disorder.ShuffleMode != "reverse" && disorder.ShuffleMode != "full" {
+			targetIdx = 0 // split-like behavior
+		}
+		if targetIdx >= len(segments) {
+			targetIdx = 0
+		}
+
+		seg := &segments[targetIdx]
+		oldData := seg.data
+		newLen := len(oldData) + seqOvl
+		newData := make([]byte, newLen)
+
+		// Copy IP+TCP headers
+		copy(newData[:payloadStart], oldData[:payloadStart])
+
+		// Fill overlap bytes with pattern or zeros
+		pattern := cfg.Fragmentation.SeqOverlapBytes
+		for i := 0; i < seqOvl; i++ {
+			if len(pattern) > 0 {
+				newData[payloadStart+i] = pattern[i%len(pattern)]
+			} else {
+				newData[payloadStart+i] = 0x00
+			}
+		}
+
+		// Copy original segment payload after overlap
+		copy(newData[payloadStart+seqOvl:], oldData[payloadStart:])
+
+		// Decrease sequence number by seqOvl
+		origSeq := binary.BigEndian.Uint32(newData[ipHdrLen+4 : ipHdrLen+8])
+		binary.BigEndian.PutUint32(newData[ipHdrLen+4:ipHdrLen+8], origSeq-uint32(seqOvl))
+
+		// Update IP total length
+		binary.BigEndian.PutUint16(newData[2:4], uint16(newLen))
+
+		// Update IP ID
+		binary.BigEndian.PutUint16(newData[4:6], id0+uint16(targetIdx)+100)
+
+		sock.FixIPv4Checksum(newData[:ipHdrLen])
+		sock.FixTCPChecksum(newData)
+
+		seg.data = newData
+	}
+
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	// Apply shuffle mode

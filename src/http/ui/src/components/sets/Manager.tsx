@@ -259,6 +259,8 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
         oob_position: 0,
         oob_char: 120,
         tlsrec_pos: 0,
+        seq_overlap: 0,
+        seq_overlap_pattern: [],
         combo: {
           extension_split: true,
           first_byte_split: true,

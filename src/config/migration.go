@@ -27,6 +27,21 @@ var migrationRegistry = map[int]MigrationFunc{
 	8:  migrateV8to9,
 	9:  migrateV9to10,
 	10: migrateV10to11,
+	11: migrateV11to12,
+}
+
+// Migration: v11 -> v12 (add TCP FilterSYN setting)
+func migrateV11to12(c *Config) error {
+	log.Tracef("Migration v11->v12: Adding TCP FilterSYN setting")
+
+	for _, set := range c.Sets {
+		set.Faking.PayloadFile = DefaultSetConfig.Faking.PayloadFile
+		set.Faking.PayloadData = DefaultSetConfig.Faking.PayloadData
+
+		set.Fragmentation.SeqOverlapPattern = DefaultSetConfig.Fragmentation.SeqOverlapPattern
+		set.Fragmentation.SeqOverlapBytes = DefaultSetConfig.Fragmentation.SeqOverlapBytes
+	}
+	return nil
 }
 
 // Migration: v10 -> v11 (add devices config to queue)

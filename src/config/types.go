@@ -71,6 +71,9 @@ type FragmentationConfig struct {
 	OOBPosition int  `json:"oob_position" bson:"oob_position"` // Position for OOB (0=disabled)
 	OOBChar     byte `json:"oob_char" bson:"oob_char"`         // Character for OOB data
 
+	SeqOverlapPattern []string `json:"seq_overlap_pattern" bson:"seq_overlap_pattern"`
+	SeqOverlapBytes   []byte   `json:"-" bson:"-"`
+
 	Combo    ComboFragConfig    `json:"combo" bson:"combo"`
 	Disorder DisorderFragConfig `json:"disorder" bson:"disorder"`
 	Overlap  OverlapFragConfig  `json:"overlap" bson:"overlap"`

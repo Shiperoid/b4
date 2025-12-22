@@ -62,6 +62,8 @@ export interface FragmentationConfig {
 
   tlsrec_pos: number;
 
+  seq_overlap_pattern: string[];
+
   combo: ComboFragConfig;
   disorder: DisorderFragConfig;
   overlap: OverlapFragConfig;

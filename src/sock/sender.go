@@ -40,15 +40,14 @@ func NewSenderWithMark(mark int) (*Sender, error) {
 	// Create IPv6 raw socket
 	fd6, err := syscall.Socket(syscall.AF_INET6, syscall.SOCK_RAW, syscall.IPPROTO_RAW)
 	if err != nil {
-		s.Close()
-		return nil, err
+		log.Warnf("Failed to create IPv6 raw socket: %v - IPv6 bypass disabled", err)
+		s.fd6 = -1
+	} else {
+		s.fd6 = fd6
+		if err := syscall.SetsockoptInt(s.fd6, syscall.SOL_SOCKET, unix.SO_MARK, mark); err != nil {
+			log.Warnf("Failed to set SO_MARK on IPv6 socket: %v", err)
+		}
 	}
-	s.fd6 = fd6
-
-	if err := syscall.SetsockoptInt(s.fd6, syscall.SOL_SOCKET, unix.SO_MARK, mark); err != nil {
-		log.Warnf("Failed to set SO_MARK on IPv6 socket: %v", err)
-	}
-
 	return s, nil
 }
 
@@ -64,6 +63,9 @@ func (s *Sender) SendIPv4(packet []byte, destIP net.IP) error {
 }
 
 func (s *Sender) SendIPv6(packet []byte, destIP net.IP) error {
+	if s.fd6 < 0 {
+		return nil
+	}
 	log.Tracef("Sending IPv6 packet to %s, len=%d", destIP.String(), len(packet))
 	addr := syscall.SockaddrInet6{}
 	copy(addr.Addr[:], destIP.To16())
