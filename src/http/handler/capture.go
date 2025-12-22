@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -23,6 +24,7 @@ func (api *API) RegisterCaptureApi() {
 	api.mux.HandleFunc("/api/capture/delete", api.handleDeleteCapture)
 	api.mux.HandleFunc("/api/capture/clear", api.handleClearCaptures)
 	api.mux.HandleFunc("/api/capture/download", api.handleDownloadCapture)
+	api.mux.HandleFunc("/api/capture/upload", api.handleUploadCapture)
 }
 
 // Trigger traffic to capture payload
@@ -218,4 +220,71 @@ func (api *API) handleDownloadCapture(w http.ResponseWriter, r *http.Request) {
 
 	http.ServeFile(w, r, absPath)
 	log.Tracef("Served capture file: %s", filename)
+}
+
+func (api *API) handleUploadCapture(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Max 64KB for a ClientHello
+	r.Body = http.MaxBytesReader(w, r.Body, 64*1024)
+
+	if err := r.ParseMultipartForm(64 * 1024); err != nil {
+		http.Error(w, "File too large (max 64KB)", http.StatusBadRequest)
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		http.Error(w, "File required", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	domain := r.FormValue("domain")
+	protocol := r.FormValue("protocol")
+
+	if domain == "" {
+		http.Error(w, "Domain required", http.StatusBadRequest)
+		return
+	}
+	if protocol == "" {
+		protocol = "tls"
+	}
+	if protocol != "tls" && protocol != "quic" {
+		http.Error(w, "Protocol must be 'tls' or 'quic'", http.StatusBadRequest)
+		return
+	}
+
+	domain = strings.ToLower(strings.TrimSpace(domain))
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		http.Error(w, "Failed to read file", http.StatusInternalServerError)
+		return
+	}
+
+	if len(data) == 0 {
+		http.Error(w, "Empty file", http.StatusBadRequest)
+		return
+	}
+
+	manager := capture.GetManager(api.cfg)
+	if err := manager.SaveUploadedCapture(protocol, domain, data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Infof("Uploaded %s capture for %s: %s (%d bytes)", protocol, domain, header.Filename, len(data))
+
+	setJsonHeader(w)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":  true,
+		"message":  fmt.Sprintf("Uploaded %s payload for %s", protocol, domain),
+		"size":     len(data),
+		"domain":   domain,
+		"protocol": protocol,
+	})
 }

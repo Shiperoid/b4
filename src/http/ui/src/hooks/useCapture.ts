@@ -1,8 +1,10 @@
-import { captureApi, Capture } from "@b4.capture";
+import { captureApi } from "@api/capture";
+import { Capture } from "@models/settings";
 import { useCallback, useState } from "react";
 
 export function useCaptures() {
   const [captures, setCaptures] = useState<Capture[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const loadCaptures = useCallback(async () => {
     try {
@@ -15,5 +17,62 @@ export function useCaptures() {
     }
   }, []);
 
-  return { captures, loadCaptures };
+  const probe = useCallback(async (domain: string, protocol: string) => {
+    setLoading(true);
+    try {
+      return await captureApi.probe(domain, protocol);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const deleteCapture = useCallback(
+    async (protocol: string, domain: string) => {
+      await captureApi.delete(protocol, domain);
+      await loadCaptures();
+    },
+    [loadCaptures]
+  );
+
+  const clearAll = useCallback(async () => {
+    await captureApi.clear();
+    await loadCaptures();
+  }, [loadCaptures]);
+
+  const upload = useCallback(
+    async (file: File, domain: string, protocol: string) => {
+      setLoading(true);
+      try {
+        const result = await captureApi.upload(file, domain, protocol);
+        await loadCaptures();
+        return result;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadCaptures]
+  );
+
+  const download = useCallback((capture: Capture) => {
+    const url = `/api/capture/download?file=${encodeURIComponent(
+      capture.filepath
+    )}`;
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `tls_${capture.domain.replace(/\./g, "_")}.bin`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, []);
+
+  return {
+    captures,
+    loading,
+    loadCaptures,
+    probe,
+    deleteCapture,
+    clearAll,
+    upload,
+    download,
+  };
 }

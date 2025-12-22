@@ -63,4 +63,5 @@ export {
   GitHub as GitHubIcon,
   KeyboardArrowDown as ArrowDownIcon,
   DeviceUnknown as DeviceUnknowIcon,
+  UploadFile as UploadIcon,
 } from "@mui/icons-material";

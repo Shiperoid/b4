@@ -439,3 +439,33 @@ func sanitizeDomain(domain string) string {
 	}
 	return result
 }
+
+func (m *Manager) SaveUploadedCapture(protocol, domain string, data []byte) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	domain = strings.ToLower(strings.TrimSpace(domain))
+	filename := fmt.Sprintf("%s_%s.bin", protocol, sanitizeDomain(domain))
+	filePath := filepath.Join(m.outputPath, filename)
+
+	if err := os.WriteFile(filePath, data, 0644); err != nil {
+		return fmt.Errorf("failed to save file: %v", err)
+	}
+
+	if m.metadata[domain] == nil {
+		m.metadata[domain] = make(map[string]*CaptureMetadata)
+	}
+
+	m.metadata[domain][protocol] = &CaptureMetadata{
+		Timestamp: time.Now(),
+		Size:      len(data),
+		Filepath:  filename,
+	}
+
+	if err := m.saveMetadata(); err != nil {
+		return fmt.Errorf("failed to save metadata: %v", err)
+	}
+
+	log.Infof("✓ Saved uploaded %s payload for %s (%d bytes)", protocol, domain, len(data))
+	return nil
+}

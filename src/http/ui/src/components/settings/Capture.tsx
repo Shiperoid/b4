@@ -7,10 +7,8 @@ import {
   Box,
   Paper,
   CircularProgress,
-  MenuItem,
   Tooltip,
   IconButton,
-  Chip,
 } from "@mui/material";
 import {
   CaptureIcon,
@@ -19,161 +17,113 @@ import {
   DownloadIcon,
   RefreshIcon,
   SuccessIcon,
+  UploadIcon,
 } from "@b4.icons";
 import { useSnackbar } from "@context/SnackbarProvider";
-import { B4Dialog, B4TextField, B4Section } from "@b4.elements";
+import { B4Dialog, B4TextField, B4Section, B4Alert } from "@b4.elements";
+import { useCaptures, Capture } from "@b4.capture";
 import { colors, radius } from "@design";
-import { B4Alert } from "@components/common/B4Alert";
-
-interface Capture {
-  protocol: string;
-  domain: string;
-  timestamp: string;
-  size: number;
-  filepath: string;
-  hex_data: string;
-}
 
 export const CaptureSettings = () => {
   const { showError, showSuccess } = useSnackbar();
-  const [captures, setCaptures] = useState<Capture[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [probeForm, setProbeForm] = useState({
-    domain: "",
-    protocol: "both",
-  });
+  const [probeForm, setProbeForm] = useState({ domain: "" });
+  const [uploadForm, setUploadForm] = useState<{
+    domain: string;
+    file: File | null;
+  }>({ domain: "", file: null });
 
-  const [hexDialog, setHexDialog] = useState<{
-    open: boolean;
-    capture: Capture | null;
-  }>({ open: false, capture: null });
+  const {
+    captures,
+    loading,
+    loadCaptures,
+    probe,
+    deleteCapture,
+    clearAll,
+    upload,
+    download,
+  } = useCaptures();
 
   useEffect(() => {
     void loadCaptures();
-  }, []);
+  }, [loadCaptures]);
 
-  const loadCaptures = async () => {
-    try {
-      const response = await fetch("/api/capture/list");
-      if (response.ok) {
-        const data = (await response.json()) as Capture[];
-        setCaptures(data);
-      }
-    } catch (error) {
-      console.error("Failed to load captures:", error);
+  useEffect(() => {
+    if (!uploadForm.domain && uploadForm.file) {
+      uploadForm.domain = uploadForm.file.name;
+      setUploadForm(uploadForm);
     }
-  };
+  }, [uploadForm]);
 
   const probeCapture = async () => {
     if (!probeForm.domain) return;
 
-    const capturedDomain = probeForm.domain; // Store for notification
-    setLoading(true);
+    const capturedDomain = probeForm.domain;
     showSuccess(
-      `Capturing enabled for ${capturedDomain}. Open https://${capturedDomain} in your browser to capture the payload.`
+      `Capturing enabled for ${capturedDomain}. Open https://${capturedDomain} in your browser.`
     );
 
     try {
-      if (probeForm.protocol === "both") {
-        await fetch("/api/capture/probe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ domain: probeForm.domain, protocol: "tls" }),
-        });
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        await fetch("/api/capture/probe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ domain: probeForm.domain, protocol: "quic" }),
-        });
-      } else {
-        await fetch("/api/capture/probe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(probeForm),
-        });
-      }
+      await probe(probeForm.domain, "tls");
 
-      // Poll for capture completion
       let attempts = 0;
       const maxAttempts = 10;
       const checkInterval = setInterval(() => {
         void (async () => {
           attempts++;
-          const response = await fetch("/api/capture/list");
-          if (response.ok) {
-            const data = (await response.json()) as Capture[];
-            const found = data.some((c) => c.domain === capturedDomain);
+          const list = await loadCaptures();
+          const found = list.some((c) => c.domain === capturedDomain);
 
-            if (found || attempts >= maxAttempts) {
-              clearInterval(checkInterval);
-              setCaptures(data);
-              setLoading(false);
-
-              if (found) {
-                showSuccess(
-                  `Successfully captured payload for ${capturedDomain}`
-                );
-                setProbeForm({ ...probeForm, domain: "" });
-              } else {
-                showError(
-                  `Capture timed out for ${capturedDomain}. Please try again.`
-                );
-              }
+          if (found || attempts >= maxAttempts) {
+            clearInterval(checkInterval);
+            if (found) {
+              showSuccess(`Captured payload for ${capturedDomain}`);
+              setProbeForm({ domain: "" });
+            } else {
+              showError(`Capture timed out for ${capturedDomain}`);
             }
           }
         })();
       }, 1000);
     } catch (error) {
       console.error("Failed to probe:", error);
-      setLoading(false);
       showError("Failed to initiate capture");
     }
   };
 
-  const deleteCapture = async (capture: Capture) => {
+  const handleDelete = async (capture: Capture) => {
     try {
-      await fetch(
-        `/api/capture/delete?protocol=${capture.protocol}&domain=${capture.domain}`,
-        { method: "DELETE" }
-      );
-      await loadCaptures();
-      showSuccess(
-        `Deleted ${capture.protocol.toUpperCase()} payload for ${
-          capture.domain
-        }`
-      );
-    } catch (error) {
-      console.error("Failed to delete:", error);
+      await deleteCapture(capture.protocol, capture.domain);
+      showSuccess(`Deleted ${capture.domain}`);
+    } catch {
+      showError("Failed to delete capture");
     }
   };
 
-  const clearAll = async () => {
+  const handleClear = async () => {
     if (!confirm("Delete all captured payloads?")) return;
-
     try {
-      await fetch("/api/capture/clear", { method: "POST" });
-      await loadCaptures();
+      await clearAll();
       showSuccess("All captures cleared");
     } catch {
       showError("Failed to clear captures");
     }
   };
 
-  const downloadCapture = (capture: Capture) => {
-    const url = `/api/capture/download?file=${encodeURIComponent(
-      capture.filepath
-    )}`;
+  const [hexDialog, setHexDialog] = useState<{
+    open: boolean;
+    capture: Capture | null;
+  }>({ open: false, capture: null });
 
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${capture.protocol}_${capture.domain.replace(
-      /\./g,
-      "_"
-    )}.bin`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const uploadCapture = async () => {
+    if (!uploadForm.file || !uploadForm.domain) return;
+
+    try {
+      await upload(uploadForm.file, uploadForm.domain.toLowerCase(), "tls");
+      showSuccess(`Uploaded payload for ${uploadForm.domain}`);
+      setUploadForm({ domain: "", file: null });
+    } catch {
+      showError("Failed to upload file");
+    }
   };
 
   const copyHex = (hexData: string) => {
@@ -181,127 +131,150 @@ export const CaptureSettings = () => {
     showSuccess("Hex data copied to clipboard");
   };
 
-  const capturesByDomain = captures.reduce((acc, capture) => {
-    if (!acc[capture.domain]) {
-      acc[capture.domain] = [];
-    }
-    acc[capture.domain].push(capture);
-    return acc;
-  }, {} as Record<string, Capture[]>);
-
-  const sortedDomains = Object.keys(capturesByDomain).sort();
-
   return (
     <Stack spacing={3}>
       {/* Info */}
       <B4Alert icon={<CaptureIcon />}>
         <Typography variant="subtitle2" gutterBottom>
-          Capture real TLS/QUIC handshakes for custom payload generation
+          Capture real TLS ClientHello for custom payload generation
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          One capture per domain+protocol. Use captured hex in Faking → Custom
-          Payload
+          One capture per domain. Use in Faking → Captured Payload
         </Typography>
       </B4Alert>
 
-      {/* Capture Form */}
-      <B4Section
-        title="Capture Payload"
-        description="Probe domain to capture its TLS ClientHello or QUIC Initial packet"
-        icon={<CaptureIcon />}
-      >
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, md: 5 }}>
-            <B4TextField
-              label="Domain"
-              value={probeForm.domain}
-              onChange={(e) =>
-                setProbeForm({
-                  ...probeForm,
-                  domain: e.target.value.toLowerCase(),
-                })
-              }
-              onKeyPress={(e) => {
-                if (e.key === "Enter" && !loading && probeForm.domain) {
-                  void probeCapture();
+      {/* Upload + Capture side by side */}
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <B4Section
+            title="Upload Custom Payload"
+            description="Upload your own binary payload file (max 64KB)"
+            icon={<UploadIcon />}
+          >
+            <Stack spacing={2}>
+              <B4TextField
+                label="Name/Domain"
+                value={uploadForm.domain}
+                onChange={(e) =>
+                  setUploadForm({
+                    ...uploadForm,
+                    domain: e.target.value.toLowerCase(),
+                  })
                 }
-              }}
-              placeholder="youtube.com"
-              helperText="Enter domain to capture from"
-              disabled={loading}
-            />
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 3 }}>
-            <B4TextField
-              select
-              label="Protocol"
-              value={probeForm.protocol}
-              onChange={(e) =>
-                setProbeForm({ ...probeForm, protocol: e.target.value })
-              }
-              disabled={loading}
-            >
-              <MenuItem value="both">Both TLS & QUIC</MenuItem>
-              <MenuItem value="tls">TLS Only</MenuItem>
-              <MenuItem value="quic">QUIC Only</MenuItem>
-            </B4TextField>
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 2 }}>
-            <Button
-              fullWidth
-              variant="contained"
-              startIcon={
-                loading ? <CircularProgress size={16} /> : <CaptureIcon />
-              }
-              onClick={() => void probeCapture()}
-              disabled={loading || !probeForm.domain}
-            >
-              {loading ? "Capturing..." : "Capture"}
-            </Button>
-          </Grid>
-
-          <Grid size={{ xs: 12, md: 2 }}>
-            <Stack direction="row" spacing={1}>
-              <Tooltip title="Refresh list">
-                <IconButton
-                  onClick={() => void loadCaptures()}
+                placeholder="youtube.com"
+                helperText="Name associated with the uploaded payload"
+                disabled={loading}
+              />
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Button
+                  component="label"
+                  color="secondary"
+                  variant="outlined"
                   disabled={loading}
+                  sx={{ flexShrink: 0 }}
                 >
-                  <RefreshIcon />
-                </IconButton>
-              </Tooltip>
-              {captures.length > 0 && (
-                <Tooltip title="Clear all captures">
-                  <IconButton
-                    onClick={() => void clearAll()}
-                    color="error"
-                    disabled={loading}
-                  >
-                    <ClearIcon />
-                  </IconButton>
-                </Tooltip>
-              )}
+                  {uploadForm.file ? uploadForm.file.name : "Choose File..."}
+                  <input
+                    type="file"
+                    hidden
+                    accept=".bin,application/octet-stream"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      setUploadForm({ ...uploadForm, file });
+                    }}
+                  />
+                </Button>
+                {uploadForm.file && (
+                  <Typography variant="caption" color="text.secondary">
+                    {uploadForm.file.size} bytes
+                  </Typography>
+                )}
+                <Button
+                  variant="contained"
+                  startIcon={
+                    loading ? <CircularProgress size={16} /> : <UploadIcon />
+                  }
+                  onClick={() => void uploadCapture()}
+                  disabled={loading || !uploadForm.file || !uploadForm.domain}
+                >
+                  {loading ? "Uploading..." : "Upload"}
+                </Button>
+              </Stack>
             </Stack>
-          </Grid>
+          </B4Section>
         </Grid>
 
-        {loading && (
-          <B4Alert>
-            <Typography variant="subtitle2" gutterBottom>
-              Capture window is open for {probeForm.domain}
-            </Typography>
-            <Typography variant="caption">
-              Please open https://{probeForm.domain} in your browser within 30
-              seconds
-            </Typography>
-          </B4Alert>
-        )}
-      </B4Section>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <B4Section
+            title="Capture Payload"
+            description="Probe domain to capture its TLS ClientHello"
+            icon={<CaptureIcon />}
+          >
+            <Stack spacing={2}>
+              <B4TextField
+                label="Domain"
+                value={probeForm.domain}
+                onChange={(e) =>
+                  setProbeForm({ domain: e.target.value.toLowerCase() })
+                }
+                onKeyPress={(e) => {
+                  if (e.key === "Enter" && !loading && probeForm.domain) {
+                    void probeCapture();
+                  }
+                }}
+                placeholder="youtube.com"
+                helperText="Enter domain to capture from"
+                disabled={loading}
+              />
+              <Stack direction="row" spacing={1}>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  startIcon={
+                    loading ? <CircularProgress size={16} /> : <CaptureIcon />
+                  }
+                  onClick={() => void probeCapture()}
+                  disabled={loading || !probeForm.domain}
+                >
+                  {loading ? "Capturing..." : "Capture"}
+                </Button>
+                <Tooltip title="Refresh list">
+                  <IconButton
+                    onClick={() => void loadCaptures()}
+                    disabled={loading}
+                  >
+                    <RefreshIcon />
+                  </IconButton>
+                </Tooltip>
+                {captures.length > 0 && (
+                  <Tooltip title="Clear all captures">
+                    <IconButton
+                      onClick={() => void handleClear()}
+                      color="error"
+                      disabled={loading}
+                    >
+                      <ClearIcon />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Stack>
+              {loading && (
+                <B4Alert>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Capture window is open for {probeForm.domain}
+                  </Typography>
+                  <Typography variant="caption">
+                    Open https://{probeForm.domain} in your browser within 30s
+                  </Typography>
+                </B4Alert>
+              )}
+            </Stack>
+          </B4Section>
+        </Grid>
+      </Grid>
 
-      {/* Captured Payloads */}
-      {sortedDomains.length > 0 && (
+      {/* Captured Payloads - Flat grid like SetCards */}
+      {captures.length > 0 && (
         <B4Section
           title="Captured Payloads"
           description={`${captures.length} payload${
@@ -309,113 +282,21 @@ export const CaptureSettings = () => {
           } ready for use`}
           icon={<DownloadIcon />}
         >
-          <Stack spacing={2}>
-            {sortedDomains.map((domain) => (
-              <Paper
-                key={domain}
-                elevation={0}
-                sx={{
-                  p: 2,
-                  border: `1px solid ${colors.border.default}`,
-                  borderRadius: radius.md,
-                }}
+          <Grid container spacing={3}>
+            {captures.map((capture) => (
+              <Grid
+                key={`${capture.protocol}:${capture.domain}`}
+                size={{ xs: 12, sm: 6, lg: 4, xl: 3 }}
               >
-                <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-                  {domain}
-                </Typography>
-
-                <Grid container spacing={1}>
-                  {capturesByDomain[domain]
-                    .sort((a, b) => a.protocol.localeCompare(b.protocol))
-                    .map((capture) => (
-                      <Grid
-                        size={{ xs: 12, sm: 6, md: 4 }}
-                        key={`${capture.protocol}:${capture.domain}`}
-                      >
-                        <Paper
-                          elevation={0}
-                          sx={{
-                            p: 1.5,
-                            border: `1px solid ${colors.border.light}`,
-                            borderRadius: radius.sm,
-                            transition: "all 0.2s",
-                            "&:hover": {
-                              borderColor: colors.secondary,
-                              transform: "translateY(-1px)",
-                            },
-                          }}
-                        >
-                          <Stack spacing={1}>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                              }}
-                            >
-                              <Chip
-                                label={capture.protocol.toUpperCase()}
-                                size="small"
-                                sx={{
-                                  bgcolor:
-                                    capture.protocol === "tls"
-                                      ? colors.accent.primary
-                                      : colors.accent.secondary,
-                                  color: colors.text.primary,
-                                }}
-                              />
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                {capture.size} bytes
-                              </Typography>
-                            </Box>
-
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {new Date(capture.timestamp).toLocaleString()}
-                            </Typography>
-
-                            <Stack direction="row" spacing={0.5}>
-                              <Tooltip title="View/Copy hex data">
-                                <IconButton
-                                  size="small"
-                                  onClick={() =>
-                                    setHexDialog({ open: true, capture })
-                                  }
-                                >
-                                  <CopyIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Download binary">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => downloadCapture(capture)}
-                                >
-                                  <DownloadIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Delete">
-                                <IconButton
-                                  size="small"
-                                  onClick={() => void deleteCapture(capture)}
-                                  sx={{ color: colors.quaternary }}
-                                >
-                                  <ClearIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            </Stack>
-                          </Stack>
-                        </Paper>
-                      </Grid>
-                    ))}
-                </Grid>
-              </Paper>
+                <CaptureCard
+                  capture={capture}
+                  onViewHex={() => setHexDialog({ open: true, capture })}
+                  onDownload={() => download(capture)}
+                  onDelete={() => void handleDelete(capture)}
+                />
+              </Grid>
             ))}
-          </Stack>
+          </Grid>
         </B4Section>
       )}
 
@@ -468,8 +349,8 @@ export const CaptureSettings = () => {
         {hexDialog.capture && (
           <Stack spacing={2}>
             <B4Alert icon={<SuccessIcon />}>
-              {hexDialog.capture.protocol.toUpperCase()} payload for{" "}
-              {hexDialog.capture.domain} • {hexDialog.capture.size} bytes
+              TLS payload for {hexDialog.capture.domain} •{" "}
+              {hexDialog.capture.size} bytes
             </B4Alert>
             <Box
               sx={{
@@ -490,5 +371,101 @@ export const CaptureSettings = () => {
         )}
       </B4Dialog>
     </Stack>
+  );
+};
+
+// Card component styled like SetCard
+interface CaptureCardProps {
+  capture: Capture;
+  onViewHex: () => void;
+  onDownload: () => void;
+  onDelete: () => void;
+}
+
+const CaptureCard = ({
+  capture,
+  onViewHex,
+  onDownload,
+  onDelete,
+}: CaptureCardProps) => {
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        p: 2,
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        border: `1px solid ${colors.border.default}`,
+        borderRadius: radius.md,
+        transition: "all 0.2s ease",
+        "&:hover": {
+          borderColor: colors.secondary,
+          transform: "translateY(-2px)",
+          boxShadow: `0 4px 12px ${colors.accent.primary}40`,
+        },
+      }}
+    >
+      {/* Header */}
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="flex-start"
+        mb={1}
+      >
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography
+            variant="subtitle1"
+            fontWeight={600}
+            sx={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {capture.domain}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {capture.size.toLocaleString()} bytes
+          </Typography>
+        </Box>
+        <CaptureIcon sx={{ color: colors.secondary, fontSize: 20, ml: 1 }} />
+      </Stack>
+
+      {/* Timestamp */}
+      <Typography variant="caption" color="text.secondary" sx={{ mb: 2 }}>
+        {new Date(capture.timestamp).toLocaleString()}
+      </Typography>
+
+      {/* Spacer */}
+      <Box sx={{ flex: 1 }} />
+
+      {/* Actions */}
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          pt: 2,
+          borderTop: `1px solid ${colors.border.light}`,
+        }}
+      >
+        <Tooltip title="View/Copy hex">
+          <IconButton size="small" onClick={onViewHex}>
+            <CopyIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="Download .bin">
+          <IconButton size="small" onClick={onDownload}>
+            <DownloadIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        <Box sx={{ flex: 1 }} />
+        <Tooltip title="Delete">
+          <IconButton size="small" onClick={onDelete}>
+            <ClearIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+    </Paper>
   );
 };
