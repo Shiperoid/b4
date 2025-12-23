@@ -314,7 +314,8 @@ check_dependencies() {
             install_packages "$missing_required" || exit 1
         else
             printf "${CYAN}Attempt to install? (Y/n): ${NC}"
-            read answer
+            read answer </dev/tty || answer="y"
+
             case "$answer" in
             [nN] | [nN][oO]) exit 1 ;;
             *) install_packages "$missing_required" || exit 1 ;;
@@ -349,7 +350,8 @@ check_recommended_packages() {
             return 0
         }
         printf "${CYAN}Install recommended packages? (Y/n): ${NC}"
-        read answer
+        read answer </dev/tty || answer="y"
+
         case "$answer" in
         [nN] | [nN][oO]) return 0 ;;
         *) install_packages "$missing" ;;
@@ -379,7 +381,8 @@ check_recommended_packages() {
     fi
 
     printf "${CYAN}Install missing packages? (Y/n): ${NC}"
-    read answer
+    read answer </dev/tty || answer="y"
+
     case "$answer" in
     [nN] | [nN][oO]) print_warning "B4 may not function correctly" ;;
     *)
@@ -950,7 +953,7 @@ select_geo_source() {
 
     echo "" >&2
     printf "${CYAN}Select source (1-5) or 'q' to skip: ${NC}" >&2
-    read choice
+    read choice </dev/tty || choice="q"
 
     case "$choice" in
     [qQ] | [qQ][uU][iI][tT])
@@ -1135,7 +1138,7 @@ setup_geodat() {
         fi
 
         printf "${CYAN}Do you want to download geosite.dat & geoip.dat files? (y/N): ${NC}"
-        read answer
+        read answer </dev/tty || answer="n"
     else
         answer="y"
     fi
@@ -1171,7 +1174,7 @@ setup_geodat() {
             else
                 echo ""
                 printf "${CYAN}Save directory [${default_dir}]: ${NC}"
-                read geosite_dst_dir
+                read geosite_dst_dir </dev/tty || geosite_dst_dir="$default_dir"
 
                 if [ -z "$geosite_dst_dir" ]; then
                     geosite_dst_dir="$default_dir"
@@ -1429,7 +1432,7 @@ main_install() {
         print_success "Installation finished successfully!"
         echo ""
         printf "${CYAN}Start B4 service now? (Y/n): ${NC}"
-        read answer
+        read answer </dev/tty || answer="y"
 
         if [ -z "$answer" ]; then
             answer="y"
@@ -1540,7 +1543,8 @@ remove_b4() {
 
     # Ask about configuration ONCE
     printf "${CYAN}Remove configuration files as well? (y/N): ${NC}"
-    read answer
+    read answer </dev/tty || answer="n"
+
     case "$answer" in
     [yY] | [yY][eE][sS])
         print_info "Removing configuration directory: $CONFIG_DIR"

@@ -254,7 +254,8 @@ check_dependencies() {
             install_packages "$missing_required" || exit 1
         else
             printf "${CYAN}Attempt to install? (Y/n): ${NC}"
-            read answer
+            read answer </dev/tty || answer="y"
+
             case "$answer" in
             [nN] | [nN][oO]) exit 1 ;;
             *) install_packages "$missing_required" || exit 1 ;;
@@ -289,7 +290,8 @@ check_recommended_packages() {
             return 0
         }
         printf "${CYAN}Install recommended packages? (Y/n): ${NC}"
-        read answer
+        read answer </dev/tty || answer="y"
+
         case "$answer" in
         [nN] | [nN][oO]) return 0 ;;
         *) install_packages "$missing" ;;
@@ -319,7 +321,8 @@ check_recommended_packages() {
     fi
 
     printf "${CYAN}Install missing packages? (Y/n): ${NC}"
-    read answer
+    read answer </dev/tty || answer="y"
+
     case "$answer" in
     [nN] | [nN][oO]) print_warning "B4 may not function correctly" ;;
     *)

@@ -223,7 +223,7 @@ main_install() {
         print_success "Installation finished successfully!"
         echo ""
         printf "${CYAN}Start B4 service now? (Y/n): ${NC}"
-        read answer
+        read answer </dev/tty || answer="y"
 
         if [ -z "$answer" ]; then
             answer="y"

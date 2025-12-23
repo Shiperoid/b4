@@ -79,7 +79,8 @@ remove_b4() {
 
     # Ask about configuration ONCE
     printf "${CYAN}Remove configuration files as well? (y/N): ${NC}"
-    read answer
+    read answer </dev/tty || answer="n"
+
     case "$answer" in
     [yY] | [yY][eE][sS])
         print_info "Removing configuration directory: $CONFIG_DIR"

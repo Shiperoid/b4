@@ -29,7 +29,7 @@ select_geo_source() {
 
     echo "" >&2
     printf "${CYAN}Select source (1-5) or 'q' to skip: ${NC}" >&2
-    read choice
+    read choice </dev/tty || choice="q"
 
     case "$choice" in
     [qQ] | [qQ][uU][iI][tT])
@@ -214,7 +214,7 @@ setup_geodat() {
         fi
 
         printf "${CYAN}Do you want to download geosite.dat & geoip.dat files? (y/N): ${NC}"
-        read answer
+        read answer </dev/tty || answer="n"
     else
         answer="y"
     fi
@@ -250,7 +250,7 @@ setup_geodat() {
             else
                 echo ""
                 printf "${CYAN}Save directory [${default_dir}]: ${NC}"
-                read geosite_dst_dir
+                read geosite_dst_dir </dev/tty || geosite_dst_dir="$default_dir"
 
                 if [ -z "$geosite_dst_dir" ]; then
                     geosite_dst_dir="$default_dir"
