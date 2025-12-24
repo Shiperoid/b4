@@ -187,6 +187,8 @@ func NewSetConfig() SetConfig {
 	cfg.Targets.IPs = append(make([]string, 0), DefaultSetConfig.Targets.IPs...)
 	cfg.Targets.GeoSiteCategories = append(make([]string, 0), DefaultSetConfig.Targets.GeoSiteCategories...)
 	cfg.Targets.GeoIpCategories = append(make([]string, 0), DefaultSetConfig.Targets.GeoIpCategories...)
+	cfg.Fragmentation.Overlap.FakeSNIs = append(make([]string, 0), DefaultSetConfig.Fragmentation.Overlap.FakeSNIs...)
+	cfg.Fragmentation.SeqOverlapPattern = append(make([]string, 0), DefaultSetConfig.Fragmentation.SeqOverlapPattern...)
 
 	return cfg
 }

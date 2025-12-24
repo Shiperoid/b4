@@ -701,7 +701,9 @@ func (w *Worker) sendIPFragments(cfg *config.SetConfig, packet []byte, dst net.I
 	splitPos = payloadStart + splitPos
 
 	// Align to 8-byte boundary (IP fragmentation requirement)
-	splitPos = (splitPos + 7) &^ 7
+	dataLen := splitPos - ipHdrLen
+	dataLen = (dataLen + 7) &^ 7
+	splitPos = ipHdrLen + dataLen
 
 	minSplitPos := ipHdrLen + 8
 	if splitPos < minSplitPos {
@@ -710,6 +712,9 @@ func (w *Worker) sendIPFragments(cfg *config.SetConfig, packet []byte, dst net.I
 
 	if splitPos >= len(packet) {
 		splitPos = len(packet) - 8
+		dataLen := splitPos - ipHdrLen
+		dataLen = dataLen &^ 7
+		splitPos = ipHdrLen + dataLen
 		if splitPos < minSplitPos {
 			_ = w.sock.SendIPv4(packet, dst)
 			return

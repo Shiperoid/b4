@@ -292,13 +292,14 @@ func (w *Worker) sendIPFragmentsv6(cfg *config.SetConfig, packet []byte, dst net
 
 	// Align to 8 bytes (IPv6 fragmentation requirement)
 	adjustedSplit = (adjustedSplit + 7) &^ 7
-	if adjustedSplit < 8 {
-		adjustedSplit = 8
+	if adjustedSplit < tcpHdrLen {
+		adjustedSplit = (tcpHdrLen + 7) &^ 7
 	}
 
 	ipPayloadLen := len(packet) - ipv6HdrLen
 	if adjustedSplit >= ipPayloadLen {
 		adjustedSplit = ipPayloadLen - 8
+		adjustedSplit = adjustedSplit &^ 7
 		if adjustedSplit < 8 {
 			_ = w.sock.SendIPv6(packet, dst)
 			return

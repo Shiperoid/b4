@@ -110,6 +110,16 @@ func (c *Config) Validate() error {
 	}
 
 	for _, set := range c.Sets {
+
+		if len(set.Fragmentation.SeqOverlapPattern) > 0 {
+			set.Fragmentation.SeqOverlapBytes = make([]byte, len(set.Fragmentation.SeqOverlapPattern))
+			for i, s := range set.Fragmentation.SeqOverlapPattern {
+				s = strings.TrimPrefix(s, "0x")
+				b, _ := strconv.ParseUint(s, 16, 8)
+				set.Fragmentation.SeqOverlapBytes[i] = byte(b)
+			}
+		}
+
 		if set.Id == MAIN_SET_ID {
 			continue
 		}
@@ -120,14 +130,6 @@ func (c *Config) Validate() error {
 			set.UDP.ConnBytesLimit = c.MainSet.UDP.ConnBytesLimit
 		}
 
-		if len(set.Fragmentation.SeqOverlapPattern) > 0 {
-			set.Fragmentation.SeqOverlapBytes = make([]byte, len(set.Fragmentation.SeqOverlapPattern))
-			for i, s := range set.Fragmentation.SeqOverlapPattern {
-				s = strings.TrimPrefix(s, "0x")
-				b, _ := strconv.ParseUint(s, 16, 8)
-				set.Fragmentation.SeqOverlapBytes[i] = byte(b)
-			}
-		}
 	}
 
 	if len(c.MainSet.Targets.GeoSiteCategories) > 0 && c.System.Geo.GeoSitePath == "" {
@@ -288,8 +290,8 @@ func (set *SetConfig) ResetToDefaults() {
 	set.Faking.SNIMutation.FakeSNIs = make([]string, len(defaultSet.Faking.SNIMutation.FakeSNIs))
 	copy(set.Faking.SNIMutation.FakeSNIs, defaultSet.Faking.SNIMutation.FakeSNIs)
 
-	set.Fragmentation.Overlap.FakeSNIs = make([]string, len(defaultSet.Faking.SNIMutation.FakeSNIs))
-	copy(set.Faking.SNIMutation.FakeSNIs, defaultSet.Faking.SNIMutation.FakeSNIs)
+	set.Fragmentation.Overlap.FakeSNIs = make([]string, len(defaultSet.Fragmentation.Overlap.FakeSNIs))
+	copy(set.Fragmentation.Overlap.FakeSNIs, defaultSet.Fragmentation.Overlap.FakeSNIs)
 
 }
 

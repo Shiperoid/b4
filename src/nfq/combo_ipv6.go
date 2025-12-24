@@ -33,8 +33,6 @@ func (w *Worker) sendComboFragmentsV6(cfg *config.SetConfig, packet []byte, dst 
 			continue
 		}
 		seg := BuildSegmentV6(packet, pi, pi.Payload[prevEnd:splitPos], uint32(prevEnd))
-		ClearPSH(seg, pi.IPHdrLen)
-		sock.FixTCPChecksumV6(seg)
 		segments = append(segments, Segment{Data: seg, Seq: pi.Seq0 + uint32(prevEnd)})
 		prevEnd = splitPos
 	}
