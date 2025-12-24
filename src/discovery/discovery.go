@@ -53,10 +53,12 @@ type DiscoverySuite struct {
 
 func NewDiscoverySuite(input string, pool *nfq.Pool) *DiscoverySuite {
 
+	suite := NewCheckSuite(input)
 	return &DiscoverySuite{
-		CheckSuite: NewCheckSuite(input),
+		CheckSuite: suite,
 		pool:       pool,
 		domainResult: &DomainDiscoveryResult{
+			Domain:  suite.Domain,
 			Results: make(map[string]*DomainPresetResult),
 		},
 		workingPayloads: []PayloadTestResult{},
