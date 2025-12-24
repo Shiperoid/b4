@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Grid, Box, Stack } from "@mui/material";
+import { Grid, Box, Stack, Typography } from "@mui/material";
 import { SecurityIcon } from "@b4.icons";
 import { Link } from "react-router-dom";
 import {
@@ -240,6 +240,49 @@ export const FakingSettings = ({ config, onChange }: FakingSettingsProps) => {
               disabled={!config.faking.sni}
             />
           </Grid>
+          {/* TLS Mod Options - only show when payload has TLS structure */}
+          {config.faking.sni_type !== FakingPayloadType.RANDOM && (
+            <Grid size={{ xs: 12 }}>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Fake Packet TLS Modification
+              </Typography>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ display: "block", mb: 1 }}
+              >
+                Modify fake TLS ClientHello to improve bypass (zapret-style)
+              </Typography>
+              <Stack direction="row" spacing={2}>
+                <B4Switch
+                  label="Randomize TLS Random"
+                  checked={(config.faking.tls_mod || []).includes("rnd")}
+                  onChange={(checked: boolean) => {
+                    const current = config.faking.tls_mod || [];
+                    const next = checked
+                      ? [...current.filter((m) => m !== "rnd"), "rnd"]
+                      : current.filter((m) => m !== "rnd");
+                    onChange("faking.tls_mod", next);
+                  }}
+                  description="Replace 32-byte Random field in fake packets"
+                  disabled={!config.faking.sni}
+                />
+                <B4Switch
+                  label="Duplicate Session ID"
+                  checked={(config.faking.tls_mod || []).includes("dupsid")}
+                  onChange={(checked: boolean) => {
+                    const current = config.faking.tls_mod || [];
+                    const next = checked
+                      ? [...current.filter((m) => m !== "dupsid"), "dupsid"]
+                      : current.filter((m) => m !== "dupsid");
+                    onChange("faking.tls_mod", next);
+                  }}
+                  description="Copy Session ID from real ClientHello into fake"
+                  disabled={!config.faking.sni}
+                />
+              </Stack>
+            </Grid>
+          )}
         </Grid>
       </B4Section>
 

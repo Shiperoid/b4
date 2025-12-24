@@ -39,6 +39,7 @@ export interface FakingConfig {
   custom_payload: string;
   sni_mutation: SNIMutationConfig;
   payload_file: string;
+  tls_mod: string[];
 }
 export type FragmentationStrategy =
   | "tcp"

@@ -285,6 +285,8 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
         sni_seq_length: 1,
         sni_type: 2,
         custom_payload: "",
+        payload_file: "",
+        tls_mod: [] as string[],
         sni_mutation: {
           mode: "off",
           grease_count: 3,
