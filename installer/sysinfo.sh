@@ -63,7 +63,7 @@ get_network_info() {
 
 # Detect firewall backend
 detect_firewall_backend() {
-    if which nft >/dev/null 2>&1; then
+    if command_exists nft; then
         out=$(nft list tables 2>/dev/null || true)
         if [ -n "$out" ]; then
             echo "nftables"
@@ -72,7 +72,7 @@ detect_firewall_backend() {
     fi
 
     # Check for iptables
-    if which iptables >/dev/null 2>&1; then
+    if command_exists iptables; then
         out=$(iptables --version 2>/dev/null || true)
         if echo "$out" | grep -q "nf_tables"; then
             echo "iptables-nft"
@@ -139,8 +139,14 @@ show_system_info() {
     # Memory Info
     if [ -f /proc/meminfo ]; then
         mem_total=$(grep '^MemTotal:' /proc/meminfo | awk '{printf "%.0f MB", $2/1024}')
-        mem_free=$(grep '^MemFree:' /proc/meminfo | awk '{printf "%.0f MB", $2/1024}')
-        print_detail "Memory" "$mem_total (Free: $mem_free)"
+        mem_available=$(grep '^MemAvailable:' /proc/meminfo | awk '{printf "%.0f MB", $2/1024}')
+        if [ -n "$mem_available" ]; then
+            print_detail "Memory" "$mem_total (Available: $mem_available)"
+        else
+            # Fallback for older kernels without MemAvailable
+            mem_free=$(grep '^MemFree:' /proc/meminfo | awk '{printf "%.0f MB", $2/1024}')
+            print_detail "Memory" "$mem_total (Free: $mem_free)"
+        fi
     fi
 
     # B4 Installation Status
@@ -193,14 +199,51 @@ show_system_info() {
         sitedat_path=$(jq -r '.system.geo.sitedat_path // empty' "$CONFIG_FILE" 2>/dev/null)
         if [ -n "$sitedat_path" ] && [ "$sitedat_path" != "null" ] && [ -f "$sitedat_path" ]; then
             geosite_size=$(du -h "$sitedat_path" 2>/dev/null | cut -f1)
-            print_detail "Geosite Data" "$sitedat_path ($geosite_size)"
+            print_detail "geosite.dat" "$sitedat_path ($geosite_size)"
+        fi
+
+        ipdat_path=$(jq -r '.system.geo.ipdat_path // empty' "$CONFIG_FILE" 2>/dev/null)
+        if [ -n "$ipdat_path" ] && [ "$ipdat_path" != "null" ] && [ -f "$ipdat_path" ]; then
+            ipdat_size=$(du -h "$ipdat_path" 2>/dev/null | cut -f1)
+            print_detail "geoip.dat" "$ipdat_path ($ipdat_size)"
+        fi
+    fi
+
+    # Show process details if running
+    if ps 2>/dev/null | grep -v grep | grep -v "b4install" | grep -q "b4$\|b4[[:space:]]"; then
+        b4_pid=$(ps 2>/dev/null | grep -v grep | grep -v "b4install" | grep "b4$\|b4[[:space:]]" | awk '{print $1}' | head -1)
+        if [ -n "$b4_pid" ] && [ -d "/proc/$b4_pid" ]; then
+            # Memory usage
+            if [ -f "/proc/$b4_pid/status" ]; then
+                rss=$(grep '^VmRSS:' /proc/$b4_pid/status 2>/dev/null | awk '{printf "%.1f MB", $2/1024}')
+                [ -n "$rss" ] && print_detail "Memory Usage" "$rss (PID: $b4_pid)"
+            fi
+            # Uptime
+            if [ -f "/proc/$b4_pid/stat" ] && [ -f "/proc/uptime" ]; then
+                start_ticks=$(awk '{print $22}' /proc/$b4_pid/stat 2>/dev/null)
+                uptime_sec=$(awk '{print int($1)}' /proc/uptime 2>/dev/null)
+                hz=$(getconf CLK_TCK 2>/dev/null || echo 100)
+                if [ -n "$start_ticks" ] && [ -n "$uptime_sec" ]; then
+                    proc_uptime=$((uptime_sec - start_ticks / hz))
+                    days=$((proc_uptime / 86400))
+                    hours=$(((proc_uptime % 86400) / 3600))
+                    mins=$(((proc_uptime % 3600) / 60))
+                    if [ $days -gt 0 ]; then
+                        print_detail "Uptime" "${days}d ${hours}h ${mins}m"
+                    elif [ $hours -gt 0 ]; then
+                        print_detail "Uptime" "${hours}h ${mins}m"
+                    else
+                        print_detail "Uptime" "${mins}m"
+                    fi
+                fi
+            fi
         fi
     fi
 
     # Service Manager Detection
     print_header "Service Management"
 
-    if [ -f "/etc/systemd/system/b4.service" ] && which systemctl >/dev/null 2>&1; then
+    if [ -f "/etc/systemd/system/b4.service" ] && command_exists systemctl; then
         print_detail "Service Manager" "systemd"
         print_detail "Service File" "/etc/systemd/system/b4.service"
     elif [ -f "/opt/etc/init.d/S99b4" ]; then
@@ -220,7 +263,7 @@ show_system_info() {
     print_detail "Firewall Backend" "$firewall_backend"
 
     # Check for iptables
-    if which iptables >/dev/null 2>&1; then
+    if command_exists iptables; then
         iptables_version=$(iptables --version 2>&1 | head -1 | awk '{print $2}' | tr -d 'v')
         print_detail "iptables" "${GREEN}Available${NC} (v$iptables_version)"
 
@@ -233,7 +276,7 @@ show_system_info() {
     fi
 
     # Check for nftables
-    if which nft >/dev/null 2>&1; then
+    if command_exists nft; then
         nft_version=$(nft --version 2>&1 | awk '{print $2}' | tr -d 'v')
         print_detail "nftables" "${GREEN}Available${NC} (v$nft_version)"
 
@@ -246,7 +289,7 @@ show_system_info() {
     fi
 
     # Check for ip6tables
-    if which ip6tables >/dev/null 2>&1; then
+    if command_exists ip6tables; then
         print_detail "ip6tables" "${GREEN}Available${NC}"
     else
         print_detail "ip6tables" "${YELLOW}Not found${NC}"
@@ -263,6 +306,39 @@ show_system_info() {
     else
         print_detail "NFQueue Status" "${RED}Not available${NC}"
     fi
+
+    # Show queue stats if b4 is using queues
+    if [ -f /proc/net/netfilter/nfnetlink_queue ]; then
+        queue_stats=$(cat /proc/net/netfilter/nfnetlink_queue 2>/dev/null | grep -v "^#" | head -1)
+        if [ -n "$queue_stats" ]; then
+            queue_id=$(echo "$queue_stats" | awk '{print $1}')
+            queue_dropped=$(echo "$queue_stats" | awk '{print $5}')
+            print_detail "Queue ID" "$queue_id"
+            if [ "$queue_dropped" != "0" ]; then
+                print_detail "Queue Drops" "${YELLOW}$queue_dropped${NC}"
+            fi
+        fi
+    fi
+
+    print_header "Network Interfaces"
+
+    # WAN interface (common names)
+    # for iface in eth0 wan0 ppp0 vlan2; do
+    #     if [ -d "/sys/class/net/$iface" ]; then
+    #         ip_addr=$(ip -4 addr show "$iface" 2>/dev/null | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1 | head -1)
+    #         [ -n "$ip_addr" ] && print_detail "WAN ($iface)" "$ip_addr"
+    #         break
+    #     fi
+    # done
+
+    # LAN interface
+    for iface in br0 br-lan eth1 lan0; do
+        if [ -d "/sys/class/net/$iface" ]; then
+            ip_addr=$(ip -4 addr show "$iface" 2>/dev/null | grep 'inet ' | awk '{print $2}' | cut -d'/' -f1 | head -1)
+            [ -n "$ip_addr" ] && print_detail "LAN ($iface)" "$ip_addr"
+            break
+        fi
+    done
 
     # Kernel Modules
     print_header "Kernel Modules"

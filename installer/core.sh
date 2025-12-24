@@ -112,25 +112,24 @@ print_web_interface_info() {
         print_info "Local network access (LAN):"
         printf "        ${GREEN}http://%s:%s${NC}\n" "$lan_ip" "$web_port"
         printf "        (remember to start the service first)\n"
-        echo ""
     fi
 
-    # Get external IP
-    print_info "Checking external IP address..."
-    external_ip=""
+    # # Get external IP
+    # print_info "Checking external IP address..."
+    # external_ip=""
 
-    if command_exists curl; then
-        external_ip=$(curl -s --max-time 3 ifconfig.me 2>/dev/null || true)
-    elif command_exists wget; then
-        external_ip=$(wget -qO- --timeout=3 ifconfig.me 2>/dev/null || true)
-    fi
+    # if command_exists curl; then
+    #     external_ip=$(curl -s --max-time 3 ifconfig.me 2>/dev/null || true)
+    # elif command_exists wget; then
+    #     external_ip=$(wget -qO- --timeout=3 ifconfig.me 2>/dev/null || true)
+    # fi
 
-    # Print external access if different from LAN
-    if [ -n "$external_ip" ] && [ "$external_ip" != "$lan_ip" ]; then
-        print_info "External access (WAN, if port ${web_port} is forwarded):"
-        printf "        ${GREEN}http://%s:%s${NC}\n" "$external_ip" "$web_port"
-        print_warning "Note: Ensure port ${web_port} is open in your firewall"
-    fi
+    # # Print external access if different from LAN
+    # if [ -n "$external_ip" ] && [ "$external_ip" != "$lan_ip" ]; then
+    #     print_info "External access (WAN, if port ${web_port} is forwarded):"
+    #     printf "        ${GREEN}http://%s:%s${NC}\n" "$external_ip" "$web_port"
+    #     print_warning "Note: Ensure port ${web_port} is open in your firewall"
+    # fi
 
     echo ""
 }
