@@ -9,8 +9,6 @@ import (
 	"github.com/daniellavrushin/b4/utils"
 )
 
-// sendDisorderFragments - splits and sends in random order without any faking
-// DPI expects sequential data; this exploits that assumption
 func (w *Worker) sendDisorderFragments(cfg *config.SetConfig, packet []byte, dst net.IP) {
 	disorder := &cfg.Fragmentation.Disorder
 	pi, ok := ExtractPacketInfoV4(packet)
@@ -26,19 +24,32 @@ func (w *Worker) sendDisorderFragments(cfg *config.SetConfig, packet []byte, dst
 
 	validSplits := BuildValidSplits(splits, pi.PayloadLen)
 
+	seqovlPattern := cfg.Fragmentation.SeqOverlapBytes
+	seqovlLen := len(seqovlPattern)
+
 	segments := make([]Segment, 0, len(validSplits)-1)
 	for i := 0; i < len(validSplits)-1; i++ {
 		start, end := validSplits[i], validSplits[i+1]
-		seg := BuildSegmentV4(packet, pi, pi.Payload[start:end], uint32(start), uint16(i))
-		if i < len(validSplits)-2 {
-			ClearPSH(seg, pi.IPHdrLen)
-			sock.FixTCPChecksum(seg)
+		realPayload := pi.Payload[start:end]
+
+		if i == 1 && seqovlLen > 0 && seqovlLen < start {
+			seg := BuildSegmentWithOverlapV4(packet, pi, realPayload, uint32(start), uint16(i), seqovlPattern)
+			if i < len(validSplits)-2 {
+				ClearPSH(seg, pi.IPHdrLen)
+				sock.FixTCPChecksum(seg)
+			}
+			segments = append(segments, Segment{Data: seg, Seq: pi.Seq0 + uint32(start) - uint32(seqovlLen)})
+		} else {
+			seg := BuildSegmentV4(packet, pi, realPayload, uint32(start), uint16(i))
+			if i < len(validSplits)-2 {
+				ClearPSH(seg, pi.IPHdrLen)
+				sock.FixTCPChecksum(seg)
+			}
+			segments = append(segments, Segment{Data: seg, Seq: pi.Seq0 + uint32(start)})
 		}
-		segments = append(segments, Segment{Data: seg, Seq: pi.Seq0 + uint32(start)})
 	}
 
 	r := utils.NewRand()
-
 	ShuffleSegments(segments, cfg.Fragmentation.Disorder.ShuffleMode, r)
 
 	minJitter, maxJitter := GetDisorderJitter(disorder)

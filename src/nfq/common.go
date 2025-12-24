@@ -322,3 +322,24 @@ func BuildValidSplits(splits []int, payloadLen int) []int {
 	validSplits = append(validSplits, payloadLen)
 	return validSplits
 }
+
+func BuildSegmentWithOverlapV4(packet []byte, pi PacketInfo, payloadSlice []byte, seqOffset uint32, idOffset uint16, overlapPattern []byte) []byte {
+	overlapLen := len(overlapPattern)
+	totalPayload := make([]byte, overlapLen+len(payloadSlice))
+	copy(totalPayload[:overlapLen], overlapPattern)
+	copy(totalPayload[overlapLen:], payloadSlice)
+
+	segLen := pi.PayloadStart + len(totalPayload)
+	seg := make([]byte, segLen)
+	copy(seg[:pi.PayloadStart], packet[:pi.PayloadStart])
+	copy(seg[pi.PayloadStart:], totalPayload)
+
+	newSeq := pi.Seq0 + seqOffset - uint32(overlapLen)
+	binary.BigEndian.PutUint32(seg[pi.IPHdrLen+4:pi.IPHdrLen+8], newSeq)
+	binary.BigEndian.PutUint16(seg[4:6], pi.ID0+idOffset)
+	binary.BigEndian.PutUint16(seg[2:4], uint16(segLen))
+
+	sock.FixIPv4Checksum(seg[:pi.IPHdrLen])
+	sock.FixTCPChecksum(seg)
+	return seg
+}

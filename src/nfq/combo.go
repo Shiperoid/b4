@@ -28,20 +28,32 @@ func (w *Worker) sendComboFragments(cfg *config.SetConfig, packet []byte, dst ne
 		splits = []int{pi.PayloadLen / 2}
 	}
 
+	seqovlPattern := cfg.Fragmentation.SeqOverlapBytes
+	seqovlLen := len(seqovlPattern)
+
 	segments := make([]Segment, 0, len(splits)+1)
 	prevEnd := 0
+	segIdx := 0
 
-	for i, splitPos := range splits {
+	for _, splitPos := range splits {
 		if splitPos <= prevEnd {
 			continue
 		}
-		seg := BuildSegmentV4(packet, pi, pi.Payload[prevEnd:splitPos], uint32(prevEnd), uint16(i))
-		segments = append(segments, Segment{Data: seg, Seq: pi.Seq0 + uint32(prevEnd)})
+		realPayload := pi.Payload[prevEnd:splitPos]
+
+		if segIdx == 0 && seqovlLen > 0 {
+			seg := BuildSegmentWithOverlapV4(packet, pi, realPayload, uint32(prevEnd), uint16(segIdx), seqovlPattern)
+			segments = append(segments, Segment{Data: seg, Seq: pi.Seq0 - uint32(seqovlLen)})
+		} else {
+			seg := BuildSegmentV4(packet, pi, realPayload, uint32(prevEnd), uint16(segIdx))
+			segments = append(segments, Segment{Data: seg, Seq: pi.Seq0 + uint32(prevEnd)})
+		}
 		prevEnd = splitPos
+		segIdx++
 	}
 
 	if prevEnd < pi.PayloadLen {
-		seg := BuildSegmentV4(packet, pi, pi.Payload[prevEnd:], uint32(prevEnd), uint16(len(segments)))
+		seg := BuildSegmentV4(packet, pi, pi.Payload[prevEnd:], uint32(prevEnd), uint16(segIdx))
 		segments = append(segments, Segment{Data: seg, Seq: pi.Seq0 + uint32(prevEnd)})
 	}
 

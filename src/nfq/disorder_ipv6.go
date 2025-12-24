@@ -9,7 +9,6 @@ import (
 	"github.com/daniellavrushin/b4/utils"
 )
 
-// sendDisorderFragmentsV6 - IPv6 version: splits and sends in random order
 func (w *Worker) sendDisorderFragmentsV6(cfg *config.SetConfig, packet []byte, dst net.IP) {
 	disorder := &cfg.Fragmentation.Disorder
 
@@ -26,15 +25,29 @@ func (w *Worker) sendDisorderFragmentsV6(cfg *config.SetConfig, packet []byte, d
 
 	validSplits := BuildValidSplits(splits, pi.PayloadLen)
 
+	seqovlPattern := cfg.Fragmentation.SeqOverlapBytes
+	seqovlLen := len(seqovlPattern)
+
 	segments := make([]Segment, 0, len(validSplits)-1)
 	for i := 0; i < len(validSplits)-1; i++ {
 		start, end := validSplits[i], validSplits[i+1]
-		seg := BuildSegmentV6(packet, pi, pi.Payload[start:end], uint32(start))
-		if i < len(validSplits)-2 {
-			ClearPSH(seg, pi.IPHdrLen)
-			sock.FixTCPChecksumV6(seg)
+		realPayload := pi.Payload[start:end]
+
+		if i == 1 && seqovlLen > 0 && seqovlLen < start {
+			seg := BuildSegmentWithOverlapV6(packet, pi, realPayload, uint32(start), seqovlPattern)
+			if i < len(validSplits)-2 {
+				ClearPSH(seg, pi.IPHdrLen)
+				sock.FixTCPChecksumV6(seg)
+			}
+			segments = append(segments, Segment{Data: seg, Seq: pi.Seq0 + uint32(start) - uint32(seqovlLen)})
+		} else {
+			seg := BuildSegmentV6(packet, pi, realPayload, uint32(start))
+			if i < len(validSplits)-2 {
+				ClearPSH(seg, pi.IPHdrLen)
+				sock.FixTCPChecksumV6(seg)
+			}
+			segments = append(segments, Segment{Data: seg, Seq: pi.Seq0 + uint32(start)})
 		}
-		segments = append(segments, Segment{Data: seg, Seq: pi.Seq0 + uint32(start)})
 	}
 
 	r := utils.NewRand()

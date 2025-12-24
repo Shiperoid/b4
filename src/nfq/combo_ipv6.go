@@ -25,16 +25,28 @@ func (w *Worker) sendComboFragmentsV6(cfg *config.SetConfig, packet []byte, dst 
 		splits = []int{pi.PayloadLen / 2}
 	}
 
+	seqovlPattern := cfg.Fragmentation.SeqOverlapBytes
+	seqovlLen := len(seqovlPattern)
+
 	segments := make([]Segment, 0, len(splits)+1)
 	prevEnd := 0
+	segIdx := 0
 
 	for _, splitPos := range splits {
 		if splitPos <= prevEnd {
 			continue
 		}
-		seg := BuildSegmentV6(packet, pi, pi.Payload[prevEnd:splitPos], uint32(prevEnd))
-		segments = append(segments, Segment{Data: seg, Seq: pi.Seq0 + uint32(prevEnd)})
+		realPayload := pi.Payload[prevEnd:splitPos]
+
+		if segIdx == 0 && seqovlLen > 0 {
+			seg := BuildSegmentWithOverlapV6(packet, pi, realPayload, uint32(prevEnd), seqovlPattern)
+			segments = append(segments, Segment{Data: seg, Seq: pi.Seq0 - uint32(seqovlLen)})
+		} else {
+			seg := BuildSegmentV6(packet, pi, realPayload, uint32(prevEnd))
+			segments = append(segments, Segment{Data: seg, Seq: pi.Seq0 + uint32(prevEnd)})
+		}
 		prevEnd = splitPos
+		segIdx++
 	}
 
 	if prevEnd < pi.PayloadLen {
