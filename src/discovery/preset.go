@@ -96,6 +96,55 @@ func GetPhase1Presets() []ConfigPreset {
 			},
 		},
 
+		// 1c. Proven disorder config for aggressive DPI (Meta/Instagram style)
+		{
+			Name:        "proven-disorder",
+			Description: "Proven disorder combination with aggressive desync for Meta-style DPI",
+			Family:      FamilyNone,
+			Phase:       PhaseBaseline,
+			Priority:    1,
+			Config: config.SetConfig{
+				TCP: config.TCPConfig{
+					ConnBytesLimit: 19,
+					Seg2Delay:      20,
+					DropSACK:       true,
+					DesyncMode:     "ack",
+					DesyncTTL:      3,
+					DesyncCount:    15,
+				},
+				UDP: config.UDPConfig{
+					Mode:           "fake",
+					FakeSeqLength:  15,
+					FakeLen:        64,
+					FakingStrategy: "checksum",
+					FilterQUIC:     "parse",
+					FilterSTUN:     true,
+					ConnBytesLimit: 8,
+				},
+				Fragmentation: config.FragmentationConfig{
+					Strategy:          "disorder",
+					ReverseOrder:      true,
+					MiddleSNI:         true,
+					SNIPosition:       1,
+					SeqOverlapPattern: []string{"0x16", "0x03", "0x03", "0x00", "0x00"},
+					Disorder: config.DisorderFragConfig{
+						ShuffleMode: "full",
+						MinJitterUs: 500,
+						MaxJitterUs: 2100,
+					},
+				},
+				Faking: config.FakingConfig{
+					SNI:          true,
+					TTL:          8,
+					Strategy:     "pastseq",
+					SeqOffset:    1000000,
+					SNISeqLength: 12,
+					SNIType:      config.FakePayloadDefault2,
+					TLSMod:       []string{"rnd", "dupsid"},
+				},
+			},
+		},
+
 		// 2. TCP Frag + Fake (common combo)
 		{
 			Name:        "tcp-frag-fake",
@@ -872,6 +921,36 @@ func GetPhase2Presets(family StrategyFamily) []ConfigPreset {
 			})
 		}
 
+		// TLS header overlap pattern
+		tlsOverlapPatterns := [][]string{
+			{"0x16", "0x03", "0x03", "0x00", "0x00"}, // TLS record header
+			{"0x16", "0x03", "0x01", "0x00", "0x00"}, // TLS 1.0 variant
+		}
+		for i, pattern := range tlsOverlapPatterns {
+			presets = append(presets, ConfigPreset{
+				Name:     formatName("disorder-tlsovl%d", i+1),
+				Family:   FamilyDisorder,
+				Phase:    PhaseOptimize,
+				Priority: 100 + i,
+				Config: withTCP(withFragmentation(base, config.FragmentationConfig{
+					Strategy:          "disorder",
+					SeqOverlapPattern: pattern,
+					Disorder: config.DisorderFragConfig{
+						ShuffleMode: "full",
+						MinJitterUs: 500,
+						MaxJitterUs: 2100,
+					},
+				}), config.TCPConfig{
+					ConnBytesLimit: 19,
+					Seg2Delay:      20,
+					DropSACK:       true,
+					DesyncMode:     "ack",
+					DesyncTTL:      3,
+					DesyncCount:    15,
+				}),
+			})
+		}
+
 	case FamilyOverlap:
 		fakeSNISets := [][]string{
 			{"ya.ru", "vk.com", "mail.ru"},
@@ -1123,8 +1202,8 @@ func GetPhase2Presets(family StrategyFamily) []ConfigPreset {
 
 	case FamilyDesync:
 		modes := []string{"rst", "fin", "ack", "combo", "full"}
-		ttls := []uint8{1, 2, 3, 5}
-		counts := []int{2, 3, 5}
+		ttls := []uint8{1, 2, 3, 5, 8}
+		counts := []int{2, 5, 10, 15}
 
 		for _, mode := range modes {
 			for _, ttl := range ttls {

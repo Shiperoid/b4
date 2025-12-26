@@ -30,6 +30,7 @@ import { B4SetConfig } from "@models/config";
 import { DiscoveryAddDialog } from "./AddDialog";
 import { B4Alert, B4Badge, B4Section, B4TextField } from "@b4.elements";
 import { useSnackbar } from "@context/SnackbarProvider";
+import { DiscoveryLogPanel } from "./LogPanel";
 import {
   useDiscovery,
   StrategyFamily,
@@ -477,7 +478,9 @@ export const DiscoveryRunner = () => {
         )}
       </B4Section>
 
-      {/* Results */}
+      {/* Discovery Log Panel */}
+      <DiscoveryLogPanel running={running} />
+
       {/* Fingerprint Results - Show as soon as available */}
       {suite?.fingerprint && suite.fingerprint.type !== "none" && (
         <FingerprintDisplay fingerprint={suite.fingerprint} />

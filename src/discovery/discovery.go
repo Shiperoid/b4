@@ -78,22 +78,27 @@ func parseDiscoveryInput(input string) (domain string, testURL string) {
 		}
 	}
 
-	// Plain domain - construct default URL
 	return input, "https://" + input + "/"
 }
 
 func (ds *DiscoverySuite) RunDiscovery() {
+	log.SetDiscoveryActive(true)
+
+	log.DiscoveryLogf("═══════════════════════════════════════")
+	log.DiscoveryLogf("Starting discovery for domain: %s", ds.Domain)
+	log.DiscoveryLogf("═══════════════════════════════════════")
+
 	suitesMu.Lock()
 	activeSuites[ds.Id] = ds.CheckSuite
 	suitesMu.Unlock()
 
 	defer func() {
+		log.SetDiscoveryActive(false)
 		ds.EndTime = time.Now()
 	}()
 
 	ds.setStatus(CheckStatusRunning)
 
-	// Set initial estimate for UI progress display
 	phase1Count := len(GetPhase1Presets())
 	ds.CheckSuite.mu.Lock()
 	ds.TotalChecks = phase1Count
@@ -107,40 +112,49 @@ func (ds *DiscoverySuite) RunDiscovery() {
 		return
 	}
 
-	// Measure network baseline before any testing
 	ds.networkBaseline = ds.measureNetworkBaseline()
 
-	log.Infof("Starting discovery for domain: %s", ds.Domain)
+	log.DiscoveryLogf("Starting discovery for domain: %s", ds.Domain)
 
 	ds.setPhase(PhaseFingerprint)
 	fingerprint := ds.runFingerprinting()
 	ds.domainResult.Fingerprint = fingerprint
 
-	ds.setPhase(PhaseDNS) // Add PhaseDNS = "dns_detection" to types.go
+	if fingerprint != nil {
+		log.DiscoveryLogf("DPI Fingerprint: %s (confidence: %d%%)", fingerprint.Type, fingerprint.Confidence)
+		if fingerprint.BlockingMethod != BlockingNone {
+			log.DiscoveryLogf("  Blocking method: %s", fingerprint.BlockingMethod)
+		}
+		if fingerprint.OptimalTTL > 0 {
+			log.DiscoveryLogf("  Optimal TTL: %d", fingerprint.OptimalTTL)
+		}
+	}
+
+	ds.setPhase(PhaseDNS)
 	dnsResult := ds.runDNSDiscovery()
 	ds.domainResult.DNSResult = dnsResult
 
 	if dnsResult != nil && dnsResult.IsPoisoned {
 		if dnsResult.hasWorkingConfig() {
-			log.Infof("DNS poisoned - applying discovered DNS bypass for TCP testing")
+			log.DiscoveryLogf("DNS poisoned - applying discovered DNS bypass for TCP testing")
 			ds.applyDNSConfig(dnsResult)
 		} else if len(dnsResult.ExpectedIPs) > 0 {
-			log.Infof("DNS poisoned, no bypass - using direct IPs: %v", dnsResult.ExpectedIPs)
+			log.DiscoveryLogf("DNS poisoned, no bypass - using direct IPs: %v", dnsResult.ExpectedIPs)
 			ds.dnsResult = dnsResult
 		} else {
-			log.Warnf("DNS poisoned but no expected IP known - discovery may fail")
+			log.DiscoveryLogf("DNS poisoned but no expected IP known - discovery may fail")
 		}
 	}
 
 	if fingerprint != nil && fingerprint.Type == DPITypeNone {
-		log.Infof("Fingerprint suggests no DPI for %s - verifying with download test", ds.Domain)
+		log.DiscoveryLogf("Fingerprint suggests no DPI for %s - verifying with download test", ds.Domain)
 
 		baselinePreset := GetPhase1Presets()[0] // no-bypass preset
 		baselineResult := ds.testPreset(baselinePreset)
 		ds.storeResult(baselinePreset, baselineResult)
 
 		if baselineResult.Status == CheckStatusComplete {
-			log.Infof("Verified: no DPI detected for %s (%.2f KB/s)", ds.Domain, baselineResult.Speed/1024)
+			log.DiscoveryLogf("Verified: no DPI detected for %s (%.2f KB/s)", ds.Domain, baselineResult.Speed/1024)
 			ds.domainResult.BestPreset = "no-bypass"
 			ds.domainResult.BestSpeed = baselineResult.Speed
 			ds.domainResult.BestSuccess = true
@@ -150,7 +164,7 @@ func (ds *DiscoverySuite) RunDiscovery() {
 		}
 
 		// Fingerprint was wrong - DPI detected during transfer
-		log.Warnf("Fingerprint said no DPI but download failed: %s - continuing discovery", baselineResult.Error)
+		log.DiscoveryLogf("Fingerprint said no DPI but download failed: %s - continuing discovery", baselineResult.Error)
 		// Update fingerprint to reflect reality
 		fingerprint.Type = DPITypeUnknown
 		fingerprint.BlockingMethod = BlockingTimeout
@@ -176,7 +190,7 @@ func (ds *DiscoverySuite) RunDiscovery() {
 	ds.determineBest(baselineSpeed)
 
 	if baselineWorks {
-		log.Infof("Baseline succeeded for %s - no DPI bypass needed, skipping optimization", ds.Domain)
+		log.DiscoveryLogf("Baseline succeeded for %s - no DPI bypass needed, skipping optimization", ds.Domain)
 
 		ds.CheckSuite.mu.Lock()
 		ds.TotalChecks = 1
@@ -249,26 +263,23 @@ func (ds *DiscoverySuite) runPhase1(presets []ConfigPreset) ([]StrategyFamily, f
 	var workingFamilies []StrategyFamily
 	var baselineSpeed float64
 
-	log.Infof("Phase 1: Testing %d strategy families", len(presets))
+	log.DiscoveryLogf("Phase 1: Testing %d strategy families", len(presets))
 
-	// Test baseline first (index 0)
 	baselineResult := ds.testPreset(presets[0])
 	ds.storeResult(presets[0], baselineResult)
 
 	baselineWorks := baselineResult.Status == CheckStatusComplete
 	if baselineWorks {
 		baselineSpeed = baselineResult.Speed
-		log.Infof("  Baseline: SUCCESS (%.2f KB/s) - no DPI detected", baselineSpeed/1024)
+		log.DiscoveryLogf("✓ Baseline: SUCCESS (%.2f KB/s) - no DPI detected", baselineSpeed/1024)
 		return workingFamilies, baselineSpeed, true
 	}
 
-	log.Infof("  Baseline: FAILED - DPI bypass needed, testing strategies")
+	log.DiscoveryLogf("✗ Baseline: FAILED - DPI bypass needed, testing strategies")
 	ds.baselineFailed = true
 
-	// Test payload variants early (proven-combo and proven-combo-alt)
 	ds.detectWorkingPayloads(presets)
 
-	// Get non-baseline presets (skip baseline and the two proven-combo variants we already tested)
 	strategyPresets := ds.filterTestedPresets(presets)
 
 	baselineFailureMode := analyzeFailure(baselineResult)
@@ -276,10 +287,9 @@ func (ds *DiscoverySuite) runPhase1(presets []ConfigPreset) ([]StrategyFamily, f
 
 	if len(suggestedFamilies) > 0 {
 		strategyPresets = reorderByFamilies(strategyPresets, suggestedFamilies)
-		log.Infof("  Failure mode: %s - prioritizing: %v", baselineFailureMode, suggestedFamilies)
+		log.DiscoveryLogf("  Failure mode: %s - prioritizing: %v", baselineFailureMode, suggestedFamilies)
 	}
 
-	// Test each strategy with the best detected payload
 	for _, preset := range strategyPresets {
 		select {
 		case <-ds.cancel:
@@ -293,13 +303,12 @@ func (ds *DiscoverySuite) runPhase1(presets []ConfigPreset) ([]StrategyFamily, f
 		if result.Status == CheckStatusComplete {
 			if result.Speed > baselineSpeed*0.8 {
 				workingFamilies = append(workingFamilies, preset.Family)
-				log.Infof("  %s: SUCCESS (%.2f KB/s)", preset.Name, result.Speed/1024)
+				log.DiscoveryLogf("  ✓ %s: %.2f KB/s", preset.Name, result.Speed/1024)
 			} else {
-				log.Infof("  %s: SUCCESS but slower than baseline (%.2f vs %.2f KB/s)",
-					preset.Name, result.Speed/1024, baselineSpeed/1024)
+				log.DiscoveryLogf("  ~ %s: %.2f KB/s (slower than baseline)", preset.Name, result.Speed/1024)
 			}
 		} else {
-			log.Tracef("  %s: FAILED (%s)", preset.Name, result.Error)
+			log.DiscoveryLogf("  ✗ %s: %s", preset.Name, result.Error)
 		}
 	}
 
@@ -308,7 +317,7 @@ func (ds *DiscoverySuite) runPhase1(presets []ConfigPreset) ([]StrategyFamily, f
 
 // detectWorkingPayloads tests both payload types and determines which work
 func (ds *DiscoverySuite) detectWorkingPayloads(presets []ConfigPreset) {
-	log.Infof("  Testing payload variants...")
+	log.DiscoveryLogf("  Testing payload variants...")
 
 	// Find proven-combo and proven-combo-alt presets
 	var payload1Preset, payload2Preset *ConfigPreset
@@ -334,9 +343,9 @@ func (ds *DiscoverySuite) detectWorkingPayloads(presets []ConfigPreset) {
 			})
 
 			if result1.Status == CheckStatusComplete {
-				log.Infof("    Payload 1 (google): SUCCESS (%.2f KB/s)", result1.Speed/1024)
+				log.DiscoveryLogf("    Payload 1 (google): SUCCESS (%.2f KB/s)", result1.Speed/1024)
 			} else {
-				log.Infof("    Payload 1 (google): FAILED")
+				log.DiscoveryLogf("    Payload 1 (google): FAILED")
 			}
 		}
 	}
@@ -354,9 +363,9 @@ func (ds *DiscoverySuite) detectWorkingPayloads(presets []ConfigPreset) {
 			})
 
 			if result2.Status == CheckStatusComplete {
-				log.Infof("    Payload 2 (duckduckgo): SUCCESS (%.2f KB/s)", result2.Speed/1024)
+				log.DiscoveryLogf("    Payload 2 (duckduckgo): SUCCESS (%.2f KB/s)", result2.Speed/1024)
 			} else {
-				log.Infof("    Payload 2 (duckduckgo): FAILED")
+				log.DiscoveryLogf("    Payload 2 (duckduckgo): FAILED")
 			}
 		}
 	}
@@ -383,19 +392,19 @@ func (ds *DiscoverySuite) selectBestPayload() {
 
 	switch workingCount {
 	case 0:
-		log.Infof("  Neither payload worked in baseline - will test both during discovery")
+		log.DiscoveryLogf("  Neither payload worked in baseline - will test both during discovery")
 	case 1:
 		payloadName := "google"
 		if ds.bestPayload == config.FakePayloadDefault2 {
 			payloadName = "duckduckgo"
 		}
-		log.Infof("  Selected payload: %s (only one works)", payloadName)
+		log.DiscoveryLogf("  Selected payload: %s (only one works)", payloadName)
 	case 2:
 		payloadName := "google"
 		if ds.bestPayload == config.FakePayloadDefault2 {
 			payloadName = "duckduckgo"
 		}
-		log.Infof("  Selected payload: %s (faster of both working)", payloadName)
+		log.DiscoveryLogf("  Selected payload: %s (faster of both working)", payloadName)
 	}
 }
 
@@ -482,7 +491,7 @@ func (ds *DiscoverySuite) updatePayloadKnowledge(payload int, speed float64) {
 func (ds *DiscoverySuite) runPhase2(families []StrategyFamily) map[StrategyFamily]ConfigPreset {
 	bestParams := make(map[StrategyFamily]ConfigPreset)
 
-	log.Infof("Phase 2: Optimizing %d working families", len(families))
+	log.DiscoveryLogf("Phase 2: Optimizing %d working families", len(families))
 
 	for _, family := range families {
 		select {
@@ -509,7 +518,7 @@ func (ds *DiscoverySuite) runPhase2(families []StrategyFamily) map[StrategyFamil
 }
 
 func (ds *DiscoverySuite) optimizeFakeSNI() ConfigPreset {
-	log.Infof("  Optimizing FakeSNI with binary search")
+	log.DiscoveryLogf("  Optimizing FakeSNI with binary search")
 
 	ds.CheckSuite.mu.Lock()
 	ds.TotalChecks += 9
@@ -539,7 +548,7 @@ func (ds *DiscoverySuite) optimizeFakeSNI() ConfigPreset {
 	// Binary search TTL
 	optimalTTL, speed := ds.findOptimalTTL(basePreset, ttlHint)
 	if optimalTTL == 0 {
-		log.Warnf("  No working TTL found for FakeSNI")
+		log.DiscoveryLogf("  No working TTL found for FakeSNI")
 		return basePreset
 	}
 
@@ -572,12 +581,12 @@ func (ds *DiscoverySuite) optimizeFakeSNI() ConfigPreset {
 	basePreset.Config.Faking.Strategy = bestStrategy
 	basePreset.Name = fmt.Sprintf("fake-%s-ttl%d-optimized", bestStrategy, optimalTTL)
 
-	log.Infof("  Best FakeSNI: TTL=%d, strategy=%s (%.2f KB/s)", optimalTTL, bestStrategy, bestSpeed/1024)
+	log.DiscoveryLogf("  Best FakeSNI: TTL=%d, strategy=%s (%.2f KB/s)", optimalTTL, bestStrategy, bestSpeed/1024)
 	return basePreset
 }
 
 func (ds *DiscoverySuite) optimizeTCPFrag() ConfigPreset {
-	log.Infof("  Optimizing TCPFrag with binary search")
+	log.DiscoveryLogf("  Optimizing TCPFrag with binary search")
 
 	// ~5 binary search iterations (log2(16)) + 1 middle test
 	ds.CheckSuite.mu.Lock()
@@ -624,17 +633,16 @@ func (ds *DiscoverySuite) optimizeTCPFrag() ConfigPreset {
 	if result.Status == CheckStatusComplete && result.Speed > speed {
 		basePreset = middlePreset
 		speed = result.Speed
-		log.Infof("  MiddleSNI improves speed: %.2f KB/s", result.Speed/1024)
+		log.DiscoveryLogf("  MiddleSNI improves speed: %.2f KB/s", result.Speed/1024)
 	}
 
-	log.Infof("  Best TCPFrag: position=%d (%.2f KB/s)", optimalPos, speed/1024)
+	log.DiscoveryLogf("  Best TCPFrag: position=%d (%.2f KB/s)", optimalPos, speed/1024)
 	return basePreset
 }
 
 func (ds *DiscoverySuite) optimizeTLSRec() ConfigPreset {
-	log.Infof("  Optimizing TLSRec with binary search")
+	log.DiscoveryLogf("  Optimizing TLSRec with binary search")
 
-	// ~6 binary search iterations (log2(64))
 	ds.CheckSuite.mu.Lock()
 	ds.TotalChecks += 6
 	ds.CheckSuite.mu.Unlock()
@@ -656,7 +664,6 @@ func (ds *DiscoverySuite) optimizeTLSRec() ConfigPreset {
 		Config: base,
 	}
 
-	// Binary search TLS record position
 	low, high := 1, 64
 	var bestPos int
 	var bestSpeed float64
@@ -685,7 +692,7 @@ func (ds *DiscoverySuite) optimizeTLSRec() ConfigPreset {
 		basePreset.Name = fmt.Sprintf("tls-pos%d-optimized", bestPos)
 	}
 
-	log.Infof("  Best TLSRec: position=%d (%.2f KB/s)", bestPos, bestSpeed/1024)
+	log.DiscoveryLogf("  Best TLSRec: position=%d (%.2f KB/s)", bestPos, bestSpeed/1024)
 	return basePreset
 }
 
@@ -699,7 +706,7 @@ func (ds *DiscoverySuite) optimizeWithPresets(family StrategyFamily) ConfigPrese
 	ds.TotalChecks += len(presets)
 	ds.CheckSuite.mu.Unlock()
 
-	log.Infof("  Optimizing %s with %d presets", family, len(presets))
+	log.DiscoveryLogf("  Optimizing %s with %d presets", family, len(presets))
 
 	var bestPreset ConfigPreset
 	var bestSpeed float64
@@ -734,7 +741,7 @@ func (ds *DiscoverySuite) runPhase3(workingFamilies []StrategyFamily, bestParams
 	ds.TotalChecks += len(presets)
 	ds.CheckSuite.mu.Unlock()
 
-	log.Infof("Phase 3: Testing %d combination presets", len(presets))
+	log.DiscoveryLogf("Phase 3: Testing %d combination presets", len(presets))
 
 	for _, preset := range presets {
 		select {
@@ -747,9 +754,9 @@ func (ds *DiscoverySuite) runPhase3(workingFamilies []StrategyFamily, bestParams
 		ds.storeResult(preset, result)
 
 		if result.Status == CheckStatusComplete {
-			log.Infof("  %s: SUCCESS (%.2f KB/s)", preset.Name, result.Speed/1024)
+			log.DiscoveryLogf("  ✓ %s: %.2f KB/s", preset.Name, result.Speed/1024)
 		} else {
-			log.Tracef("  %s: FAILED", preset.Name)
+			log.DiscoveryLogf("  ✗ %s: failed", preset.Name)
 		}
 	}
 }
@@ -758,7 +765,7 @@ func (ds *DiscoverySuite) testPresetInternal(preset ConfigPreset) CheckResult {
 	testConfig := ds.buildTestConfig(preset)
 
 	if err := ds.pool.UpdateConfig(testConfig); err != nil {
-		log.Errorf("Failed to apply preset %s: %v", preset.Name, err)
+		log.DiscoveryLogf("Failed to apply preset %s: %v", preset.Name, err)
 		return CheckResult{
 			Domain: ds.Domain,
 			Status: CheckStatusFailed,
@@ -995,9 +1002,16 @@ func (ds *DiscoverySuite) storeResult(preset ConfigPreset, result CheckResult) {
 
 	if result.Status == CheckStatusComplete && preset.Name != "no-bypass" {
 		if result.Speed > ds.domainResult.BestSpeed {
+			oldBest := ds.domainResult.BestSpeed
 			ds.domainResult.BestPreset = preset.Name
 			ds.domainResult.BestSpeed = result.Speed
 			ds.domainResult.BestSuccess = true
+			if oldBest > 0 {
+				improvement := ((result.Speed - oldBest) / oldBest) * 100
+				log.DiscoveryLogf("★ New best: %s at %.2f KB/s (+%.0f%%)", preset.Name, result.Speed/1024, improvement)
+			} else {
+				log.DiscoveryLogf("★ First success: %s at %.2f KB/s", preset.Name, result.Speed/1024)
+			}
 		}
 	}
 
@@ -1099,9 +1113,9 @@ func (ds *DiscoverySuite) finalize() {
 }
 
 func (ds *DiscoverySuite) restoreConfig() {
-	log.Infof("Restoring original configuration")
+	log.DiscoveryLogf("Restoring original configuration")
 	if err := ds.pool.UpdateConfig(ds.cfg); err != nil {
-		log.Errorf("Failed to restore original configuration: %v", err)
+		log.DiscoveryLogf("Failed to restore original configuration: %v", err)
 	}
 }
 
@@ -1109,31 +1123,23 @@ func (ds *DiscoverySuite) logDiscoverySummary() {
 	ds.CheckSuite.mu.RLock()
 	defer ds.CheckSuite.mu.RUnlock()
 
-	log.Infof("\n=== Discovery Results for %s ===", ds.Domain)
+	duration := time.Since(ds.StartTime)
+	totalConfigs := len(ds.domainResult.Results)
 
-	// Log payload detection results
-	for _, pr := range ds.workingPayloads {
-		payloadName := "google"
-		if pr.Payload == config.FakePayloadDefault2 {
-			payloadName = "duckduckgo"
-		}
-		status := "FAILED"
-		if pr.Works {
-			status = fmt.Sprintf("SUCCESS (%.2f KB/s)", pr.Speed/1024)
-		}
-		log.Infof("  Payload %s: %s", payloadName, status)
-	}
-
+	log.DiscoveryLogf("═══════════════════════════════════════")
 	if ds.domainResult.BestSuccess {
 		improvement := ""
 		if ds.domainResult.Improvement > 0 {
-			improvement = fmt.Sprintf(" (+%.0f%%)", ds.domainResult.Improvement)
+			improvement = fmt.Sprintf(" (+%.0f%% vs baseline)", ds.domainResult.Improvement)
 		}
-		log.Infof("✓ Best config: %s (%.2f KB/s%s)",
-			ds.domainResult.BestPreset, ds.domainResult.BestSpeed/1024, improvement)
+		log.DiscoveryLogf("✓ Discovery complete: %s", ds.Domain)
+		log.DiscoveryLogf("  Best config: %s", ds.domainResult.BestPreset)
+		log.DiscoveryLogf("  Speed: %.2f KB/s%s", ds.domainResult.BestSpeed/1024, improvement)
 	} else {
-		log.Warnf("✗ No successful configuration found")
+		log.DiscoveryLogf("✗ Discovery complete: no working config found")
 	}
+	log.DiscoveryLogf("  Tested %d configurations in %v", totalConfigs, duration.Round(time.Second))
+	log.DiscoveryLogf("═══════════════════════════════════════")
 }
 
 func (ds *DiscoverySuite) runExtendedSearch() []StrategyFamily {
@@ -1170,7 +1176,7 @@ func (ds *DiscoverySuite) runExtendedSearch() []StrategyFamily {
 		ds.TotalChecks += len(presets)
 		ds.CheckSuite.mu.Unlock()
 
-		log.Infof("  Extended search: %s (%d variants)", family, len(presets))
+		log.DiscoveryLogf("  Extended search: %s (%d variants)", family, len(presets))
 
 		for _, preset := range presets {
 			select {
@@ -1183,7 +1189,7 @@ func (ds *DiscoverySuite) runExtendedSearch() []StrategyFamily {
 			ds.storeResult(preset, result)
 
 			if result.Status == CheckStatusComplete {
-				log.Infof("    %s: SUCCESS (%.2f KB/s)", preset.Name, result.Speed/1024)
+				log.DiscoveryLogf("    %s: SUCCESS (%.2f KB/s)", preset.Name, result.Speed/1024)
 				if !containsFamily(workingFamilies, family) {
 					workingFamilies = append(workingFamilies, family)
 				}
@@ -1212,7 +1218,7 @@ func (ds *DiscoverySuite) findOptimalTTL(basePreset ConfigPreset, hint uint8) (u
 		if result.Status == CheckStatusComplete {
 			bestTTL = hint
 			bestSpeed = result.Speed
-			log.Infof("  TTL hint %d: SUCCESS (%.2f KB/s) - narrowing search", hint, result.Speed/1024)
+			log.DiscoveryLogf("  TTL hint %d: SUCCESS (%.2f KB/s) - narrowing search", hint, result.Speed/1024)
 
 			// Narrow search: find minimum between 1 and hint
 			high = hint
@@ -1220,11 +1226,11 @@ func (ds *DiscoverySuite) findOptimalTTL(basePreset ConfigPreset, hint uint8) (u
 				low = hint - 8 // Don't search too far below
 			}
 		} else {
-			log.Infof("  TTL hint %d: FAILED - falling back to full search", hint)
+			log.DiscoveryLogf("  TTL hint %d: FAILED - falling back to full search", hint)
 		}
 	}
 
-	log.Infof("Binary search for optimal TTL (range %d-%d)", low, high)
+	log.DiscoveryLogf("Binary search for optimal TTL (range %d-%d)", low, high)
 
 	for low < high {
 		mid := (low + high) / 2
@@ -1240,7 +1246,7 @@ func (ds *DiscoverySuite) findOptimalTTL(basePreset ConfigPreset, hint uint8) (u
 			bestTTL = mid
 			bestSpeed = result.Speed
 			high = mid
-			log.Infof("  TTL %d: SUCCESS (%.2f KB/s)", mid, result.Speed/1024)
+			log.DiscoveryLogf("  TTL %d: SUCCESS (%.2f KB/s)", mid, result.Speed/1024)
 		} else {
 			low = mid + 1
 			log.Tracef("  TTL %d: FAILED", mid)
@@ -1268,11 +1274,11 @@ func (ds *DiscoverySuite) findOptimalTTL(basePreset ConfigPreset, hint uint8) (u
 		if result.Status == CheckStatusComplete && result.Speed > bestSpeed*1.1 {
 			bestTTL = testTTL
 			bestSpeed = result.Speed
-			log.Infof("  TTL %d: Better (%.2f KB/s)", testTTL, result.Speed/1024)
+			log.DiscoveryLogf("  TTL %d: Better (%.2f KB/s)", testTTL, result.Speed/1024)
 		}
 	}
 
-	log.Infof("Optimal TTL found: %d (%.2f KB/s)", bestTTL, bestSpeed/1024)
+	log.DiscoveryLogf("Optimal TTL found: %d (%.2f KB/s)", bestTTL, bestSpeed/1024)
 	return bestTTL, bestSpeed
 }
 
@@ -1282,7 +1288,7 @@ func (ds *DiscoverySuite) findOptimalPosition(basePreset ConfigPreset, maxPos in
 	var bestPos int
 	var bestSpeed float64
 
-	log.Infof("Binary search for optimal position (range %d-%d)", low, high)
+	log.DiscoveryLogf("Binary search for optimal position (range %d-%d)", low, high)
 
 	for low < high {
 		mid := (low + high) / 2
@@ -1298,7 +1304,7 @@ func (ds *DiscoverySuite) findOptimalPosition(basePreset ConfigPreset, maxPos in
 			bestPos = mid
 			bestSpeed = result.Speed
 			high = mid
-			log.Infof("  Position %d: SUCCESS (%.2f KB/s)", mid, result.Speed/1024)
+			log.DiscoveryLogf("  Position %d: SUCCESS (%.2f KB/s)", mid, result.Speed/1024)
 		} else {
 			low = mid + 1
 			log.Tracef("  Position %d: FAILED", mid)
@@ -1372,7 +1378,7 @@ func (ds *DiscoverySuite) measureNetworkBaseline() float64 {
 		referenceDomain = config.DefaultConfig.System.Checker.ReferenceDomain
 	}
 
-	log.Infof("Measuring network baseline using %s", referenceDomain)
+	log.DiscoveryLogf("Measuring network baseline using %s", referenceDomain)
 
 	testURL := fmt.Sprintf("https://%s/", referenceDomain)
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -1390,7 +1396,7 @@ func (ds *DiscoverySuite) measureNetworkBaseline() float64 {
 
 	req, err := http.NewRequestWithContext(ctx, "GET", testURL, nil)
 	if err != nil {
-		log.Warnf("Failed to create baseline request: %v", err)
+		log.DiscoveryLogf("Failed to create baseline request: %v", err)
 		return 0
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0")
@@ -1398,7 +1404,7 @@ func (ds *DiscoverySuite) measureNetworkBaseline() float64 {
 	start := time.Now()
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Warnf("Baseline measurement failed: %v", err)
+		log.DiscoveryLogf("Baseline measurement failed: %v", err)
 		return 0
 	}
 	defer resp.Body.Close()
@@ -1411,7 +1417,7 @@ func (ds *DiscoverySuite) measureNetworkBaseline() float64 {
 	}
 
 	speed := float64(bytesRead) / duration.Seconds()
-	log.Infof("Network baseline: %.2f KB/s (%d bytes in %v)", speed/1024, bytesRead, duration)
+	log.DiscoveryLogf("Network baseline: %.2f KB/s (%d bytes in %v)", speed/1024, bytesRead, duration)
 
 	return speed
 }

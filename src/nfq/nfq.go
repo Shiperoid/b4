@@ -241,7 +241,9 @@ func (w *Worker) Start() error {
 					sniTarget = set.Name
 				}
 
-				log.Infof(",TCP,%s,%s,%s:%d,%s,%s:%d,%s", sniTarget, host, srcStr, sport, ipTarget, dstStr, dport, srcMac)
+				if !log.IsDiscoveryActive() {
+					log.Infof(",TCP,%s,%s,%s:%d,%s,%s:%d,%s", sniTarget, host, srcStr, sport, ipTarget, dstStr, dport, srcMac)
+				}
 
 				if matched {
 					metrics := metrics.GetMetricsCollector()
@@ -356,9 +358,9 @@ func (w *Worker) Start() error {
 
 				matched = shouldHandle
 
-				// Log ALL UDP packets (this runs before verdict)
-				log.Infof(",UDP,%s,%s,%s:%d,%s,%s:%d,%s", sniTarget, host, srcStr, sport, ipTarget, dstStr, dport, srcMac)
-
+				if !log.IsDiscoveryActive() {
+					log.Infof(",UDP,%s,%s,%s:%d,%s,%s:%d,%s", sniTarget, host, srcStr, sport, ipTarget, dstStr, dport, srcMac)
+				}
 				// Early exit for STUN
 				if isSTUN && set.UDP.FilterSTUN {
 					_ = q.SetVerdict(id, nfqueue.NfAccept)

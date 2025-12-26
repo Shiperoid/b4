@@ -121,3 +121,67 @@ export function useDiscovery() {
     addPresetAsSet,
   };
 }
+
+const MAX_LOGS = 500;
+
+export function useDiscoveryLogs() {
+  const [logs, setLogs] = useState<string[]>([]);
+  const [connected, setConnected] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+  const logsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    const wsUrl =
+      (location.protocol === "https:" ? "wss://" : "ws://") +
+      location.host +
+      "/api/ws/discovery";
+
+    let ws: WebSocket | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+    let isCleaningUp = false;
+
+    const connect = () => {
+      if (isCleaningUp) return;
+
+      ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setConnected(true);
+      };
+
+      ws.onmessage = (ev) => {
+        const line = String(ev.data);
+        logsRef.current = [...logsRef.current, line].slice(-MAX_LOGS);
+        setLogs(logsRef.current);
+      };
+
+      ws.onerror = () => {
+        setConnected(false);
+      };
+
+      ws.onclose = () => {
+        setConnected(false);
+        wsRef.current = null;
+        if (!isCleaningUp) {
+          reconnectTimeout = setTimeout(connect, 3000);
+        }
+      };
+    };
+
+    connect();
+
+    return () => {
+      isCleaningUp = true;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (ws) ws.close();
+    };
+  }, []);
+
+  const clearLogs = useCallback(() => {
+    logsRef.current = [];
+    setLogs([]);
+  }, []);
+
+  return { logs, connected, clearLogs };
+}

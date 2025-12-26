@@ -62,7 +62,8 @@ func StartServer(cfg *config.Config, pool *nfq.Pool) (*stdhttp.Server, error) {
 func registerWebSocketEndpoints(mux *stdhttp.ServeMux) {
 	mux.HandleFunc("/api/ws/logs", ws.HandleLogsWebSocket)
 	mux.HandleFunc("/api/ws/metrics", ws.HandleMetricsWebSocket)
-	log.Tracef("WebSocket endpoints registered: /api/ws/logs, /api/ws/metrics")
+	mux.HandleFunc("/api/ws/discovery", ws.HandleDiscoveryWebSocket)
+	log.Tracef("WebSocket endpoints registered: /api/ws/logs, /api/ws/metrics, /api/ws/discovery")
 }
 
 // registerAPIEndpoints registers all REST API handlers

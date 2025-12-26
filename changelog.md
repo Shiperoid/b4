@@ -2,6 +2,7 @@
 
 ## [1.26.4] - 2025-12-xx
 
+- ADDED: `Discovery Logs` panel shows real-time progress during configuration discovery.
 - IMPROVED: `Discovery` now uses DNS-over-HTTPS (encrypted DNS via `Google`/`Quad9`/`Cloudflare`) to detect when your ISP returns fake IP addresses for blocked sites. When DNS poisoning is detected, B4 connects directly to the real server to continue testing bypass strategies.
 
 ## [1.26.3] - 2025-12-26

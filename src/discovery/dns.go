@@ -30,7 +30,7 @@ type DNSProber struct {
 }
 
 func (ds *DiscoverySuite) runDNSDiscovery() *DNSDiscoveryResult {
-	log.Infof("Phase DNS: Checking DNS poisoning for %s", ds.Domain)
+	log.DiscoveryLogf("Phase DNS: Checking DNS poisoning for %s", ds.Domain)
 
 	prober := NewDNSProber(
 		ds.Domain,
@@ -56,8 +56,11 @@ func (ds *DiscoverySuite) applyDNSConfig(dnsResult *DNSDiscoveryResult) {
 		FragmentQuery: dnsResult.NeedsFragment,
 	}
 
-	log.Infof("Applied DNS config: server=%s, fragment=%v",
-		dnsResult.BestServer, dnsResult.NeedsFragment)
+	if dnsResult.BestServer != "" {
+		log.DiscoveryLogf("  Applied DNS bypass: server=%s, fragment=%v", dnsResult.BestServer, dnsResult.NeedsFragment)
+	} else if dnsResult.NeedsFragment {
+		log.DiscoveryLogf("  Applied DNS bypass: fragment=true")
+	}
 }
 
 func (r *DNSDiscoveryResult) hasWorkingConfig() bool {
@@ -83,20 +86,21 @@ func (p *DNSProber) Probe(ctx context.Context) *DNSDiscoveryResult {
 
 	expectedIPs := p.getExpectedIPs(ctx)
 	if len(expectedIPs) == 0 {
-		log.Warnf("DNS Discovery: couldn't get reference IP for %s", p.domain)
+		log.DiscoveryLogf("DNS Discovery: couldn't get reference IP for %s", p.domain)
 		return result
 	}
 	result.ExpectedIPs = expectedIPs
 	expectedIP := expectedIPs[0]
-	log.Tracef("DNS Discovery: found %d valid IPs for %s: %v", len(expectedIPs), p.domain, expectedIPs)
+	log.DiscoveryLogf("  DNS: reference IPs: %v", expectedIPs)
 
 	sysResult := p.testDNS(ctx, "", false, expectedIP)
 	result.ProbeResults = append(result.ProbeResults, sysResult)
 
 	if !sysResult.Works {
 		result.IsPoisoned = true
-		log.Infof("DNS Discovery: %s appears poisoned (got %s, expected %s)",
-			p.domain, sysResult.ResolvedIP, expectedIP)
+		log.DiscoveryLogf("  ✗ DNS poisoned: system resolver returned %s (expected %s)", sysResult.ResolvedIP, expectedIP)
+	} else {
+		log.DiscoveryLogf("  ✓ DNS: system resolver OK")
 	}
 
 	if !result.IsPoisoned {
@@ -108,7 +112,7 @@ func (p *DNSProber) Probe(ctx context.Context) *DNSDiscoveryResult {
 
 	if fragResult.Works {
 		result.NeedsFragment = true
-		log.Infof("DNS Discovery: fragmented query works for %s", p.domain)
+		log.DiscoveryLogf("DNS Discovery: fragmented query works for %s", p.domain)
 		return result
 	}
 
@@ -119,7 +123,7 @@ func (p *DNSProber) Probe(ctx context.Context) *DNSDiscoveryResult {
 		if plainResult.Works {
 			result.BestServer = server
 			result.NeedsFragment = false
-			log.Infof("DNS Discovery: %s works with DNS %s", p.domain, server)
+			log.DiscoveryLogf("DNS Discovery: %s works with DNS %s", p.domain, server)
 			return result
 		}
 
@@ -130,12 +134,12 @@ func (p *DNSProber) Probe(ctx context.Context) *DNSDiscoveryResult {
 		if fragAltResult.Works {
 			result.BestServer = server
 			result.NeedsFragment = true
-			log.Infof("DNS Discovery: %s works with fragmented DNS to %s", p.domain, server)
+			log.DiscoveryLogf("DNS Discovery: %s works with fragmented DNS to %s", p.domain, server)
 			return result
 		}
 	}
 
-	log.Warnf("DNS Discovery: no working DNS config found for %s", p.domain)
+	log.DiscoveryLogf("DNS Discovery: no working DNS config found for %s", p.domain)
 	return result
 }
 
