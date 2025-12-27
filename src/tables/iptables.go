@@ -219,19 +219,6 @@ func (manager *IPTablesManager) buildManifest() (Manifest, error) {
 			manager.buildNFQSpec(queueNum, threads)...,
 		)
 
-		udpPorts := cfg.CollectUDPPorts()
-		for i, p := range udpPorts {
-			udpPorts[i] = strings.ReplaceAll(p, "-", ":")
-		}
-
-		udpPortSpec := []string{"-p", "udp", "-m", "multiport", "--dports", strings.Join(udpPorts, ",")}
-		udpSpec := append(
-			append(udpPortSpec,
-				"-m", "connbytes", "--connbytes-dir", "original",
-				"--connbytes-mode", "packets", "--connbytes", udpConnbytesRange),
-			manager.buildNFQSpec(queueNum, threads)...,
-		)
-
 		dnsSpec := append(
 			[]string{"-p", "udp", "--dport", "53"},
 			manager.buildNFQSpec(queueNum, threads)...,
@@ -245,8 +232,24 @@ func (manager *IPTablesManager) buildManifest() (Manifest, error) {
 		rules = append(rules,
 			Rule{manager: manager, IPT: ipt, Table: "mangle", Chain: chainName, Action: "A", Spec: tcpSpec},
 			Rule{manager: manager, IPT: ipt, Table: "mangle", Chain: chainName, Action: "A", Spec: dnsSpec},
-			Rule{manager: manager, IPT: ipt, Table: "mangle", Chain: chainName, Action: "A", Spec: udpSpec},
 		)
+
+		udpPorts := cfg.CollectUDPPorts()
+		for i, p := range udpPorts {
+			udpPorts[i] = strings.ReplaceAll(p, "-", ":")
+		}
+
+		udpPortChunks := chunkPorts(udpPorts, 15)
+		for _, chunk := range udpPortChunks {
+			udpPortSpec := []string{"-p", "udp", "-m", "multiport", "--dports", strings.Join(chunk, ",")}
+			udpSpec := append(
+				append(udpPortSpec,
+					"-m", "connbytes", "--connbytes-dir", "original",
+					"--connbytes-mode", "packets", "--connbytes", udpConnbytesRange),
+				manager.buildNFQSpec(queueNum, threads)...,
+			)
+			rules = append(rules, Rule{manager: manager, IPT: ipt, Table: "mangle", Chain: chainName, Action: "A", Spec: udpSpec})
+		}
 
 		if cfg.Queue.Devices.Enabled && len(cfg.Queue.Devices.Mac) > 0 {
 			if cfg.Queue.Devices.WhiteIsBlack {
@@ -417,7 +420,6 @@ func (ipt *IPTablesManager) clearB4JumpRules() {
 			lines := strings.Split(out, "\n")
 			for _, line := range lines {
 				if strings.Contains(line, "-j ACCEPT") && strings.Contains(line, "--mark") {
-					// Extract the mark value
 					parts := strings.Fields(line)
 					for i, p := range parts {
 						if p == "--mark" && i+1 < len(parts) {
@@ -440,7 +442,6 @@ func (ipt *IPTablesManager) clearB4JumpRules() {
 			}
 		}
 
-		// Clean OUTPUT - remove B4 jump rules
 		for {
 			_, err := run(iptBin, "-w", "-t", "mangle", "-D", "OUTPUT", "-j", "B4")
 			if err != nil {
@@ -448,4 +449,19 @@ func (ipt *IPTablesManager) clearB4JumpRules() {
 			}
 		}
 	}
+}
+
+func chunkPorts(ports []string, maxSize int) [][]string {
+	if len(ports) <= maxSize {
+		return [][]string{ports}
+	}
+	var chunks [][]string
+	for i := 0; i < len(ports); i += maxSize {
+		end := i + maxSize
+		if end > len(ports) {
+			end = len(ports)
+		}
+		chunks = append(chunks, ports[i:end])
+	}
+	return chunks
 }

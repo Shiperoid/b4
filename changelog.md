@@ -1,5 +1,9 @@
 # B4 - Bye Bye Big Bro
 
+## [1.27.2] - 2025-12-27
+
+- FIXED: Adding multiple services with many UDP ports (Discord, WhatsApp, etc.) could cause `iptables` firewall rules to fail, preventing B4 from starting or restarting properly.
+
 ## [1.27.1] - 2025-12-27
 
 - FIXED: DNS poisoning detection should correctly compare IP lists from system resolver vs encrypted DNS, even when IPs are returned in different order.

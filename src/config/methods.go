@@ -363,8 +363,10 @@ func (cfg *Config) CollectUDPPorts() []string {
 		ports = append(ports, p)
 	}
 	sort.Strings(ports)
+	ports = mergeAndNormalizePorts(ports)
 	return ports
 }
+
 func (c *Config) Clone() *Config {
 	data, _ := json.Marshal(c)
 	var clone Config
@@ -406,4 +408,61 @@ func (c *Config) LoadCapturePayloads() {
 			log.Tracef("Loaded capture payload %s (%d bytes)", set.Faking.PayloadFile, len(data))
 		}
 	}
+}
+
+func mergeAndNormalizePorts(ports []string) []string {
+	type portRange struct{ start, end int }
+	var ranges []portRange
+
+	for _, p := range ports {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		p = strings.ReplaceAll(p, ":", "-")
+		if strings.Contains(p, "-") {
+			parts := strings.Split(p, "-")
+			if len(parts) == 2 {
+				start, _ := strconv.Atoi(parts[0])
+				end, _ := strconv.Atoi(parts[1])
+				if start > 0 && end > 0 && start <= end {
+					ranges = append(ranges, portRange{start, end})
+				}
+			}
+		} else {
+			port, _ := strconv.Atoi(p)
+			if port > 0 {
+				ranges = append(ranges, portRange{port, port})
+			}
+		}
+	}
+
+	if len(ranges) == 0 {
+		return nil
+	}
+
+	sort.Slice(ranges, func(i, j int) bool { return ranges[i].start < ranges[j].start })
+
+	merged := []portRange{ranges[0]}
+	for i := 1; i < len(ranges); i++ {
+		last := &merged[len(merged)-1]
+		cur := ranges[i]
+		if cur.start <= last.end+1 {
+			if cur.end > last.end {
+				last.end = cur.end
+			}
+		} else {
+			merged = append(merged, cur)
+		}
+	}
+
+	result := make([]string, len(merged))
+	for i, r := range merged {
+		if r.start == r.end {
+			result[i] = strconv.Itoa(r.start)
+		} else {
+			result[i] = fmt.Sprintf("%d-%d", r.start, r.end)
+		}
+	}
+	return result
 }
