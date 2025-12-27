@@ -1,5 +1,11 @@
 # B4 - Bye Bye Big Bro
 
+## [1.27.1] - 2025-12-27
+
+- FIXED: DNS poisoning detection should correctly compare IP lists from system resolver vs encrypted DNS, even when IPs are returned in different order.
+- FIXED: UDP/QUIC traffic for IP-matched services (like YouTube, Google) could be incorrectly handled when another set had port-based filtering, potentially breaking video streaming.
+- FIXED: A bug when downgrading to a previous version from the web UI would report success but stay on the current version.
+
 ## [1.27.0] - 2025-12-27
 
 - ADDED: `Discovery Logs` panel shows real-time progress during configuration discovery.

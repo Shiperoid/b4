@@ -133,43 +133,65 @@ func (p *DNSProber) Probe(ctx context.Context) *DNSDiscoveryResult {
 	}
 
 	expectedIPs := p.getExpectedIPs(ctx)
-
 	systemIPs := p.getSystemResolverIPs(ctx)
-	for _, ip := range systemIPs {
-		found := false
-		for _, eip := range expectedIPs {
-			if ip == eip {
-				found = true
-				break
-			}
-		}
-		if !found {
-			expectedIPs = append(expectedIPs, ip)
-		}
-	}
 
 	if len(expectedIPs) == 0 {
 		log.DiscoveryLogf("DNS Discovery: couldn't get reference IP for %s", p.domain)
 		return result
 	}
-	result.ExpectedIPs = expectedIPs
-	expectedIP := expectedIPs[0]
-	log.DiscoveryLogf("  DNS: reference IPs: %v", expectedIPs)
 
-	sysResult := p.testDNS(ctx, "", false, expectedIP)
+	log.DiscoveryLogf("  DNS: reference IPs (DoH): %v", expectedIPs)
+
+	isPoisoned := true
+	var matchedIP string
+	expectedSet := make(map[string]bool)
+	for _, ip := range expectedIPs {
+		expectedSet[ip] = true
+	}
+
+	for _, sysIP := range systemIPs {
+		if expectedSet[sysIP] {
+			isPoisoned = false
+			matchedIP = sysIP
+			break
+		}
+	}
+
+	sysResult := DNSProbeResult{
+		Server:     "",
+		Fragmented: false,
+		ExpectedIP: expectedIPs[0],
+		ResolvedIP: "",
+		Works:      !isPoisoned,
+		IsPoisoned: isPoisoned,
+	}
+	if len(systemIPs) > 0 {
+		sysResult.ResolvedIP = systemIPs[0]
+	}
+
 	result.ProbeResults = append(result.ProbeResults, sysResult)
 
-	if !sysResult.Works {
+	if isPoisoned {
 		result.IsPoisoned = true
-		log.DiscoveryLogf("  ✗ DNS poisoned: system resolver returned %s (expected %s)", sysResult.ResolvedIP, expectedIP)
-	} else {
-		log.DiscoveryLogf("  ✓ DNS: system resolver OK")
+		log.DiscoveryLogf("  ✗ DNS poisoned: system IPs %v don't match reference %v", systemIPs, expectedIPs)
+	}
+
+	for _, ip := range systemIPs {
+		if !expectedSet[ip] {
+			expectedIPs = append(expectedIPs, ip)
+		}
+	}
+	result.ExpectedIPs = expectedIPs
+
+	if !result.IsPoisoned {
+		log.DiscoveryLogf("  ✓ DNS: system resolver OK (matched %s)", matchedIP)
 	}
 
 	if !result.IsPoisoned {
 		return result
 	}
 
+	expectedIP := expectedIPs[0]
 	fragResult := p.testDNSWithFragment("", expectedIP)
 	result.ProbeResults = append(result.ProbeResults, fragResult)
 
@@ -190,7 +212,6 @@ func (p *DNSProber) Probe(ctx context.Context) *DNSDiscoveryResult {
 			return result
 		}
 
-		// Fragmented to alternate
 		fragAltResult := p.testDNSWithFragment(server, expectedIP)
 		result.ProbeResults = append(result.ProbeResults, fragAltResult)
 
@@ -404,7 +425,7 @@ func (p *DNSProber) testIPServesDomain(ctx context.Context, ip string) bool {
 
 	tlsConn := tls.Client(conn, &tls.Config{
 		ServerName:         p.domain,
-		InsecureSkipVerify: false,
+		InsecureSkipVerify: true,
 	})
 
 	err = tlsConn.HandshakeContext(ctx)

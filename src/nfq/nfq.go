@@ -318,13 +318,11 @@ func (w *Worker) Start() error {
 
 				if matchedIP && matcher.PortMatchesSet(dport, st) {
 					matchedPort = true
-				} else {
+				} else if !matchedIP {
 					if mport, portSet := matcher.MatchUDPPortOnly(dport); mport {
 						matchedPort = true
 						set = portSet
-						if !matchedIP {
-							ipTarget = portSet.Name
-						}
+						ipTarget = portSet.Name
 					}
 				}
 

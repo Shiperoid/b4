@@ -162,8 +162,14 @@ func (ds *DiscoverySuite) RunDiscovery() {
 		ds.storeResult(baselinePreset, baselineResult)
 
 		if baselineResult.Status == CheckStatusComplete {
-			log.DiscoveryLogf("Verified: no DPI detected for %s (%.2f KB/s)", ds.Domain, baselineResult.Speed/1024)
-			ds.domainResult.BestPreset = "no-bypass"
+			dnsNeeded := dnsResult != nil && dnsResult.IsPoisoned && dnsResult.hasWorkingConfig()
+			if dnsNeeded {
+				log.DiscoveryLogf("Verified: TCP works for %s (%.2f KB/s) but DNS bypass required", ds.Domain, baselineResult.Speed/1024)
+				ds.domainResult.BestPreset = "dns-only"
+			} else {
+				log.DiscoveryLogf("Verified: no DPI detected for %s (%.2f KB/s)", ds.Domain, baselineResult.Speed/1024)
+				ds.domainResult.BestPreset = "no-bypass"
+			}
 			ds.domainResult.BestSpeed = baselineResult.Speed
 			ds.domainResult.BestSuccess = true
 			ds.restoreConfig()
@@ -194,27 +200,32 @@ func (ds *DiscoverySuite) RunDiscovery() {
 	ds.determineBest(baselineSpeed)
 
 	if baselineWorks {
-		log.DiscoveryLogf("Baseline succeeded for %s - no DPI bypass needed, skipping optimization", ds.Domain)
+		dnsNeeded := dnsResult != nil && dnsResult.IsPoisoned && dnsResult.hasWorkingConfig()
 
-		ds.CheckSuite.mu.Lock()
-		ds.TotalChecks = 1
-		ds.domainResult.BestPreset = "no-bypass"
-		ds.domainResult.BestSpeed = baselineSpeed
-		ds.domainResult.BestSuccess = true
-		ds.domainResult.BaselineSpeed = baselineSpeed
-		ds.domainResult.Improvement = 0
-		ds.CheckSuite.mu.Unlock()
+		if !dnsNeeded {
+			ds.CheckSuite.mu.Lock()
+			ds.TotalChecks = 1
+			ds.domainResult.BestPreset = "no-bypass"
+			ds.domainResult.BestSpeed = baselineSpeed
+			ds.domainResult.BestSuccess = true
+			ds.domainResult.BaselineSpeed = baselineSpeed
+			ds.domainResult.Improvement = 0
+			ds.CheckSuite.mu.Unlock()
 
-		ds.restoreConfig()
-		ds.finalize()
-		ds.logDiscoverySummary()
-		return
+			log.DiscoveryLogf("Baseline succeeded for %s - no DPI bypass needed", ds.Domain)
+			ds.restoreConfig()
+			ds.finalize()
+			ds.logDiscoverySummary()
+			return
+		}
+
+		log.DiscoveryLogf("TCP works for %s but DNS bypass required - testing minimal preset", ds.Domain)
+		ds.baselineFailed = false
 	}
 
 	if len(workingFamilies) == 0 {
 		log.Warnf("Phase 1 found no working families, trying extended search")
 
-		// Try all Phase 2 presets for each family anyway
 		ds.setPhase(PhaseOptimize)
 		workingFamilies = ds.runExtendedSearch()
 
@@ -275,11 +286,9 @@ func (ds *DiscoverySuite) runPhase1(presets []ConfigPreset) ([]StrategyFamily, f
 	baselineWorks := baselineResult.Status == CheckStatusComplete
 	if baselineWorks {
 		baselineSpeed = baselineResult.Speed
-		log.DiscoveryLogf("✓ Baseline: SUCCESS (%.2f KB/s) - no DPI detected", baselineSpeed/1024)
 		return workingFamilies, baselineSpeed, true
 	}
 
-	log.DiscoveryLogf("✗ Baseline: FAILED - DPI bypass needed, testing strategies")
 	ds.baselineFailed = true
 
 	ds.detectWorkingPayloads(presets)
@@ -307,12 +316,7 @@ func (ds *DiscoverySuite) runPhase1(presets []ConfigPreset) ([]StrategyFamily, f
 		if result.Status == CheckStatusComplete {
 			if result.Speed > baselineSpeed*0.8 {
 				workingFamilies = append(workingFamilies, preset.Family)
-				log.DiscoveryLogf("  ✓ %s: %.2f KB/s", preset.Name, result.Speed/1024)
-			} else {
-				log.DiscoveryLogf("  ~ %s: %.2f KB/s (slower than baseline)", preset.Name, result.Speed/1024)
 			}
-		} else {
-			log.DiscoveryLogf("  ✗ %s: %s", preset.Name, result.Error)
 		}
 	}
 
@@ -453,15 +457,12 @@ func (ds *DiscoverySuite) testPresetWithBestPayload(preset ConfigPreset) CheckRe
 	return result1
 }
 
-// testPresetWithPayload tests a specific preset with a specific payload type
 func (ds *DiscoverySuite) testPresetWithPayload(preset ConfigPreset, payloadType int) CheckResult {
 	modifiedPreset := preset
 	modifiedPreset.Config.Faking.SNIType = payloadType
-
 	return ds.testPresetInternal(modifiedPreset)
 }
 
-// updatePayloadKnowledge updates our knowledge about working payloads
 func (ds *DiscoverySuite) updatePayloadKnowledge(payload int, speed float64) {
 	for i, pr := range ds.workingPayloads {
 		if pr.Payload == payload {
@@ -749,10 +750,12 @@ func (ds *DiscoverySuite) runPhase3(workingFamilies []StrategyFamily, bestParams
 }
 
 func (ds *DiscoverySuite) testPresetInternal(preset ConfigPreset) CheckResult {
+	log.DiscoveryLogf("  Testing '%s'...", preset.Name)
+
 	testConfig := ds.buildTestConfig(preset)
 
 	if err := ds.pool.UpdateConfig(testConfig); err != nil {
-		log.DiscoveryLogf("Failed to apply preset %s: %v", preset.Name, err)
+		log.DiscoveryLogf("    → FAILED (config error: %v)", err)
 		return CheckResult{
 			Domain: ds.Domain,
 			Status: CheckStatusFailed,
@@ -765,6 +768,11 @@ func (ds *DiscoverySuite) testPresetInternal(preset ConfigPreset) CheckResult {
 	result := ds.fetchWithTimeout(time.Duration(ds.cfg.System.Checker.DiscoveryTimeoutSec) * time.Second)
 	result.Set = testConfig.MainSet
 
+	if result.Status == CheckStatusComplete {
+		log.DiscoveryLogf("    → OK (%.2f KB/s, %d bytes)", result.Speed/1024, result.BytesRead)
+	} else {
+		log.DiscoveryLogf("    → FAILED (%s)", result.Error)
+	}
 	return result
 }
 
@@ -954,19 +962,28 @@ func (ds *DiscoverySuite) fetchWithTimeoutUsingIP(timeout time.Duration, ip stri
 	result.BytesRead = bytesRead
 
 	if bytesRead < MIN_BYTES_FOR_SUCCESS {
+		if result.ContentSize > 0 {
+			if bytesRead >= result.ContentSize {
+				result.Status = CheckStatusComplete
+				result.Speed = 0
+				log.Tracef("Small but complete response (%d/%d bytes, HTTP %d)", bytesRead, result.ContentSize, resp.StatusCode)
+				return result
+			}
+			result.Status = CheckStatusFailed
+			result.Error = fmt.Sprintf("truncated: got %d of %d bytes", bytesRead, result.ContentSize)
+			return result
+		}
+
+		if resp.StatusCode >= 200 && resp.StatusCode < 500 && bytesRead > 0 {
+			result.Status = CheckStatusComplete
+			result.Speed = 0
+			log.Tracef("Small response without Content-Length (%d bytes, HTTP %d)", bytesRead, resp.StatusCode)
+			return result
+		}
+
 		result.Status = CheckStatusFailed
 		result.Error = fmt.Sprintf("insufficient data: %d bytes (need %d)", bytesRead, MIN_BYTES_FOR_SUCCESS)
 		return result
-	}
-
-	if result.ContentSize > 0 && bytesRead < 100*1024 {
-		completionRatio := float64(bytesRead) / float64(result.ContentSize)
-		if completionRatio < 0.5 && result.ContentSize > int64(bytesRead)+1024 {
-			result.Status = CheckStatusFailed
-			result.Error = fmt.Sprintf("incomplete transfer: got %d/%d bytes (%.0f%%)",
-				bytesRead, result.ContentSize, completionRatio*100)
-			return result
-		}
 	}
 
 	if duration.Seconds() > 0 {
@@ -1122,7 +1139,7 @@ func (ds *DiscoverySuite) buildTestConfig(preset ConfigPreset) *config.Config {
 			if err != nil {
 				log.DiscoveryLogf("Discovery: failed to load CDN categories: %v", err)
 			} else {
-				log.DiscoveryLogf("Discovery: CDN %s - loaded %d domains, %d IPs", ds.Domain, len(domains), len(ips))
+				log.Tracef("Discovery: CDN %s - loaded %d domains, %d IPs", ds.Domain, len(domains), len(ips))
 			}
 		} else {
 			var ipsToAdd []string

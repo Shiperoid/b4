@@ -228,11 +228,18 @@ func (api *API) handleUpdate(w http.ResponseWriter, r *http.Request) {
 		// Use systemd-run to execute in separate scope for systemd systems
 		var cmd *exec.Cmd
 		if serviceManager == "systemd" {
-			cmd = exec.Command("systemd-run", "--scope", "--unit=b4-update",
-				installerPath, "--update", "--quiet")
+			args := []string{"--scope", "--unit=b4-update", installerPath, "--update", "--quiet"}
+			if req.Version != "" {
+				args = append(args, req.Version)
+			}
+			cmd = exec.Command("systemd-run", args...)
 		} else {
 			// For non-systemd, use nohup
-			cmd = exec.Command("nohup", installerPath, "--update", "--quiet")
+			args := []string{installerPath, "--update", "--quiet"}
+			if req.Version != "" {
+				args = append(args, req.Version)
+			}
+			cmd = exec.Command("nohup", args...)
 			cmd.SysProcAttr = &syscall.SysProcAttr{
 				Setsid: true,
 			}
