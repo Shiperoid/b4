@@ -779,6 +779,11 @@ func (ds *DiscoverySuite) testPreset(preset ConfigPreset) CheckResult {
 }
 
 func (ds *DiscoverySuite) fetchWithTimeout(timeout time.Duration) CheckResult {
+	geoip, geosite := GetCDNCategories(ds.Domain)
+	if len(geoip) > 0 || len(geosite) > 0 {
+		return ds.fetchWithTimeoutUsingIP(timeout, "")
+	}
+
 	var allIPs []string
 	if ds.dnsResult != nil {
 		allIPs = append(allIPs, ds.dnsResult.ExpectedIPs...)
@@ -1090,14 +1095,35 @@ func (ds *DiscoverySuite) buildTestConfig(preset ConfigPreset) *config.Config {
 		mainSet.Targets.DomainsToMatch = []string{ds.Domain}
 
 		geoip, geosite := GetCDNCategories(ds.Domain)
-		if geoip != "" || geosite != "" {
-			if geoip != "" {
-				mainSet.Targets.GeoIpCategories = []string{geoip}
+		if len(geoip) > 0 || len(geosite) > 0 {
+			if len(geoip) > 0 {
+				mainSet.Targets.GeoIpCategories = geoip
 			}
-			if geosite != "" {
-				mainSet.Targets.GeoSiteCategories = []string{geosite}
+			if len(geosite) > 0 {
+				mainSet.Targets.GeoSiteCategories = geosite
 			}
-			log.Tracef("Discovery: using CDN categories geoip=%s geosite=%s for %s", geoip, geosite, ds.Domain)
+
+			if len(ds.cfg.System.Checker.ReferenceDNS) > 0 {
+				mainSet.DNS = config.DNSConfig{
+					Enabled:       true,
+					TargetDNS:     ds.cfg.System.Checker.ReferenceDNS[0],
+					FragmentQuery: true,
+				}
+			} else {
+				mainSet.DNS = config.DNSConfig{
+					Enabled:       true,
+					TargetDNS:     "9.9.9.9",
+					FragmentQuery: true,
+				}
+			}
+
+			tempCfg := &config.Config{System: ds.cfg.System}
+			domains, ips, err := tempCfg.GetTargetsForSet(&mainSet)
+			if err != nil {
+				log.DiscoveryLogf("Discovery: failed to load CDN categories: %v", err)
+			} else {
+				log.DiscoveryLogf("Discovery: CDN %s - loaded %d domains, %d IPs", ds.Domain, len(domains), len(ips))
+			}
 		} else {
 			var ipsToAdd []string
 			if ds.dnsResult != nil {

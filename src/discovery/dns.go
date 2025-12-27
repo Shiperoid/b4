@@ -3,6 +3,7 @@ package discovery
 import (
 	"context"
 	"crypto/tls"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,7 +18,7 @@ import (
 	"github.com/daniellavrushin/b4/nfq"
 )
 
-//go:embed cdn.json
+//go:embed dns.json
 var cdnJSON []byte
 
 type dohResponse struct {
@@ -29,8 +30,8 @@ type dohResponse struct {
 
 type CDNEntry struct {
 	Match   []string `json:"match"`
-	GeoIP   string   `json:"geoip"`
-	GeoSite string   `json:"geosite"`
+	GeoIP   []string `json:"geoip"`
+	GeoSite []string `json:"geosite"`
 }
 
 type DNSProber struct {
@@ -53,19 +54,27 @@ func loadCDNEntries() {
 	})
 }
 
-func GetCDNCategories(domain string) (geoip, geosite string) {
+func GetCDNCategories(domain string) (geoip, geosite []string) {
 	loadCDNEntries()
 
 	domain = strings.ToLower(strings.TrimSuffix(domain, "."))
 
 	for _, entry := range cdnEntries {
 		for _, pattern := range entry.Match {
+			if strings.HasSuffix(pattern, ".*") {
+				prefix := strings.TrimSuffix(pattern, ".*")
+				if strings.HasPrefix(domain, prefix+".") || strings.Contains(domain, "."+prefix+".") {
+					return entry.GeoIP, entry.GeoSite
+				}
+				continue
+			}
+
 			if domain == pattern || strings.HasSuffix(domain, "."+pattern) {
 				return entry.GeoIP, entry.GeoSite
 			}
 		}
 	}
-	return "", ""
+	return nil, nil
 }
 
 func (ds *DiscoverySuite) runDNSDiscovery() *DNSDiscoveryResult {

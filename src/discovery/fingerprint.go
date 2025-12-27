@@ -15,7 +15,6 @@ import (
 	"github.com/daniellavrushin/b4/log"
 )
 
-// DPI system types we can identify
 type DPIType string
 
 const (
@@ -28,7 +27,6 @@ const (
 	DPITypeNone      DPIType = "none"      // No DPI detected
 )
 
-// DPI blocking mechanism
 type BlockingMethod string
 
 const (
@@ -40,7 +38,6 @@ const (
 	BlockingNone          BlockingMethod = "none"           // No blocking
 )
 
-// DPI inspection depth
 type InspectionDepth string
 
 const (
@@ -51,47 +48,37 @@ const (
 	InspectionStateless InspectionDepth = "stateless" // Per-packet inspection
 )
 
-// DPIFingerprint contains all information about detected DPI system
 type DPIFingerprint struct {
 	Type            DPIType         `json:"type"`
 	BlockingMethod  BlockingMethod  `json:"blocking_method"`
 	InspectionDepth InspectionDepth `json:"inspection_depth"`
 
-	// Timing characteristics
 	RSTLatencyMs   float64 `json:"rst_latency_ms"`   // Time until RST received
 	BlockLatencyMs float64 `json:"block_latency_ms"` // Time until blocking detected
 
-	// Network position
 	DPIHopCount int  `json:"dpi_hop_count"` // Estimated hops to DPI (from RST TTL)
 	IsInline    bool `json:"is_inline"`     // DPI is inline vs mirror/tap
 
-	// Capabilities detected
 	InspectsHTTP bool `json:"inspects_http"`
 	InspectsTLS  bool `json:"inspects_tls"`
 	InspectsQUIC bool `json:"inspects_quic"`
 	TracksState  bool `json:"tracks_state"` // Stateful inspection
 
-	// Evasion hints
 	VulnerableToTTL    bool `json:"vulnerable_to_ttl"`
 	VulnerableToFrag   bool `json:"vulnerable_to_frag"`
 	VulnerableToDesync bool `json:"vulnerable_to_desync"`
 	VulnerableToOOB    bool `json:"vulnerable_to_oob"`
 
-	// Optimal parameters discovered
 	OptimalTTL      uint8  `json:"optimal_ttl,omitempty"`
 	OptimalStrategy string `json:"optimal_strategy,omitempty"`
 
-	// Raw probe results for debugging
 	ProbeResults map[string]*ProbeResult `json:"probe_results,omitempty"`
 
-	// Confidence score (0-100)
 	Confidence int `json:"confidence"`
 
-	// Recommended strategies (ordered by likelihood of success)
 	RecommendedFamilies []StrategyFamily `json:"recommended_families"`
 }
 
-// ProbeResult stores result of individual probe
 type ProbeResult struct {
 	ProbeName    string        `json:"probe_name"`
 	Success      bool          `json:"success"`
@@ -104,18 +91,15 @@ type ProbeResult struct {
 	Notes        string        `json:"notes,omitempty"`
 }
 
-// DPIProber handles all fingerprinting probes
 type DPIProber struct {
 	domain  string
 	timeout time.Duration
 	results map[string]*ProbeResult
 	mu      sync.Mutex
 
-	// Reference domain that should NOT be blocked (for comparison)
 	referenceDomain string
 }
 
-// NewDPIProber creates a new prober for the given domain
 func NewDPIProber(domain string, refDomain string, timeout time.Duration) *DPIProber {
 	return &DPIProber{
 		domain:          domain,
@@ -125,7 +109,6 @@ func NewDPIProber(domain string, refDomain string, timeout time.Duration) *DPIPr
 	}
 }
 
-// Fingerprint runs all probes and returns DPI fingerprint
 func (p *DPIProber) Fingerprint(ctx context.Context) *DPIFingerprint {
 	fp := &DPIFingerprint{
 		Type:           DPITypeUnknown,
@@ -134,46 +117,35 @@ func (p *DPIProber) Fingerprint(ctx context.Context) *DPIFingerprint {
 		Confidence:     0,
 	}
 
-	log.Infof("DPI Fingerprinting: Starting probes for %s", p.domain)
+	log.DiscoveryLogf("Phase Fingerprint: Analyzing DPI for %s", p.domain)
 
-	// Run probes in order of information value
-	// Each probe builds on information from previous probes
-
-	// 1. Baseline: Is the domain actually blocked?
 	baselineResult := p.probeBaseline(ctx)
 	fp.ProbeResults["baseline"] = baselineResult
 
 	if !baselineResult.Blocked {
-		log.Infof("DPI Fingerprinting: Domain %s is NOT blocked, no DPI detected", p.domain)
+		log.DiscoveryLogf("  ✓ No DPI detected - domain accessible")
 		fp.Type = DPITypeNone
 		fp.BlockingMethod = BlockingNone
 		fp.Confidence = 95
 		return fp
 	}
 
-	log.Infof("DPI Fingerprinting: Domain is blocked, analyzing blocking method...")
+	log.DiscoveryLogf("  ✗ Domain blocked - analyzing DPI characteristics...")
 
-	// 2. Determine blocking method
 	p.probeBlockingMethod(ctx, fp)
 
-	// 3. Analyze RST characteristics (if RST-based blocking)
 	if fp.BlockingMethod == BlockingRSTInject {
 		p.probeRSTCharacteristics(ctx, fp)
 	}
 
-	// 4. Test inspection depth
 	p.probeInspectionDepth(ctx, fp)
 
-	// 5. Test specific evasion vulnerabilities
 	p.probeEvasionVulnerabilities(ctx, fp)
 
-	// 6. Try to identify DPI type based on all collected data
 	p.identifyDPIType(fp)
 
-	// 7. Generate recommendations
 	p.generateRecommendations(fp)
 
-	// Copy results
 	p.mu.Lock()
 	for k, v := range p.results {
 		fp.ProbeResults[k] = v
@@ -185,13 +157,11 @@ func (p *DPIProber) Fingerprint(ctx context.Context) *DPIFingerprint {
 	return fp
 }
 
-// probeBaseline checks if domain is actually blocked
 func (p *DPIProber) probeBaseline(ctx context.Context) *ProbeResult {
 	result := &ProbeResult{
 		ProbeName: "baseline",
 	}
 
-	// First check reference domain (should work)
 	refResult := p.doHTTPSProbe(ctx, p.referenceDomain)
 	if !refResult.Success {
 		result.Notes = "Reference domain also failed - possible network issue"
@@ -199,7 +169,6 @@ func (p *DPIProber) probeBaseline(ctx context.Context) *ProbeResult {
 		return result
 	}
 
-	// Now check target domain
 	targetResult := p.doHTTPSProbe(ctx, p.domain)
 	result.Success = targetResult.Success
 	result.Blocked = !targetResult.Success
@@ -210,59 +179,55 @@ func (p *DPIProber) probeBaseline(ctx context.Context) *ProbeResult {
 	return result
 }
 
-// probeBlockingMethod determines how the DPI blocks connections
 func (p *DPIProber) probeBlockingMethod(ctx context.Context, fp *DPIFingerprint) {
-	// Test 1: Check for RST injection (most common)
 	rstResult := p.probeForRST(ctx)
 	p.storeResult("rst_detection", rstResult)
 
 	if rstResult.RSTTTL > 0 {
 		fp.BlockingMethod = BlockingRSTInject
 		fp.RSTLatencyMs = float64(rstResult.Latency.Milliseconds())
+		log.DiscoveryLogf("  Detected: RST injection (%.1fms latency)", fp.RSTLatencyMs)
 		return
 	}
 
-	// Test 2: Check for HTTP redirect
 	redirectResult := p.probeForRedirect(ctx)
 	p.storeResult("redirect_detection", redirectResult)
 
 	if redirectResult.HTTPCode >= 300 && redirectResult.HTTPCode < 400 {
 		fp.BlockingMethod = BlockingRedirect
+		log.DiscoveryLogf("  Detected: HTTP redirect to block page")
 		return
 	}
 
-	// Test 3: Check for content injection
 	injectResult := p.probeForContentInjection(ctx)
 	p.storeResult("content_injection", injectResult)
 
 	if injectResult.Notes == "content_injected" {
 		fp.BlockingMethod = BlockingContentInject
+		log.DiscoveryLogf("  Detected: Content injection (fake response)")
 		return
 	}
 
-	// Test 4: Pure timeout = silent drop
 	if rstResult.ErrorType == "timeout" {
 		fp.BlockingMethod = BlockingTimeout
 		return
 	}
 
-	// Test 5: Check for TLS alert
 	tlsResult := p.probeForTLSAlert(ctx)
 	p.storeResult("tls_alert", tlsResult)
 
 	if tlsResult.Notes == "tls_alert_received" {
 		fp.BlockingMethod = BlockingTLSAlert
+		log.DiscoveryLogf("  Detected: Silent drop (timeout)")
 		return
 	}
 }
 
-// probeForRST attempts to detect RST injection and measure its TTL
 func (p *DPIProber) probeForRST(ctx context.Context) *ProbeResult {
 	result := &ProbeResult{
 		ProbeName: "rst_detection",
 	}
 
-	// Use raw TCP connection to detect RST
 	dialer := &net.Dialer{
 		Timeout: p.timeout,
 	}
@@ -272,7 +237,6 @@ func (p *DPIProber) probeForRST(ctx context.Context) *ProbeResult {
 	if err != nil {
 		result.Latency = time.Since(start)
 
-		// Check error type
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			result.ErrorType = "timeout"
 		} else if strings.Contains(err.Error(), "connection reset") {
@@ -287,7 +251,6 @@ func (p *DPIProber) probeForRST(ctx context.Context) *ProbeResult {
 	}
 	defer conn.Close()
 
-	// Connected, now send ClientHello with blocked SNI
 	tlsConn := tls.Client(conn, &tls.Config{
 		ServerName:         p.domain,
 		InsecureSkipVerify: true,
@@ -310,13 +273,11 @@ func (p *DPIProber) probeForRST(ctx context.Context) *ProbeResult {
 	return result
 }
 
-// probeForRedirect checks if blocking uses HTTP redirect
 func (p *DPIProber) probeForRedirect(ctx context.Context) *ProbeResult {
 	result := &ProbeResult{
 		ProbeName: "redirect_detection",
 	}
 
-	// Try HTTP (not HTTPS) first - redirects are more common there
 	client := &http.Client{
 		Timeout: p.timeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -349,7 +310,6 @@ func (p *DPIProber) probeForRedirect(ctx context.Context) *ProbeResult {
 	return result
 }
 
-// probeForContentInjection checks if DPI injects fake responses
 func (p *DPIProber) probeForContentInjection(ctx context.Context) *ProbeResult {
 	result := &ProbeResult{
 		ProbeName: "content_injection",
@@ -373,11 +333,9 @@ func (p *DPIProber) probeForContentInjection(ctx context.Context) *ProbeResult {
 	}
 	defer resp.Body.Close()
 
-	// Read response body
 	body, _ := io.ReadAll(io.LimitReader(resp.Body, 10*1024))
 	result.ResponseSize = int64(len(body))
 
-	// Check for common block page indicators
 	bodyStr := strings.ToLower(string(body))
 	blockIndicators := []string{
 		"blocked", "запрещен", "access denied", "filtered",
@@ -392,7 +350,6 @@ func (p *DPIProber) probeForContentInjection(ctx context.Context) *ProbeResult {
 		}
 	}
 
-	// Check if response is suspiciously fast and small (injected)
 	if result.Latency < 50*time.Millisecond && result.ResponseSize < 1000 {
 		result.Notes = "possibly_injected"
 	}
@@ -400,7 +357,6 @@ func (p *DPIProber) probeForContentInjection(ctx context.Context) *ProbeResult {
 	return result
 }
 
-// probeForTLSAlert checks if DPI sends TLS alerts
 func (p *DPIProber) probeForTLSAlert(ctx context.Context) *ProbeResult {
 	result := &ProbeResult{
 		ProbeName: "tls_alert",
@@ -410,6 +366,7 @@ func (p *DPIProber) probeForTLSAlert(ctx context.Context) *ProbeResult {
 	conn, err := dialer.DialContext(ctx, "tcp", fmt.Sprintf("%s:443", p.domain))
 	if err != nil {
 		result.ErrorType = "connect_failed"
+		log.DiscoveryLogf("  Detected:  Could not connect to domain")
 		return result
 	}
 	defer conn.Close()
@@ -428,15 +385,14 @@ func (p *DPIProber) probeForTLSAlert(ctx context.Context) *ProbeResult {
 		if strings.Contains(errStr, "alert") {
 			result.Notes = "tls_alert_received"
 			result.Blocked = true
+			log.DiscoveryLogf("  Detected: TLS alert injection")
 		}
 	}
 
 	return result
 }
 
-// probeRSTCharacteristics analyzes RST packets in detail
 func (p *DPIProber) probeRSTCharacteristics(ctx context.Context, fp *DPIFingerprint) {
-	// Multiple probes to get consistent TTL reading
 	ttlReadings := make([]int, 0, 5)
 	latencies := make([]time.Duration, 0, 5)
 
@@ -450,8 +406,6 @@ func (p *DPIProber) probeRSTCharacteristics(ctx context.Context, fp *DPIFingerpr
 	}
 
 	if len(ttlReadings) > 0 {
-		// Estimate hop count from TTL
-		// Common initial TTLs: 64 (Linux), 128 (Windows), 255 (Cisco)
 		avgTTL := average(ttlReadings)
 
 		if avgTTL > 200 {
@@ -464,10 +418,8 @@ func (p *DPIProber) probeRSTCharacteristics(ctx context.Context, fp *DPIFingerpr
 		if fp.DPIHopCount < 1 {
 			fp.DPIHopCount = 1
 		}
-		// Very low hop count = inline DPI
 		fp.IsInline = fp.DPIHopCount <= 3
 
-		// Calculate average latency
 		var totalLatency time.Duration
 		for _, l := range latencies {
 			totalLatency += l
@@ -481,50 +433,50 @@ func (p *DPIProber) probeRSTCharacteristics(ctx context.Context, fp *DPIFingerpr
 			Notes:     fmt.Sprintf("hop_count=%d, inline=%v", fp.DPIHopCount, fp.IsInline),
 		})
 	}
+
+	log.DiscoveryLogf("  RST analysis: %d hops to DPI, inline=%v", fp.DPIHopCount, fp.IsInline)
 }
 
-// probeInspectionDepth determines what the DPI actually inspects
 func (p *DPIProber) probeInspectionDepth(ctx context.Context, fp *DPIFingerprint) {
-	// Test 1: Does it inspect only SNI or full TLS?
-	// Try connecting with no SNI
 	noSNIResult := p.probeWithoutSNI(ctx)
 	p.storeResult("no_sni", noSNIResult)
 
 	if noSNIResult.Success {
 		fp.InspectionDepth = InspectionSNIOnly
 		fp.InspectsTLS = true
-		log.Infof("DPI Fingerprinting: DPI only inspects SNI (no-SNI works)")
+		log.DiscoveryLogf("  Inspection: SNI only (no-SNI bypass works)")
 	}
 
-	// Test 2: Does it track connection state?
 	stateResult := p.probeStateTracking()
 	p.storeResult("state_tracking", stateResult)
 
 	fp.TracksState = stateResult.Notes == "stateful"
 	if fp.TracksState {
 		fp.InspectionDepth = InspectionStateful
+		log.DiscoveryLogf("  Inspection: Stateful (tracks connections)")
 	} else {
 		fp.InspectionDepth = InspectionStateless
+		log.DiscoveryLogf("  Inspection: Stateless (per-packet)")
 	}
 
-	// Test 3: HTTP inspection
 	httpResult := p.probeHTTPBlocking(ctx)
 	p.storeResult("http_blocking", httpResult)
 	fp.InspectsHTTP = httpResult.Blocked
 
-	// Test 4: QUIC inspection (UDP 443)
 	quicResult := p.probeQUICBlocking(ctx)
 	p.storeResult("quic_blocking", quicResult)
 	fp.InspectsQUIC = quicResult.Blocked
+
+	if fp.InspectsHTTP || fp.InspectsQUIC {
+		log.DiscoveryLogf("  Protocols blocked: HTTP=%v QUIC=%v", fp.InspectsHTTP, fp.InspectsQUIC)
+	}
 }
 
-// probeWithoutSNI tries TLS connection without SNI extension
 func (p *DPIProber) probeWithoutSNI(ctx context.Context) *ProbeResult {
 	result := &ProbeResult{
 		ProbeName: "no_sni",
 	}
 
-	// Resolve IP first
 	ips, err := net.LookupIP(p.domain)
 	if err != nil || len(ips) == 0 {
 		result.ErrorType = "dns_failed"
@@ -539,10 +491,8 @@ func (p *DPIProber) probeWithoutSNI(ctx context.Context) *ProbeResult {
 	}
 	defer conn.Close()
 
-	// TLS without ServerName
 	tlsConn := tls.Client(conn, &tls.Config{
 		InsecureSkipVerify: true,
-		// No ServerName set
 	})
 
 	start := time.Now()
@@ -583,7 +533,6 @@ func (p *DPIProber) probeStateTracking() *ProbeResult {
 	return result
 }
 
-// probeHTTPBlocking checks if plain HTTP is blocked
 func (p *DPIProber) probeHTTPBlocking(ctx context.Context) *ProbeResult {
 	result := &ProbeResult{
 		ProbeName: "http_blocking",
@@ -611,7 +560,6 @@ func (p *DPIProber) probeHTTPBlocking(ctx context.Context) *ProbeResult {
 
 	result.HTTPCode = resp.StatusCode
 
-	// Check if response is a block page
 	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
 		result.Blocked = true
 	}
@@ -619,14 +567,10 @@ func (p *DPIProber) probeHTTPBlocking(ctx context.Context) *ProbeResult {
 	return result
 }
 
-// probeQUICBlocking checks if QUIC/UDP 443 is blocked
 func (p *DPIProber) probeQUICBlocking(ctx context.Context) *ProbeResult {
 	result := &ProbeResult{
 		ProbeName: "quic_blocking",
 	}
-
-	// Simple UDP probe to port 443
-	// A full QUIC handshake would be more accurate but complex
 
 	conn, err := net.DialTimeout("udp", fmt.Sprintf("%s:443", p.domain), p.timeout)
 	if err != nil {
@@ -636,8 +580,6 @@ func (p *DPIProber) probeQUICBlocking(ctx context.Context) *ProbeResult {
 	}
 	defer conn.Close()
 
-	// Send a minimal QUIC-like packet (not a real QUIC Initial)
-	// Real implementation would use proper QUIC Initial packet
 	fakeQUIC := make([]byte, 100)
 	fakeQUIC[0] = 0xC0 // Long header, QUIC initial
 
@@ -650,13 +592,11 @@ func (p *DPIProber) probeQUICBlocking(ctx context.Context) *ProbeResult {
 		return result
 	}
 
-	// Try to read response
 	conn.SetReadDeadline(time.Now().Add(p.timeout / 2))
 	buf := make([]byte, 1500)
 	_, err = conn.Read(buf)
 
 	if err != nil {
-		// Timeout is expected if no QUIC server, but DPI might also drop
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			result.Notes = "timeout_no_response"
 		}
@@ -667,26 +607,17 @@ func (p *DPIProber) probeQUICBlocking(ctx context.Context) *ProbeResult {
 	return result
 }
 
-// probeEvasionVulnerabilities tests specific bypass techniques
 func (p *DPIProber) probeEvasionVulnerabilities(ctx context.Context, fp *DPIFingerprint) {
 	log.Infof("DPI Fingerprinting: Testing evasion vulnerabilities...")
 
-	// These probes require the B4 engine to be active
-	// For now, we estimate based on DPI characteristics
-
-	// TTL-based evasion works if DPI is not inline
 	fp.VulnerableToTTL = fp.DPIHopCount > 2 && fp.DPIHopCount < 20
 
-	// Fragmentation works against stateless DPI
 	fp.VulnerableToFrag = !fp.TracksState || fp.InspectionDepth == InspectionSNIOnly
 
-	// Desync works against stateful DPI that trusts sequence numbers
 	fp.VulnerableToDesync = fp.TracksState && fp.BlockingMethod == BlockingRSTInject
 
-	// OOB works against DPI that doesn't handle urgent data
 	fp.VulnerableToOOB = fp.BlockingMethod == BlockingTimeout && !fp.TracksState
 
-	// Calculate optimal TTL if vulnerable
 	if fp.VulnerableToTTL && fp.DPIHopCount > 0 {
 		fp.OptimalTTL = uint8(fp.DPIHopCount - 1)
 		if fp.OptimalTTL < 1 {
@@ -702,9 +633,7 @@ func (p *DPIProber) probeEvasionVulnerabilities(ctx context.Context, fp *DPIFing
 	})
 }
 
-// identifyDPIType attempts to identify the specific DPI system
 func (p *DPIProber) identifyDPIType(fp *DPIFingerprint) {
-	// Scoring system for each DPI type
 	scores := map[DPIType]int{
 		DPITypeTSPU:      0,
 		DPITypeSandvine:  0,
@@ -713,11 +642,6 @@ func (p *DPIProber) identifyDPIType(fp *DPIFingerprint) {
 		DPITypeFortigate: 0,
 	}
 
-	// TSPU characteristics (Russian DPI)
-	// - Very fast RST injection (<10ms)
-	// - Inline deployment
-	// - Blocks SNI specifically
-	// - Often hop count 1-3
 	if fp.RSTLatencyMs < 15 && fp.IsInline {
 		scores[DPITypeTSPU] += 30
 	}
@@ -731,10 +655,6 @@ func (p *DPIProber) identifyDPIType(fp *DPIFingerprint) {
 		scores[DPITypeTSPU] += 10
 	}
 
-	// Sandvine characteristics
-	// - Moderate latency (10-50ms)
-	// - Often uses content injection
-	// - Full TLS inspection capable
 	if fp.RSTLatencyMs >= 10 && fp.RSTLatencyMs < 50 {
 		scores[DPITypeSandvine] += 20
 	}
@@ -745,9 +665,6 @@ func (p *DPIProber) identifyDPIType(fp *DPIFingerprint) {
 		scores[DPITypeSandvine] += 15
 	}
 
-	// Huawei characteristics
-	// - HTTP redirect common
-	// - Moderate hop count (ISP level)
 	if fp.BlockingMethod == BlockingRedirect {
 		scores[DPITypeHuawei] += 25
 	}
@@ -755,9 +672,6 @@ func (p *DPIProber) identifyDPIType(fp *DPIFingerprint) {
 		scores[DPITypeHuawei] += 15
 	}
 
-	// Fortigate characteristics
-	// - TLS alerts
-	// - Enterprise deployment (low hop count)
 	if fp.BlockingMethod == BlockingTLSAlert {
 		scores[DPITypeFortigate] += 35
 	}
@@ -765,7 +679,6 @@ func (p *DPIProber) identifyDPIType(fp *DPIFingerprint) {
 		scores[DPITypeFortigate] += 15
 	}
 
-	// Find highest score
 	maxScore := 0
 	bestType := DPITypeUnknown
 	for dpiType, score := range scores {
@@ -775,26 +688,23 @@ func (p *DPIProber) identifyDPIType(fp *DPIFingerprint) {
 		}
 	}
 
-	// Only assign type if confidence is reasonable
 	if maxScore >= 40 {
 		fp.Type = bestType
 		fp.Confidence = min(maxScore, 95)
+		log.DiscoveryLogf("  Identified: %s DPI system", fp.Type)
 	} else {
 		fp.Type = DPITypeUnknown
 		fp.Confidence = maxScore
 	}
 }
 
-// generateRecommendations suggests strategies based on fingerprint
 func (p *DPIProber) generateRecommendations(fp *DPIFingerprint) {
 	recommendations := make([]StrategyFamily, 0)
 
-	// Combo is generally most effective - test first
 	recommendations = append(recommendations, FamilyTCPFrag)
 	recommendations = append(recommendations, FamilyCombo)
 	recommendations = append(recommendations, FamilyHybrid)
 
-	// Priority based on vulnerabilities
 	if fp.VulnerableToDesync {
 		recommendations = append(recommendations, FamilyDesync)
 		recommendations = append(recommendations, FamilyFirstByte)
@@ -818,28 +728,24 @@ func (p *DPIProber) generateRecommendations(fp *DPIFingerprint) {
 		recommendations = append(recommendations, FamilyOOB)
 	}
 
-	// Type-specific recommendations
 	switch fp.Type {
 	case DPITypeTSPU:
-		// TSPU responds well to combo and disorder
 		if !containsFamily(recommendations, FamilyDisorder) {
 			recommendations = append(recommendations, FamilyDisorder)
 		}
 		recommendations = append(recommendations, FamilySACK)
 
 	case DPITypeSandvine:
-		// Sandvine needs timing-based attacks
 		recommendations = append(recommendations, FamilyFirstByte)
 		recommendations = append(recommendations, FamilySynFake)
 		recommendations = append(recommendations, FamilyDelay)
 
 	case DPITypeHuawei, DPITypeFortigate:
-		// Enterprise DPI - overlap and extsplit often work
 		recommendations = append(recommendations, FamilyOverlap)
 		recommendations = append(recommendations, FamilyExtSplit)
 		recommendations = append(recommendations, FamilyIPFrag)
 	}
-	// Ensure we have at least some recommendations
+
 	if len(recommendations) == 0 {
 		recommendations = []StrategyFamily{
 			FamilyTCPFrag,
@@ -849,7 +755,6 @@ func (p *DPIProber) generateRecommendations(fp *DPIFingerprint) {
 		}
 	}
 
-	// Remove duplicates while preserving order
 	seen := make(map[StrategyFamily]bool)
 	unique := make([]StrategyFamily, 0, len(recommendations))
 	for _, f := range recommendations {
@@ -861,13 +766,10 @@ func (p *DPIProber) generateRecommendations(fp *DPIFingerprint) {
 
 	fp.RecommendedFamilies = unique
 
-	// Determine optimal strategy name
 	if len(unique) > 0 {
 		fp.OptimalStrategy = string(unique[0])
 	}
 }
-
-// Helper methods
 
 func (p *DPIProber) doHTTPSProbe(ctx context.Context, domain string) *ProbeResult {
 	result := &ProbeResult{
@@ -900,15 +802,12 @@ func (p *DPIProber) doHTTPSProbe(ctx context.Context, domain string) *ProbeResul
 	result.Success = true
 	result.HTTPCode = resp.StatusCode
 
-	// Read some body to ensure connection is complete
 	io.CopyN(io.Discard, resp.Body, 1024)
 
 	return result
 }
 
 func (p *DPIProber) estimateTTLFromTiming(latency time.Duration) int {
-	// Rough heuristic: faster response = closer DPI
-	// This is very approximate
 	ms := latency.Milliseconds()
 
 	if ms < 5 {
@@ -929,19 +828,41 @@ func (p *DPIProber) storeResult(name string, result *ProbeResult) {
 }
 
 func (p *DPIProber) logFingerprint(fp *DPIFingerprint) {
-	log.Infof("=== DPI Fingerprint Results ===")
-	log.Infof("  Type: %s (confidence: %d%%)", fp.Type, fp.Confidence)
-	log.Infof("  Blocking Method: %s", fp.BlockingMethod)
-	log.Infof("  Inspection Depth: %s", fp.InspectionDepth)
-	log.Infof("  DPI Hop Count: %d (inline: %v)", fp.DPIHopCount, fp.IsInline)
-	log.Infof("  RST Latency: %.2fms", fp.RSTLatencyMs)
-	log.Infof("  Vulnerabilities: TTL=%v Frag=%v Desync=%v OOB=%v",
-		fp.VulnerableToTTL, fp.VulnerableToFrag, fp.VulnerableToDesync, fp.VulnerableToOOB)
-	if fp.OptimalTTL > 0 {
-		log.Infof("  Optimal TTL: %d", fp.OptimalTTL)
+	log.DiscoveryLogf("DPI Fingerprint: %s (confidence: %d%%)", fp.Type, fp.Confidence)
+	if fp.BlockingMethod != BlockingNone {
+		log.DiscoveryLogf("  Blocking method: %s", fp.BlockingMethod)
 	}
-	log.Infof("  Recommended Families: %v", fp.RecommendedFamilies)
-	log.Infof("===============================")
+	if fp.DPIHopCount > 0 {
+		log.DiscoveryLogf("  DPI location: %d hops away (inline: %v)", fp.DPIHopCount, fp.IsInline)
+	}
+	if fp.OptimalTTL > 0 {
+		log.DiscoveryLogf("  Optimal TTL: %d", fp.OptimalTTL)
+	}
+
+	var vulns []string
+	if fp.VulnerableToTTL {
+		vulns = append(vulns, "TTL")
+	}
+	if fp.VulnerableToFrag {
+		vulns = append(vulns, "Frag")
+	}
+	if fp.VulnerableToDesync {
+		vulns = append(vulns, "Desync")
+	}
+	if fp.VulnerableToOOB {
+		vulns = append(vulns, "OOB")
+	}
+	if len(vulns) > 0 {
+		log.DiscoveryLogf("  Vulnerable to: %s", strings.Join(vulns, ", "))
+	}
+
+	if len(fp.RecommendedFamilies) > 0 {
+		families := make([]string, 0, len(fp.RecommendedFamilies))
+		for _, f := range fp.RecommendedFamilies[:min(5, len(fp.RecommendedFamilies))] {
+			families = append(families, string(f))
+		}
+		log.DiscoveryLogf("  Recommended: %s", strings.Join(families, ", "))
+	}
 }
 
 // Utility functions
