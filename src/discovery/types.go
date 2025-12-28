@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/daniellavrushin/b4/config"
+	"github.com/daniellavrushin/b4/nfq"
 )
 
 type CheckStatus string
@@ -24,7 +25,6 @@ const (
 	PhaseStrategy    DiscoveryPhase = "strategy_detection"
 	PhaseOptimize    DiscoveryPhase = "optimization"
 	PhaseCombination DiscoveryPhase = "combination"
-	PhaseFingerprint DiscoveryPhase = "fingerprint"
 	PhaseDNS         DiscoveryPhase = "dns_detection"
 )
 
@@ -79,7 +79,6 @@ type CheckSuite struct {
 	CurrentPhase           DiscoveryPhase                    `json:"current_phase,omitempty"`
 	mu                     sync.RWMutex                      `json:"-"`
 	cancel                 chan struct{}                     `json:"-"`
-	Fingerprint            *DPIFingerprint                   `json:"fingerprint,omitempty"`
 }
 
 type DomainPresetResult struct {
@@ -104,7 +103,6 @@ type DomainDiscoveryResult struct {
 	Results       map[string]*DomainPresetResult `json:"results"`
 	BaselineSpeed float64                        `json:"baseline_speed,omitempty"`
 	Improvement   float64                        `json:"improvement,omitempty"`
-	Fingerprint   *DPIFingerprint                `json:"fingerprint,omitempty"`
 	DNSResult     *DNSDiscoveryResult            `json:"dns_result,omitempty"`
 }
 
@@ -133,4 +131,26 @@ type DNSDiscoveryResult struct {
 	BestServer    string           `json:"best_server,omitempty"`
 	NeedsFragment bool             `json:"needs_fragment"`
 	ProbeResults  []DNSProbeResult `json:"probe_results,omitempty"`
+}
+
+type PayloadTestResult struct {
+	Speed   float64 `json:"speed"`
+	Payload int     `json:"payload"`
+	Works   bool    `json:"works"`
+}
+
+type DiscoverySuite struct {
+	*CheckSuite
+	networkBaseline float64
+	optimalTTL      uint8
+
+	pool         *nfq.Pool
+	cfg          *config.Config
+	domainResult *DomainDiscoveryResult
+
+	// Detected working payload(s)
+	workingPayloads []PayloadTestResult
+	bestPayload     int
+
+	dnsResult *DNSDiscoveryResult
 }
