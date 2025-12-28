@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/daniellavrushin/b4/config"
+	"github.com/daniellavrushin/b4/nfq"
 )
 
 type CheckStatus string
@@ -130,4 +131,26 @@ type DNSDiscoveryResult struct {
 	BestServer    string           `json:"best_server,omitempty"`
 	NeedsFragment bool             `json:"needs_fragment"`
 	ProbeResults  []DNSProbeResult `json:"probe_results,omitempty"`
+}
+
+type PayloadTestResult struct {
+	Speed   float64 `json:"speed"`
+	Payload int     `json:"payload"`
+	Works   bool    `json:"works"`
+}
+
+type DiscoverySuite struct {
+	*CheckSuite
+	networkBaseline float64
+	optimalTTL      uint8
+
+	pool         *nfq.Pool
+	cfg          *config.Config
+	domainResult *DomainDiscoveryResult
+
+	// Detected working payload(s)
+	workingPayloads []PayloadTestResult
+	bestPayload     int
+
+	dnsResult *DNSDiscoveryResult
 }

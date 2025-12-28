@@ -31,27 +31,6 @@ const (
 	FailureUnknown      FailureMode = "unknown"
 )
 
-type PayloadTestResult struct {
-	Speed   float64
-	Payload int
-	Works   bool
-}
-
-type DiscoverySuite struct {
-	*CheckSuite
-	networkBaseline float64
-
-	pool         *nfq.Pool
-	cfg          *config.Config
-	domainResult *DomainDiscoveryResult
-
-	// Detected working payload(s)
-	workingPayloads []PayloadTestResult
-	bestPayload     int
-
-	dnsResult *DNSDiscoveryResult
-}
-
 func NewDiscoverySuite(input string, pool *nfq.Pool) *DiscoverySuite {
 
 	suite := NewCheckSuite(input)
@@ -453,7 +432,7 @@ func (ds *DiscoverySuite) optimizeFakeSNI() ConfigPreset {
 	base.Faking.SeqOffset = 10000
 	base.Faking.SNISeqLength = 1
 	base.Faking.SNIType = ds.bestPayload
-	base.Fragmentation.Strategy = "tcp"
+	base.Fragmentation.Strategy = "combo"
 	base.Fragmentation.SNIPosition = 1
 	base.Fragmentation.ReverseOrder = true
 
@@ -464,7 +443,7 @@ func (ds *DiscoverySuite) optimizeFakeSNI() ConfigPreset {
 		Config: base,
 	}
 
-	optimalTTL, speed := ds.findOptimalTTL(basePreset, 0)
+	optimalTTL, speed := ds.findOptimalTTL(basePreset)
 	if optimalTTL == 0 {
 		log.DiscoveryLogf("  No working TTL found for FakeSNI")
 		return basePreset
@@ -514,7 +493,7 @@ func (ds *DiscoverySuite) optimizeTCPFrag() ConfigPreset {
 	base.Fragmentation.ReverseOrder = true
 	base.Faking.SNI = true
 
-	base.Faking.TTL = 8
+	base.Faking.TTL = ds.getOptimalTTL()
 
 	base.Faking.Strategy = "pastseq"
 	base.Faking.SNIType = ds.bestPayload
@@ -561,7 +540,8 @@ func (ds *DiscoverySuite) optimizeTLSRec() ConfigPreset {
 	base := baseConfig()
 	base.Fragmentation.Strategy = "tls"
 	base.Faking.SNI = true
-	base.Faking.TTL = 8
+
+	base.Faking.TTL = ds.getOptimalTTL()
 
 	base.Faking.Strategy = "pastseq"
 	base.Faking.SNIType = ds.bestPayload
@@ -1206,88 +1186,6 @@ func (ds *DiscoverySuite) runExtendedSearch() []StrategyFamily {
 	return workingFamilies
 }
 
-// FindOptimalTTL uses binary search to find minimum working TTL, then verifies speed
-func (ds *DiscoverySuite) findOptimalTTL(basePreset ConfigPreset, hint uint8) (uint8, float64) {
-	var bestTTL uint8
-	var bestSpeed float64
-	low, high := uint8(1), uint8(32)
-
-	// If hint provided, test it first and narrow search range
-	if hint > 0 {
-		preset := basePreset
-		preset.Name = fmt.Sprintf("ttl-hint-%d", hint)
-		preset.Config.Faking.TTL = hint
-
-		result := ds.testPresetWithBestPayload(preset)
-		ds.storeResult(preset, result)
-
-		if result.Status == CheckStatusComplete {
-			bestTTL = hint
-			bestSpeed = result.Speed
-			log.DiscoveryLogf("  TTL hint %d: SUCCESS (%.2f KB/s) - narrowing search", hint, result.Speed/1024)
-
-			// Narrow search: find minimum between 1 and hint
-			high = hint
-			if hint > 8 {
-				low = hint - 8 // Don't search too far below
-			}
-		} else {
-			log.DiscoveryLogf("  TTL hint %d: FAILED - falling back to full search", hint)
-		}
-	}
-
-	log.DiscoveryLogf("Binary search for optimal TTL (range %d-%d)", low, high)
-
-	for low < high {
-		mid := (low + high) / 2
-
-		preset := basePreset
-		preset.Name = fmt.Sprintf("ttl-search-%d", mid)
-		preset.Config.Faking.TTL = mid
-
-		result := ds.testPresetWithBestPayload(preset)
-		ds.storeResult(preset, result)
-
-		if result.Status == CheckStatusComplete {
-			bestTTL = mid
-			bestSpeed = result.Speed
-			high = mid
-			log.DiscoveryLogf("  TTL %d: SUCCESS (%.2f KB/s)", mid, result.Speed/1024)
-		} else {
-			low = mid + 1
-			log.Tracef("  TTL %d: FAILED", mid)
-		}
-	}
-
-	if bestTTL == 0 {
-		return 0, 0
-	}
-
-	// Test slightly higher TTLs - sometimes better speed
-	for _, offset := range []uint8{2, 4} {
-		testTTL := bestTTL + offset
-		if testTTL > 32 {
-			continue
-		}
-
-		preset := basePreset
-		preset.Name = fmt.Sprintf("ttl-verify-%d", testTTL)
-		preset.Config.Faking.TTL = testTTL
-
-		result := ds.testPresetWithBestPayload(preset)
-		ds.storeResult(preset, result)
-
-		if result.Status == CheckStatusComplete && result.Speed > bestSpeed*1.1 {
-			bestTTL = testTTL
-			bestSpeed = result.Speed
-			log.DiscoveryLogf("  TTL %d: Better (%.2f KB/s)", testTTL, result.Speed/1024)
-		}
-	}
-
-	log.DiscoveryLogf("Optimal TTL found: %d (%.2f KB/s)", bestTTL, bestSpeed/1024)
-	return bestTTL, bestSpeed
-}
-
 // FindOptimalPosition binary searches for minimum working fragmentation position
 func (ds *DiscoverySuite) findOptimalPosition(basePreset ConfigPreset, maxPos int) (int, float64) {
 	low, high := 1, maxPos
@@ -1343,10 +1241,8 @@ func analyzeFailure(result CheckResult) FailureMode {
 func suggestFamiliesForFailure(mode FailureMode) []StrategyFamily {
 	switch mode {
 	case FailureRSTImmediate:
-		// DPI inline, stateful - need desync/fake
 		return []StrategyFamily{FamilyDesync, FamilyFakeSNI, FamilySynFake}
 	case FailureTimeout:
-		// Packets dropped - fragmentation helps
 		return []StrategyFamily{FamilyTCPFrag, FamilyTLSRec, FamilyOOB}
 	default:
 		return nil
