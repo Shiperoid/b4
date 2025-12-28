@@ -1,5 +1,10 @@
 # B4 - Bye Bye Big Bro
 
+## [1.27.3] - 2025-12-28
+
+- IMPROVED: `Discovery` now finds the optimal TTL for a specific network, instead of using a fixed value.
+- IMPROVED: Removed DPI fingerprinting phase from discovery - it was slow and unreliable. Discovery now starts testing bypass strategies immediately, making the process faster.
+
 ## [1.27.2] - 2025-12-27
 
 - FIXED: Adding multiple services with many UDP ports (Discord, WhatsApp, etc.) could cause `iptables` firewall rules to fail, preventing B4 from starting or restarting properly.
