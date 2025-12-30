@@ -7,9 +7,14 @@
 - ADDED: Support for `MIPS` devices with soft float.
 - IMPROVED: `Discovery` now finds the optimal TTL for a specific network, instead of using a fixed value.
 - IMPROVED: Removed DPI fingerprinting phase from discovery - it was slow and unreliable. Discovery now starts testing bypass strategies immediately, making the process faster.
+- IMPROVED: Shutdown behavior - B4 now waits up to 5 seconds for in-flight packet operations to complete gracefully before terminating.
 - FIXED: DPI bypass not working for LAN devices on routers using `nftables` (e.g., OpenWrt with fw4 firewall).
 - FIXED: TCP `desync` bypass methods (`rst`, `fin`, `ack`, `combo`, `full` modes) were sending malformed packets, causing them to fail or be ignored. Affects both `IPv4` and `IPv6`.
 - FIXED: Restored missing `Packet Mark` setting in Network Configuration - allows customizing the firewall mark used for traffic routing.
+- FIXED: Potential connection hangs caused by packets getting stuck in the processing queue without verdicts being set.
+- FIXED: Memory leak where packet injection operations could continue running after service shutdown, potentially causing crashes or instability during restart.
+- FIXED: Race condition in network interface name caching that could cause incorrect packet filtering decisions on multi-interface systems.
+- FIXED: Fragmented IP packets now bypass B4 processing entirely to prevent incomplete packet inspection and potential protocol violations.
 - REMOVED: Fragmentation strategy `overlap` — functionality merged into `combo`.
 - CHANGED: Fragmentation `combo` now supports decoy packets. When `enabled`, B4 sends a fake `ClientHello` with a whitelisted domain (e.g., ya.ru, vk.com) before sending the real fragmented request. Can be found in Fragmentaiton Tab set settings.
   
