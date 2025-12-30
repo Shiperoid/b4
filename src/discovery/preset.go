@@ -372,6 +372,45 @@ func GetPhase1Presets() []ConfigPreset {
 			},
 		},
 
+		// 9.1  Combo + Decoy SNI
+		{
+			Name:        "combo-decoy",
+			Description: "Combo with decoy packet (fake SNI before real)",
+			Family:      FamilyCombo,
+			Phase:       PhaseStrategy,
+			Priority:    22,
+			Config: config.SetConfig{
+				TCP: config.TCPConfig{
+					ConnBytesLimit: 19,
+					Seg2Delay:      50,
+				},
+				UDP: defaultUDP(),
+				Fragmentation: config.FragmentationConfig{
+					Strategy:     "combo",
+					ReverseOrder: true,
+					MiddleSNI:    true,
+					SNIPosition:  1,
+					Combo: config.ComboFragConfig{
+						FirstByteSplit: true,
+						ExtensionSplit: true,
+						ShuffleMode:    "middle",
+						FirstDelayMs:   30,
+						JitterMaxUs:    1000,
+						DecoyEnabled:   true,
+						DecoySNIs:      []string{"ya.ru", "vk.com", "mail.ru"},
+					},
+				},
+				Faking: config.FakingConfig{
+					SNI:          true,
+					TTL:          6,
+					Strategy:     "pastseq",
+					SeqOffset:    10000,
+					SNISeqLength: 1,
+					SNIType:      config.FakePayloadDefault1,
+				},
+			},
+		},
+
 		// 10. SYN Fake with TCP frag
 		{
 			Name:        "synfake-frag",
