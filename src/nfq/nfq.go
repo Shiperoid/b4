@@ -117,6 +117,18 @@ func (w *Worker) Start() error {
 					}
 					return 0
 				}
+
+				// Check for IP fragmentation
+				fragOffset := binary.BigEndian.Uint16(raw[6:8]) & 0x1FFF
+				moreFragments := (binary.BigEndian.Uint16(raw[6:8]) & 0x2000) != 0
+
+				if fragOffset != 0 || moreFragments {
+					if err := q.SetVerdict(id, nfqueue.NfAccept); err != nil {
+						log.Tracef("failed to accept fragmented IPv4 packet %d: %v", id, err)
+					}
+					return 0
+				}
+
 				proto = raw[9]
 				src = net.IP(raw[12:16])
 				dst = net.IP(raw[16:20])
@@ -145,14 +157,10 @@ func (w *Worker) Start() error {
 						hdrLen := int(raw[offset+1])*8 + 8
 						offset += hdrLen
 					case 44:
-						if len(raw) < offset+8 {
-							if err := q.SetVerdict(id, nfqueue.NfAccept); err != nil {
-								log.Tracef("failed to set verdict on packet %d: %v", id, err)
-							}
-							return 0
+						if err := q.SetVerdict(id, nfqueue.NfAccept); err != nil {
+							log.Tracef("failed to accept fragmented IPv6 packet %d: %v", id, err)
 						}
-						nextHeader = raw[offset]
-						offset += 8
+						return 0
 					default:
 						goto done
 					}

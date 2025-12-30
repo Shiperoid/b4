@@ -93,11 +93,13 @@ func (p *Pool) Stop() {
 		close(done)
 	}()
 
+	timeout := 5 * time.Second
+
 	select {
 	case <-done:
 		log.Infof("All NFQueue workers stopped")
-	case <-time.After(3 * time.Second):
-		log.Errorf("Timeout waiting for NFQueue workers to stop")
+	case <-time.After(timeout):
+		log.Errorf("Timeout (%v) waiting for NFQueue workers to stop", timeout)
 	}
 }
 

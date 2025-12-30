@@ -46,8 +46,3 @@ type Worker struct {
 	ipToMac          atomic.Value
 	connState        sync.Map
 }
-
-type ConnState struct {
-	PacketCount int32
-	LastSeen    int64
-}
