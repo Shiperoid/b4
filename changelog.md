@@ -1,6 +1,6 @@
 # B4 - Bye Bye Big Bro
 
-## [1.28.0] - 2025-12-30
+## [1.28.1] - 2025-12-30
 
 - ADDED: Web server bind address setting - control which network interface the web UI listens on (e.g., `127.0.0.1` for localhost-only access, `0.0.0.0` for all interfaces). Supports `IPv6`.
 - ADDED: Added `Skip DNS` toggle in `Discovery` - useful when you know DNS isn't blocked and want faster results.
