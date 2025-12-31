@@ -1,8 +1,9 @@
 # B4 - Bye Bye Big Bro
 
-## [1.29.0] - 2025-xx-xx
+## [1.29.1] - 2026-01-01
 
-- PRERELEASE - not yet ready.
+- ADDED: Incoming response bypass - defeats TSPU throttling that blocks downloads after ~15KB. I nmost cases - select TCP incoming  `fake`.
+- FIXED: Discovery progress bar sometimes showing over 100%.
 
 ## [1.28.1] - 2025-12-30
 

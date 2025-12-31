@@ -107,7 +107,7 @@ export const DiscoveryRunner = () => {
   const domainInputRef = useRef<HTMLInputElement | null>(null);
 
   const progress = suite
-    ? (suite.completed_checks / suite.total_checks) * 100
+    ? Math.min((suite.completed_checks / suite.total_checks) * 100, 100)
     : 0;
   const isReconnecting = suiteId && running && !suite;
 

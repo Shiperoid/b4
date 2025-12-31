@@ -133,12 +133,11 @@ func (ds *DiscoverySuite) RunDiscovery() {
 		phase1Presets := GetPhase1Presets()
 		if len(phase1Presets) > 1 {
 			provenPreset := phase1Presets[1]
-			verifyResult := ds.testPresetWithBestPayload(provenPreset)
-			ds.storeResult(provenPreset, verifyResult)
-
-			if verifyResult.Status == CheckStatusComplete && verifyResult.Speed > baselineSpeed*1.5 {
-				log.DiscoveryLogf("  Bypass 50%%+ faster than baseline - DPI bypass needed")
-				baselineWorks = false
+			if existingResult, exists := ds.domainResult.Results[provenPreset.Name]; exists {
+				if existingResult.Status == CheckStatusComplete && existingResult.Speed > baselineSpeed*1.5 {
+					log.DiscoveryLogf("  Bypass 50%%+ faster than baseline - DPI bypass needed")
+					baselineWorks = false
+				}
 			}
 		}
 
