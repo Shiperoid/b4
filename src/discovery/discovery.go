@@ -20,11 +20,6 @@ import (
 type FailureMode string
 
 const (
-	MIN_BYTES_FOR_SUCCESS = 4 * 1024   // At least 4KB downloaded
-	MIN_SPEED_FOR_SUCCESS = 100 * 1024 // At least 100 KB/s
-)
-
-const (
 	FailureRSTImmediate FailureMode = "rst_immediate"
 	FailureTimeout      FailureMode = "timeout"
 	FailureTLSError     FailureMode = "tls_error"
@@ -834,21 +829,15 @@ func (ds *DiscoverySuite) fetchWithTimeoutUsingIP(timeout time.Duration, ip stri
 	var bytesRead int64
 	lastProgress := time.Now()
 
-	for bytesRead < 100*1024 {
+	maxRead := int64(100 * 1024)
+	if result.ContentSize > 0 && result.ContentSize < maxRead {
+		maxRead = result.ContentSize
+	}
+
+	for bytesRead < maxRead {
 		select {
 		case <-ctx.Done():
-			result.Duration = time.Since(start)
-			result.BytesRead = bytesRead
-			if bytesRead >= MIN_BYTES_FOR_SUCCESS {
-				result.Status = CheckStatusComplete
-				if result.Duration.Seconds() > 0 {
-					result.Speed = float64(bytesRead) / result.Duration.Seconds()
-				}
-			} else {
-				result.Status = CheckStatusFailed
-				result.Error = fmt.Sprintf("timeout after %d bytes (need %d)", bytesRead, MIN_BYTES_FOR_SUCCESS)
-			}
-			return result
+			goto evaluate
 		default:
 		}
 
@@ -878,43 +867,32 @@ func (ds *DiscoverySuite) fetchWithTimeoutUsingIP(timeout time.Duration, ip stri
 		}
 	}
 
+evaluate:
 	duration := time.Since(start)
 	result.Duration = duration
 	result.BytesRead = bytesRead
-
-	if bytesRead < MIN_BYTES_FOR_SUCCESS {
-		if result.ContentSize > 0 {
-			if bytesRead >= result.ContentSize {
-				result.Status = CheckStatusComplete
-				result.Speed = 0
-				log.Tracef("Small but complete response (%d/%d bytes, HTTP %d)", bytesRead, result.ContentSize, resp.StatusCode)
-				return result
-			}
-			result.Status = CheckStatusFailed
-			result.Error = fmt.Sprintf("truncated: got %d of %d bytes", bytesRead, result.ContentSize)
-			return result
-		}
-
-		if resp.StatusCode >= 200 && resp.StatusCode < 500 && bytesRead > 0 {
-			result.Status = CheckStatusComplete
-			result.Speed = 0
-			log.Tracef("Small response without Content-Length (%d bytes, HTTP %d)", bytesRead, resp.StatusCode)
-			return result
-		}
-
-		result.Status = CheckStatusFailed
-		result.Error = fmt.Sprintf("insufficient data: %d bytes (need %d)", bytesRead, MIN_BYTES_FOR_SUCCESS)
-		return result
-	}
 
 	if duration.Seconds() > 0 {
 		result.Speed = float64(bytesRead) / duration.Seconds()
 	}
 
+	if result.ContentSize > 0 {
+		expectedBytes := result.ContentSize
+		if expectedBytes > 100*1024 {
+			expectedBytes = 100 * 1024
+		}
+
+		if bytesRead < expectedBytes*9/10 {
+			result.Status = CheckStatusFailed
+			result.Error = fmt.Sprintf("truncated: %d/%d bytes (%.0f%%)",
+				bytesRead, expectedBytes, float64(bytesRead)*100/float64(expectedBytes))
+			return result
+		}
+	}
+
 	result.Status = CheckStatusComplete
 	return result
 }
-
 func (ds *DiscoverySuite) storeResult(preset ConfigPreset, result CheckResult) {
 	ds.CheckSuite.mu.Lock()
 	defer ds.CheckSuite.mu.Unlock()
