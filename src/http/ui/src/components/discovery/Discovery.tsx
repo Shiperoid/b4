@@ -62,6 +62,7 @@ const familyNames: Record<StrategyFamily, string> = {
   hybrid: "Hybrid",
   window: "Window Manipulation",
   mutation: "Mutation",
+  incoming: "Incoming",
 };
 
 // Friendly names for phases

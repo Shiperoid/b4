@@ -49,6 +49,7 @@ const (
 	FamilyFirstByte StrategyFamily = "firstbyte"
 	FamilyCombo     StrategyFamily = "combo"
 	FamilyHybrid    StrategyFamily = "hybrid"
+	FamilyIncoming  StrategyFamily = "incoming"
 )
 
 type CheckResult struct {

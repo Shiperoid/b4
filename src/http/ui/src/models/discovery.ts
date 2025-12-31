@@ -16,7 +16,8 @@ export type StrategyFamily =
   | "combo"
   | "hybrid"
   | "window"
-  | "mutation";
+  | "mutation"
+  | "incoming";
 
 export type DiscoveryPhase =
   | "baseline"

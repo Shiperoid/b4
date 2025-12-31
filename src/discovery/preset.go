@@ -22,6 +22,146 @@ func GetPhase1Presets() []ConfigPreset {
 			Config:      baselineConfig(),
 		},
 
+		// 1d. Incoming fake bypass - TSPU behavioral throttling bypass
+		{
+			Name:        "incoming-fake",
+			Description: "Incoming fake packets to bypass TSPU behavioral throttling",
+			Family:      FamilyNone,
+			Phase:       PhaseBaseline,
+			Priority:    1,
+			Config: config.SetConfig{
+				TCP: config.TCPConfig{
+					ConnBytesLimit: 19,
+					Incoming: config.IncomingConfig{
+						Mode:      "fake",
+						Min:       14,
+						Max:       14,
+						FakeTTL:   7,
+						FakeCount: 5,
+						Strategy:  "badsum",
+					},
+				},
+				UDP: config.UDPConfig{
+					Mode:           "fake",
+					FakeSeqLength:  6,
+					FakeLen:        64,
+					FakingStrategy: "none",
+					FilterQUIC:     "disabled",
+					FilterSTUN:     true,
+					ConnBytesLimit: 8,
+				},
+				Fragmentation: config.FragmentationConfig{
+					Strategy:     "combo",
+					ReverseOrder: true,
+					MiddleSNI:    true,
+					SNIPosition:  1,
+					Combo: config.ComboFragConfig{
+						FirstByteSplit: true,
+						ExtensionSplit: true,
+						ShuffleMode:    "full",
+						FirstDelayMs:   30,
+						JitterMaxUs:    1000,
+					},
+				},
+				Faking: config.FakingConfig{
+					SNI:          true,
+					TTL:          8,
+					Strategy:     "pastseq",
+					SeqOffset:    10000,
+					SNISeqLength: 1,
+					SNIType:      config.FakePayloadDefault1,
+				},
+			},
+		},
+
+		// 1e. Incoming fake with random corruption strategy
+		{
+			Name:        "incoming-fake-rand",
+			Description: "Incoming fake with random corruption for harder DPI fingerprinting",
+			Family:      FamilyNone,
+			Phase:       PhaseBaseline,
+			Priority:    1,
+			Config: config.SetConfig{
+				TCP: config.TCPConfig{
+					ConnBytesLimit: 19,
+					Incoming: config.IncomingConfig{
+						Mode:      "fake",
+						Min:       14,
+						Max:       14,
+						FakeTTL:   7,
+						FakeCount: 3,
+						Strategy:  "rand",
+					},
+				},
+				UDP: defaultUDP(),
+				Fragmentation: config.FragmentationConfig{
+					Strategy:     "combo",
+					ReverseOrder: true,
+					MiddleSNI:    true,
+					SNIPosition:  1,
+					Combo: config.ComboFragConfig{
+						FirstByteSplit: true,
+						ExtensionSplit: true,
+						ShuffleMode:    "full",
+						FirstDelayMs:   30,
+						JitterMaxUs:    1000,
+					},
+				},
+				Faking: config.FakingConfig{
+					SNI:          true,
+					TTL:          8,
+					Strategy:     "pastseq",
+					SeqOffset:    10000,
+					SNISeqLength: 1,
+					SNIType:      config.FakePayloadDefault1,
+				},
+			},
+		},
+
+		// 1f. Incoming reset mode - threshold-based RST injection
+		{
+			Name:        "incoming-reset",
+			Description: "Inject fake RST at threshold to reset DPI byte counter",
+			Family:      FamilyNone,
+			Phase:       PhaseBaseline,
+			Priority:    1,
+			Config: config.SetConfig{
+				TCP: config.TCPConfig{
+					ConnBytesLimit: 19,
+					Incoming: config.IncomingConfig{
+						Mode:      "reset",
+						Min:       10,
+						Max:       18,
+						FakeTTL:   5,
+						FakeCount: 3,
+						Strategy:  "badsum",
+					},
+				},
+				UDP: defaultUDP(),
+				Fragmentation: config.FragmentationConfig{
+					Strategy:     "combo",
+					ReverseOrder: true,
+					MiddleSNI:    true,
+					SNIPosition:  1,
+					Combo: config.ComboFragConfig{
+						FirstByteSplit: true,
+						ExtensionSplit: true,
+						ShuffleMode:    "full",
+						FirstDelayMs:   30,
+						JitterMaxUs:    1000,
+					},
+				},
+				Faking: config.FakingConfig{
+					SNI:          true,
+					TTL:          8,
+					Strategy:     "pastseq",
+					SeqOffset:    10000,
+					SNISeqLength: 1,
+					SNIType:      config.FakePayloadDefault1,
+				},
+			},
+		},
+
 		// 1. Proven working config - this is the baseline that works for most Russian DPI
 		{
 			Name:        "proven-combo",
@@ -124,7 +264,7 @@ func GetPhase1Presets() []ConfigPreset {
 					DropSACK:       true,
 					Desync: config.DesyncConfig{
 						Mode:       "ack",
-						TTL:        3,
+						TTL:        7,
 						Count:      15,
 						PostDesync: false,
 					},
@@ -152,7 +292,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    1000000,
 					SNISeqLength: 12,
@@ -180,7 +320,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -208,7 +348,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -235,7 +375,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -263,7 +403,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -317,7 +457,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -351,7 +491,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -372,7 +512,7 @@ func GetPhase1Presets() []ConfigPreset {
 					ConnBytesLimit: 19,
 					Desync: config.DesyncConfig{
 						Mode:       "combo",
-						TTL:        2,
+						TTL:        7,
 						Count:      5,
 						PostDesync: false,
 					},
@@ -386,7 +526,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          3,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 2,
@@ -425,7 +565,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          6,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -446,7 +586,7 @@ func GetPhase1Presets() []ConfigPreset {
 					ConnBytesLimit: 19,
 					SynFake:        true,
 					SynFakeLen:     0,
-					SynTTL:         3,
+					SynTTL:         7,
 				},
 				UDP: defaultUDP(),
 				Fragmentation: config.FragmentationConfig{
@@ -456,7 +596,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -486,7 +626,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -514,7 +654,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          1,
+					TTL:          2,
 					Strategy:     "ttl",
 					SNISeqLength: 3,
 					SNIType:      config.FakePayloadDefault1,
@@ -534,7 +674,7 @@ func GetPhase1Presets() []ConfigPreset {
 					ConnBytesLimit: 19,
 					Desync: config.DesyncConfig{
 						Mode:  "full",
-						TTL:   3,
+						TTL:   7,
 						Count: 5,
 					},
 				},
@@ -547,7 +687,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          3,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    50000,
 					SNISeqLength: 3,
@@ -578,7 +718,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -606,7 +746,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -633,7 +773,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -670,7 +810,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 5,
@@ -693,7 +833,7 @@ func GetPhase1Presets() []ConfigPreset {
 
 					Desync: config.DesyncConfig{
 						Mode:  "ack",
-						TTL:   3,
+						TTL:   7,
 						Count: 3,
 					},
 				},
@@ -721,7 +861,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 5,
@@ -750,7 +890,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -788,7 +928,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -821,7 +961,7 @@ func GetPhase1Presets() []ConfigPreset {
 				},
 				Faking: config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -851,7 +991,116 @@ func GetPhase2Presets(family StrategyFamily) []ConfigPreset {
 	presets := []ConfigPreset{}
 
 	switch family {
+	case FamilyIncoming:
+		// Mode variations
+		modes := []string{"fake", "reset", "fin", "desync"}
+		for _, mode := range modes {
+			presets = append(presets, ConfigPreset{
+				Name:     formatName("incoming-%s", mode),
+				Family:   FamilyIncoming,
+				Phase:    PhaseOptimize,
+				Priority: 1,
+				Config: withTCP(base, config.TCPConfig{
+					ConnBytesLimit: 19,
+					Incoming: config.IncomingConfig{
+						Mode:      mode,
+						Min:       14,
+						Max:       14,
+						FakeTTL:   7,
+						FakeCount: 5,
+						Strategy:  "badsum",
+					},
+				}),
+			})
+		}
 
+		// Strategy variations for fake mode
+		strategies := []string{"badsum", "badseq", "badack", "rand", "all"}
+		for _, strat := range strategies {
+			presets = append(presets, ConfigPreset{
+				Name:     formatName("incoming-fake-%s", strat),
+				Family:   FamilyIncoming,
+				Phase:    PhaseOptimize,
+				Priority: 2,
+				Config: withTCP(base, config.TCPConfig{
+					ConnBytesLimit: 19,
+					Incoming: config.IncomingConfig{
+						Mode:      "fake",
+						Min:       14,
+						Max:       14,
+						FakeTTL:   7,
+						FakeCount: 5,
+						Strategy:  strat,
+					},
+				}),
+			})
+		}
+
+		// TTL variations
+		ttls := []uint8{4, 7, 8, 9, 10, 13}
+		for _, ttl := range ttls {
+			presets = append(presets, ConfigPreset{
+				Name:     formatName("incoming-ttl%d", ttl),
+				Family:   FamilyIncoming,
+				Phase:    PhaseOptimize,
+				Priority: int(ttl),
+				Config: withTCP(base, config.TCPConfig{
+					ConnBytesLimit: 19,
+					Incoming: config.IncomingConfig{
+						Mode:      "fake",
+						Min:       14,
+						Max:       14,
+						FakeTTL:   ttl,
+						FakeCount: 5,
+						Strategy:  "badsum",
+					},
+				}),
+			})
+		}
+
+		// FakeCount variations
+		counts := []int{1, 3, 5, 7, 10}
+		for _, cnt := range counts {
+			presets = append(presets, ConfigPreset{
+				Name:     formatName("incoming-count%d", cnt),
+				Family:   FamilyIncoming,
+				Phase:    PhaseOptimize,
+				Priority: cnt,
+				Config: withTCP(base, config.TCPConfig{
+					ConnBytesLimit: 19,
+					Incoming: config.IncomingConfig{
+						Mode:      "fake",
+						Min:       14,
+						Max:       14,
+						FakeTTL:   7,
+						FakeCount: cnt,
+						Strategy:  "badsum",
+					},
+				}),
+			})
+		}
+
+		// Threshold variations for reset mode
+		thresholds := []struct{ min, max int }{{10, 10}, {12, 16}, {14, 14}, {10, 19}}
+		for _, t := range thresholds {
+			presets = append(presets, ConfigPreset{
+				Name:     formatName("incoming-reset-%d-%d", t.min, t.max),
+				Family:   FamilyIncoming,
+				Phase:    PhaseOptimize,
+				Priority: t.max,
+				Config: withTCP(base, config.TCPConfig{
+					ConnBytesLimit: 19,
+					Incoming: config.IncomingConfig{
+						Mode:      "reset",
+						Min:       t.min,
+						Max:       t.max,
+						FakeTTL:   7,
+						FakeCount: 3,
+						Strategy:  "badsum",
+					},
+				}),
+			})
+		}
 	case FamilyCombo:
 		shuffleModes := []string{"middle", "full", "edges"}
 		delays := []int{50, 100, 150, 200}
@@ -984,7 +1233,7 @@ func GetPhase2Presets(family StrategyFamily) []ConfigPreset {
 
 					Desync: config.DesyncConfig{
 						Mode:  "ack",
-						TTL:   3,
+						TTL:   7,
 						Count: 15,
 					},
 				}),
@@ -1086,7 +1335,7 @@ func GetPhase2Presets(family StrategyFamily) []ConfigPreset {
 
 	case FamilyFakeSNI:
 		// TTL variations
-		ttls := []uint8{1, 2, 3, 5, 8}
+		ttls := []uint8{3, 5, 6, 7, 8, 9}
 		for _, ttl := range ttls {
 			presets = append(presets, ConfigPreset{
 				Name:     formatName("fake-ttl%d", ttl),
@@ -1113,7 +1362,7 @@ func GetPhase2Presets(family StrategyFamily) []ConfigPreset {
 				Priority: sl + 10,
 				Config: withFaking(base, config.FakingConfig{
 					SNI:          true,
-					TTL:          3,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: sl,
@@ -1132,7 +1381,7 @@ func GetPhase2Presets(family StrategyFamily) []ConfigPreset {
 				Priority: i + 20,
 				Config: withFaking(base, config.FakingConfig{
 					SNI:          true,
-					TTL:          3,
+					TTL:          7,
 					Strategy:     strat,
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -1158,7 +1407,7 @@ func GetPhase2Presets(family StrategyFamily) []ConfigPreset {
 				Priority: 30 + pt.sniType,
 				Config: withFaking(base, config.FakingConfig{
 					SNI:          true,
-					TTL:          8,
+					TTL:          7,
 					Strategy:     "pastseq",
 					SeqOffset:    10000,
 					SNISeqLength: 1,
@@ -1216,7 +1465,7 @@ func GetPhase2Presets(family StrategyFamily) []ConfigPreset {
 
 	case FamilyDesync:
 		modes := []string{"rst", "fin", "ack", "combo", "full"}
-		ttls := []uint8{1, 2, 3, 5, 8}
+		ttls := []uint8{3, 5, 6, 7, 8, 9}
 		counts := []int{2, 5, 10, 15}
 
 		for _, mode := range modes {
@@ -1400,7 +1649,7 @@ func GetCombinationPresets(workingFamilies []StrategyFamily, bestParams map[Stra
 			},
 			Faking: config.FakingConfig{
 				SNI:          true,
-				TTL:          3,
+				TTL:          7,
 				Strategy:     "pastseq",
 				SeqOffset:    50000,
 				SNISeqLength: 3,
