@@ -31,6 +31,16 @@ var migrationRegistry = map[int]MigrationFunc{
 	12: migrateV12to13,
 	13: migrateV13to14,
 	14: migrateV14to15, // Flatten TCP desync settings into nested struct
+	15: migrateV15to16, // Add TCP Incoming config
+}
+
+func migrateV15to16(c *Config, _ map[string]interface{}) error {
+	log.Tracef("Migration v15->v16: Adding TCP Incoming config")
+
+	for _, set := range c.Sets {
+		set.TCP.Incoming = DefaultSetConfig.TCP.Incoming
+	}
+	return nil
 }
 
 func migrateV14to15(c *Config, raw map[string]interface{}) error {

@@ -219,6 +219,8 @@ func (w *Worker) Start() error {
 							case "fake":
 								if v == IPv4 {
 									w.InjectFakeIncoming(incomingSet, raw, ihl, src)
+								} else {
+									w.InjectFakeIncomingV6(incomingSet, raw, src)
 								}
 
 							case "reset":
@@ -226,6 +228,8 @@ func (w *Worker) Start() error {
 									log.Tracef("Incoming: %dKB threshold for %s:%d, injecting reset", incomingSet.TCP.Incoming.Threshold, srcStr, sport)
 									if v == IPv4 {
 										w.InjectResetIncoming(incomingSet, raw, ihl, src)
+									} else {
+										w.InjectResetIncomingV6(incomingSet, raw, src)
 									}
 								}
 							}
@@ -238,7 +242,6 @@ func (w *Worker) Start() error {
 					}
 					return 0
 				}
-
 				tcpFlags := tcp[13]
 				isSyn := (tcpFlags & 0x02) != 0 // SYN flag
 				isAck := (tcpFlags & 0x10) != 0 // ACK flag
