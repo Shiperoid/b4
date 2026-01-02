@@ -1,5 +1,9 @@
 # B4 - Bye Bye Big Bro
 
+## [1.xx.x] - 2026-01-xx
+
+- FIXED: Crash during `Discovery` when checking status (e.g. clicking "Create Set" or refreshing page while discovery is running. Reported by `Andrew B.`).
+
 ## [1.29.1] - 2026-01-01
 
 - ADDED: Incoming response bypass - defeats TSPU throttling that blocks downloads after ~15KB. I nmost cases - select TCP incoming  `fake` for all strategies.

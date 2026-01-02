@@ -39,10 +39,8 @@ func (api *API) handleCheckStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	snapshot := suite.GetSnapshot()
-
 	setJsonHeader(w)
-	json.NewEncoder(w).Encode(snapshot)
+	json.NewEncoder(w).Encode(suite)
 }
 
 func (api *API) handleCancelCheck(w http.ResponseWriter, r *http.Request) {
