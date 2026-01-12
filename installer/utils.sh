@@ -222,16 +222,18 @@ fetch_stdout() {
     result=""
     if command_exists wget; then
         result=$(wget -qO- --timeout=10 "$url" 2>/dev/null)
+        if [ $? -eq 0 ] && [ -n "$result" ]; then
+            echo "$result"
+            return 0
+        fi
     elif command_exists curl; then
         result=$(curl -sfL --max-time 10 "$url" 2>/dev/null)
+        if [ $? -eq 0 ] && [ -n "$result" ]; then
+            echo "$result"
+            return 0
+        fi
     else
         return 1
-    fi
-
-    # If direct download succeeded, return result
-    if [ -n "$result" ]; then
-        echo "$result"
-        return 0
     fi
 
     # If direct download failed, try proxy fallback
