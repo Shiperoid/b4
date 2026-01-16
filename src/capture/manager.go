@@ -452,7 +452,7 @@ func (m *Manager) LoadCaptureData(c *Capture) ([]byte, error) {
 
 	filename := filepath.Base(c.Filepath)
 
-	if filename != filepath.Base(filename) || strings.Contains(filename, "..") {
+	if strings.Contains(filename, "..") {
 		return nil, fmt.Errorf("invalid filename: %s", filename)
 	}
 
