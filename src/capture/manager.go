@@ -290,19 +290,23 @@ func (m *Manager) ListCaptures() []*Capture {
 	for domain, protocols := range m.metadata {
 		for protocol, meta := range protocols {
 			// Read hex data on demand
-			filepath := filepath.Join(m.outputPath, meta.Filepath)
-			data, err := os.ReadFile(filepath)
+			fullPath := filepath.Join(m.outputPath, meta.Filepath)
+			data, err := os.ReadFile(fullPath)
 			var hexData string
 			if err == nil {
 				hexData = hex.EncodeToString(data)
 			}
+
+			// Return relative path in the format "captures/filename.bin"
+			// This is what the config system expects when loading payloads
+			relativePath := filepath.Join("captures", meta.Filepath)
 
 			captures = append(captures, &Capture{
 				Protocol:  protocol,
 				Domain:    domain,
 				Timestamp: meta.Timestamp,
 				Size:      meta.Size,
-				Filepath:  filepath,
+				Filepath:  relativePath,
 				HexData:   hexData,
 			})
 		}
@@ -321,19 +325,23 @@ func (m *Manager) GetCapture(protocol, domain string) (*Capture, bool) {
 	}
 
 	meta := m.metadata[domain][protocol]
-	filepath := filepath.Join(m.outputPath, meta.Filepath)
-	data, err := os.ReadFile(filepath)
+	fullPath := filepath.Join(m.outputPath, meta.Filepath)
+	data, err := os.ReadFile(fullPath)
 	var hexData string
 	if err == nil {
 		hexData = hex.EncodeToString(data)
 	}
+
+	// Return relative path in the format "captures/filename.bin"
+	// This is what the config system expects when loading payloads
+	relativePath := filepath.Join("captures", meta.Filepath)
 
 	capture := &Capture{
 		Protocol:  protocol,
 		Domain:    domain,
 		Timestamp: meta.Timestamp,
 		Size:      meta.Size,
-		Filepath:  filepath,
+		Filepath:  relativePath,
 		HexData:   hexData,
 	}
 
