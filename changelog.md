@@ -1,6 +1,6 @@
 # B4 - Bye Bye Big Bro
 
-## [1.31.1] - 2026-01-16
+## [1.31.2] - 2026-01-16
 
 - FIXED: Custom payload files not working in `Discovery` feature - old configurations with relative paths like `captures/payload.bin` now work correctly.
 

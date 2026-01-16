@@ -449,5 +449,17 @@ func (m *Manager) LoadCaptureData(c *Capture) ([]byte, error) {
 	if c == nil || c.Filepath == "" {
 		return nil, fmt.Errorf("invalid capture")
 	}
-	return os.ReadFile(c.Filepath)
+
+	filename := filepath.Base(c.Filepath)
+
+	if filename != filepath.Base(filename) || strings.Contains(filename, "..") {
+		return nil, fmt.Errorf("invalid filename: %s", filename)
+	}
+
+	if !strings.HasSuffix(filename, ".bin") {
+		return nil, fmt.Errorf("invalid file extension: %s", filename)
+	}
+
+	fullPath := filepath.Join(m.outputPath, filename)
+	return os.ReadFile(fullPath)
 }
