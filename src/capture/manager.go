@@ -449,5 +449,20 @@ func (m *Manager) LoadCaptureData(c *Capture) ([]byte, error) {
 	if c == nil || c.Filepath == "" {
 		return nil, fmt.Errorf("invalid capture")
 	}
-	return os.ReadFile(c.Filepath)
+
+	filename := filepath.Base(c.Filepath)
+
+	if !strings.HasSuffix(filename, ".bin") {
+		return nil, fmt.Errorf("invalid file extension: %s", filename)
+	}
+
+	fullPath := filepath.Clean(filepath.Join(m.outputPath, filename))
+	cleanOutputPath := filepath.Clean(m.outputPath)
+
+	if !strings.HasPrefix(fullPath, cleanOutputPath+string(filepath.Separator)) &&
+		fullPath != cleanOutputPath {
+		return nil, fmt.Errorf("access denied: path outside captures directory")
+	}
+
+	return os.ReadFile(fullPath)
 }
