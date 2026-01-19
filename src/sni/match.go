@@ -58,10 +58,10 @@ type cacheEntry struct {
 }
 
 type learnedIPEntry struct {
-	domain   string
-	set      *config.SetConfig
+	domain    string
+	set       *config.SetConfig
 	learnedAt time.Time
-	element  *list.Element
+	element   *list.Element
 }
 
 type regexWithSet struct {
@@ -422,8 +422,10 @@ func (s *SuffixSet) MatchLearnedIP(ip net.IP) (bool, *config.SetConfig, string) 
 	}
 
 	if time.Since(entry.learnedAt) > s.learnedIPTTL {
-		delete(s.learnedIPCache, ipStr)
-		s.learnedIPCacheLRU.Remove(entry.element)
+		if currentEntry, stillExists := s.learnedIPCache[ipStr]; stillExists && currentEntry == entry {
+			delete(s.learnedIPCache, ipStr)
+			s.learnedIPCacheLRU.Remove(entry.element)
+		}
 		return false, nil, ""
 	}
 
@@ -451,14 +453,14 @@ func (s *SuffixSet) GetCacheStats() map[string]interface{} {
 	regexCacheSize := atomic.LoadInt32(&s.regexCacheSize)
 
 	return map[string]interface{}{
-		"ip_cache_size":         ipCacheSize,
-		"ip_cache_limit":        s.ipCacheLimit,
-		"domain_cache_size":     domainCacheSize,
-		"domain_cache_limit":    s.domainCacheLimit,
-		"learned_ip_cache_size": learnedIPCacheSize,
+		"ip_cache_size":          ipCacheSize,
+		"ip_cache_limit":         s.ipCacheLimit,
+		"domain_cache_size":      domainCacheSize,
+		"domain_cache_limit":     s.domainCacheLimit,
+		"learned_ip_cache_size":  learnedIPCacheSize,
 		"learned_ip_cache_limit": s.learnedIPCacheLimit,
-		"regex_cache_size":      regexCacheSize,
-		"regex_cache_limit":     10000,
+		"regex_cache_size":       regexCacheSize,
+		"regex_cache_limit":      10000,
 	}
 }
 

@@ -24,6 +24,8 @@ const (
 	FailureTimeout      FailureMode = "timeout"
 	FailureTLSError     FailureMode = "tls_error"
 	FailureUnknown      FailureMode = "unknown"
+
+	validationRetryDelay = 100 * time.Millisecond
 )
 
 func NewDiscoverySuite(input string, pool *nfq.Pool, skipDNS bool, payloadFiles []string, validationTries int) *DiscoverySuite {
@@ -562,7 +564,7 @@ func (ds *DiscoverySuite) testPresetInternal(preset ConfigPreset) CheckResult {
 
 		// If we have multiple tries, add a small delay between attempts
 		if i < ds.validationTries-1 {
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(validationRetryDelay)
 		}
 	}
 
