@@ -1,5 +1,10 @@
 # B4 - Bye Bye Big Bro
 
+## [1.33.1] - 2026-01-26
+
+- FIXED: UDP/QUIC traffic stopping to match after some time. B4 now keeps server-to-domain associations active as long as traffic is flowing, preventing the "works at first, then stops" issue.
+- IMPROVED: Rewrite TLS ClientHello payload generation.
+
 ## [1.32.0] - 2026-01-19
 
 - ADDED: Validation tries setting in `Discovery` - require multiple successful connections before accepting a configuration as reliable (default: 1, configurable 1-5). Helps filter out unstable bypass methods.
