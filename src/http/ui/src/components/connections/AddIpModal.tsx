@@ -101,7 +101,7 @@ export const AddIpModal = ({
   const loadIpInfo = async () => {
     setLoadingInfo(true);
     try {
-      const cleanIp = ip.split(":")[0].replace(/[[\]]/g, "");
+      const cleanIp = ip.split(":")[0].replaceAll(/[[\]]/g, "");
       const response = await fetch(
         `/api/integration/ipinfo?ip=${encodeURIComponent(cleanIp)}`
       );
@@ -111,7 +111,7 @@ export const AddIpModal = ({
 
         // Extract ASN from org field (e.g., "AS13335 Cloudflare, Inc.")
         if (data.org) {
-          const asnMatch = data.org.match(/AS(\d+)/);
+          const asnMatch = /AS(\d+)/.exec(data.org);
           if (asnMatch) {
             setAsn(asnMatch[1]);
           }
@@ -127,7 +127,7 @@ export const AddIpModal = ({
   const loadRipeNetworkInfo = async () => {
     setLoadingInfo(true);
     try {
-      const cleanIp = ip.split(":")[0].replace(/[[\]]/g, "");
+      const cleanIp = ip.split(":")[0].replaceAll(/[[\]]/g, "");
       const response = await fetch(
         `/api/integration/ripestat?ip=${encodeURIComponent(cleanIp)}`
       );
@@ -223,32 +223,7 @@ export const AddIpModal = ({
         </B4Alert>
 
         <Box sx={{ mb: 3 }}>
-          {!ipInfo ? (
-            <Stack direction="row" spacing={2} alignItems="center">
-              <Typography variant="body2" color="text.secondary">
-                Original IP: <B4Badge label={ip} color="primary" />
-              </Typography>
-              <Box sx={{ flex: 1 }} />
-              {ipInfoToken && (
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => void loadIpInfo()}
-                  disabled={loadingInfo}
-                >
-                  {loadingInfo ? "Loading..." : "Enrich with IPInfo"}
-                </Button>
-              )}
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => void loadRipeNetworkInfo()}
-                disabled={loadingInfo}
-              >
-                {loadingInfo ? "Loading..." : "Load Network Info"}
-              </Button>
-            </Stack>
-          ) : (
+          {ipInfo ? (
             <>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Original IP: <B4Badge label={ip} color="secondary" />
@@ -299,6 +274,31 @@ export const AddIpModal = ({
                 </Stack>
               </Box>
             </>
+          ) : (
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Typography variant="body2" color="text.secondary">
+                Original IP: <B4Badge label={ip} color="primary" />
+              </Typography>
+              <Box sx={{ flex: 1 }} />
+              {ipInfoToken && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => void loadIpInfo()}
+                  disabled={loadingInfo}
+                >
+                  {loadingInfo ? "Loading..." : "Enrich with IPInfo"}
+                </Button>
+              )}
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => void loadRipeNetworkInfo()}
+                disabled={loadingInfo}
+              >
+                {loadingInfo ? "Loading..." : "Load Network Info"}
+              </Button>
+            </Stack>
           )}
         </Box>
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
 import {
   Container,
   Box,
@@ -8,9 +9,73 @@ import {
   Typography,
 } from "@mui/material";
 import { useSnackbar } from "@context/SnackbarProvider";
-import { SetsManager, SetWithStats } from "./Manager";
-import { B4Config } from "@models/config";
+import { SetsManager, SetStats, SetWithStats } from "./Manager";
+import { SetEditorPage } from "./Editor";
+import { B4Config, B4SetConfig } from "@models/config";
+import { createDefaultSet } from "@models/defaults";
+import { useSets } from "@hooks/useSets";
 import { colors } from "@design";
+
+interface SetEditorRouteProps {
+  config: B4Config & { sets?: SetWithStats[] };
+  onRefresh: () => void;
+}
+
+function SetEditorRoute({ config, onRefresh }: Readonly<SetEditorRouteProps>) {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { showSuccess, showError } = useSnackbar();
+  const { createSet, updateSet, loading: saving } = useSets();
+
+  const isNew = id === "new";
+  const setsData = config.sets || [];
+  const sets = setsData.map((s) =>
+    "set" in s ? s.set : s
+  ) as B4SetConfig[];
+  const setsStats = setsData.map((s) =>
+    "stats" in s ? s.stats : null
+  ) as (SetStats | null)[];
+
+  const existingSet = isNew ? null : sets.find((s) => s.id === id);
+  const set = isNew ? createDefaultSet(sets.length) : existingSet;
+
+  const stats = existingSet
+    ? setsStats[sets.findIndex((s) => s.id === existingSet.id)] || undefined
+    : undefined;
+
+  const handleSave = (editedSet: B4SetConfig) => {
+    void (async () => {
+      const { id: _, ...setWithoutId } = editedSet;
+      const result = isNew
+        ? await createSet(setWithoutId)
+        : await updateSet(editedSet);
+
+      if (result.success) {
+        showSuccess(isNew ? "Set created" : "Set updated");
+        onRefresh();
+        navigate("/sets");
+      } else {
+        showError(result.error || "Failed to save");
+      }
+    })();
+  };
+
+  if (!set) {
+    return <Navigate to="/sets" replace />;
+  }
+
+  return (
+    <SetEditorPage
+      settings={config.system}
+      set={set}
+      config={config}
+      stats={stats}
+      isNew={isNew}
+      saving={saving}
+      onSave={handleSave}
+    />
+  );
+}
 
 export function SetsPage() {
   const { showError } = useSnackbar();
@@ -64,7 +129,23 @@ export function SetsPage() {
       }}
     >
       <Box sx={{ flex: 1, overflow: "auto" }}>
-        <SetsManager config={config} onRefresh={() => void loadConfig()} />
+        <Routes>
+          <Route
+            index
+            element={
+              <SetsManager config={config} onRefresh={() => void loadConfig()} />
+            }
+          />
+          <Route
+            path=":id"
+            element={
+              <SetEditorRoute
+                config={config}
+                onRefresh={() => void loadConfig()}
+              />
+            }
+          />
+        </Routes>
       </Box>
     </Container>
   );

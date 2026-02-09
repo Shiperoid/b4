@@ -23,6 +23,8 @@ import (
 	"github.com/florianl/go-nfqueue"
 )
 
+const connKeyFormat = "%s:%d->%s:%d"
+
 func (w *Worker) Start() error {
 	cfg := w.getConfig()
 	mark := cfg.Queue.Mark
@@ -221,7 +223,7 @@ func (w *Worker) Start() error {
 					log.Tracef("TCP SYN to %s:%d (set: %s)", dstStr, dport, set.Name)
 
 					metrics := metrics.GetMetricsCollector()
-					metrics.RecordConnection("TCP-SYN", "", srcStr, dstStr, true)
+					metrics.RecordConnection("TCP-SYN", "", srcStr, dstStr, true, srcMac, set.Name)
 
 					if v == IPv4 {
 						modsyn := raw
@@ -265,7 +267,7 @@ func (w *Worker) Start() error {
 						log.Tracef("TLS record: type=%x ver=%x%x len=%d", payload[0], payload[1], payload[2],
 							int(payload[3])<<8|int(payload[4]))
 					}
-					connKey := fmt.Sprintf("%s:%d->%s:%d", srcStr, sport, dstStr, dport)
+					connKey := fmt.Sprintf(connKeyFormat, srcStr, sport, dstStr, dport)
 
 					host, _ = sni.ParseTLSClientHelloSNI(payload)
 
@@ -294,13 +296,19 @@ func (w *Worker) Start() error {
 					log.Infof(",TCP,%s,%s,%s:%d,%s,%s:%d,%s", sniTarget, host, srcStr, sport, ipTarget, dstStr, dport, srcMac)
 				}
 
-				if matched {
-					metrics := metrics.GetMetricsCollector()
-					metrics.RecordConnection("TCP", host, srcStr, dstStr, true)
-					metrics.RecordPacket(uint64(len(raw)))
+				{
+					m := metrics.GetMetricsCollector()
+					setName := ""
+					if matched {
+						setName = set.Name
+					}
+					m.RecordConnection("TCP", host, srcStr, dstStr, matched, srcMac, setName)
+					m.RecordPacket(uint64(len(raw)))
+				}
 
-					if matched && set.TCP.Incoming.Mode != config.ConfigOff {
-						connKey := fmt.Sprintf("%s:%d->%s:%d", srcStr, sport, dstStr, dport)
+				if matched {
+					if set.TCP.Incoming.Mode != config.ConfigOff {
+						connKey := fmt.Sprintf(connKeyFormat, srcStr, sport, dstStr, dport)
 						connState.RegisterOutgoing(connKey, set)
 					}
 
@@ -354,7 +362,7 @@ func (w *Worker) Start() error {
 				payload := udp[8:]
 				sport := binary.BigEndian.Uint16(udp[0:2])
 				dport := binary.BigEndian.Uint16(udp[2:4])
-				connKey := fmt.Sprintf("%s:%d->%s:%d", srcStr, sport, dstStr, dport)
+				connKey := fmt.Sprintf(connKeyFormat, srcStr, sport, dstStr, dport)
 
 				if sport == 53 || dport == 53 {
 					return w.processDnsPacket(v, sport, dport, payload, raw, ihl, id)
@@ -432,6 +440,9 @@ func (w *Worker) Start() error {
 				}
 
 				if !shouldHandle {
+					m := metrics.GetMetricsCollector()
+					m.RecordConnection("UDP", host, srcStr, dstStr, false, srcMac, "")
+					m.RecordPacket(uint64(len(raw)))
 					if err := q.SetVerdict(id, nfqueue.NfAccept); err != nil {
 						log.Tracef("failed to set verdict on packet %d: %v", id, err)
 					}
@@ -439,7 +450,11 @@ func (w *Worker) Start() error {
 				}
 
 				metrics := metrics.GetMetricsCollector()
-				metrics.RecordConnection("UDP", host, srcStr, dstStr, matched)
+				setName := ""
+				if matched {
+					setName = set.Name
+				}
+				metrics.RecordConnection("UDP", host, srcStr, dstStr, matched, srcMac, setName)
 				metrics.RecordPacket(uint64(len(raw)))
 
 				switch set.UDP.Mode {
@@ -520,7 +535,7 @@ func (w *Worker) Start() error {
 
 func (w *Worker) dropAndInjectQUIC(cfg *config.SetConfig, raw []byte, dst net.IP) {
 	udpCfg := &cfg.UDP
-	seg2d := udpCfg.Seg2Delay
+	seg2d := config.ResolveSeg2Delay(udpCfg.Seg2Delay, udpCfg.Seg2DelayMax)
 	if udpCfg.Mode != "fake" {
 		return
 	}
@@ -585,7 +600,7 @@ func (w *Worker) dropAndInjectTCP(cfg *config.SetConfig, raw []byte, dst net.IP)
 
 	if cfg.TCP.Desync.Mode != config.ConfigOff {
 		w.ExecuteDesyncIPv4(cfg, raw, dst)
-		time.Sleep(time.Duration(cfg.TCP.Seg2Delay) * time.Millisecond)
+		time.Sleep(time.Duration(config.ResolveSeg2Delay(cfg.TCP.Seg2Delay, cfg.TCP.Seg2DelayMax)) * time.Millisecond)
 	}
 
 	if cfg.TCP.Win.Mode != config.ConfigOff {
@@ -629,7 +644,7 @@ func (w *Worker) dropAndInjectTCP(cfg *config.SetConfig, raw []byte, dst net.IP)
 
 func (w *Worker) sendTCPFragments(cfg *config.SetConfig, packet []byte, dst net.IP) {
 
-	seg2d := cfg.TCP.Seg2Delay
+	seg2d := config.ResolveSeg2Delay(cfg.TCP.Seg2Delay, cfg.TCP.Seg2DelayMax)
 	ipHdrLen := int((packet[0] & 0x0F) * 4)
 	tcpHdrLen := int((packet[ipHdrLen+12] >> 4) * 4)
 	totalLen := len(packet)
@@ -759,7 +774,7 @@ func (w *Worker) sendTCPFragments(cfg *config.SetConfig, packet []byte, dst net.
 }
 
 func (w *Worker) sendIPFragments(cfg *config.SetConfig, packet []byte, dst net.IP) {
-	seg2d := cfg.TCP.Seg2Delay
+	seg2d := config.ResolveSeg2Delay(cfg.TCP.Seg2Delay, cfg.TCP.Seg2DelayMax)
 	ipHdrLen := int((packet[0] & 0x0F) * 4)
 	tcpHdrLen := int((packet[ipHdrLen+12] >> 4) * 4)
 	payloadStart := ipHdrLen + tcpHdrLen

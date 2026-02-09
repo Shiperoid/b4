@@ -37,13 +37,13 @@ interface DnsEntry {
 }
 
 interface DnsSettingsProps {
-  config: B4SetConfig;
-  ipv6: boolean;
-  onChange: (field: string, value: string | boolean) => void;
+  readonly config: B4SetConfig;
+  readonly ipv6: boolean;
+  readonly onChange: (field: string, value: string | boolean) => void;
 }
 
 const POPULAR_DNS = (dns as DnsEntry[]).sort((a, b) =>
-  a.name.localeCompare(b.name)
+  a.name.localeCompare(b.name),
 );
 
 export function DnsSettings({ config, onChange, ipv6 }: DnsSettingsProps) {
@@ -147,7 +147,7 @@ export function DnsSettings({ config, onChange, ipv6 }: DnsSettingsProps) {
               >
                 <List dense disablePadding>
                   {POPULAR_DNS.filter((server) =>
-                    ipv6 ? server.ipv6 : !server.ipv6
+                    ipv6 ? server.ipv6 : !server.ipv6,
                   ).map((server) => (
                     <ListItemButton
                       key={server.ip}
@@ -165,19 +165,30 @@ export function DnsSettings({ config, onChange, ipv6 }: DnsSettingsProps) {
                       }}
                     >
                       <ListItemIcon sx={{ minWidth: 36 }}>
-                        {dns.target_dns === server.ip ? (
-                          <CheckIcon
-                            sx={{ color: colors.secondary, fontSize: 20 }}
-                          />
-                        ) : server.warn ? (
-                          <BlockIcon
-                            sx={{ color: colors.secondary, fontSize: 20 }}
-                          />
-                        ) : (
-                          <DnsIcon
-                            sx={{ color: colors.text.secondary, fontSize: 20 }}
-                          />
-                        )}
+                        {(() => {
+                          if (dns.target_dns === server.ip) {
+                            return (
+                              <CheckIcon
+                                sx={{ color: colors.secondary, fontSize: 20 }}
+                              />
+                            );
+                          }
+                          if (server.warn) {
+                            return (
+                              <BlockIcon
+                                sx={{ color: colors.secondary, fontSize: 20 }}
+                              />
+                            );
+                          }
+                          return (
+                            <DnsIcon
+                              sx={{
+                                color: colors.text.secondary,
+                                fontSize: 20,
+                              }}
+                            />
+                          );
+                        })()}
                       </ListItemIcon>
                       <ListItemText
                         primary={
@@ -213,10 +224,12 @@ export function DnsSettings({ config, onChange, ipv6 }: DnsSettingsProps) {
                           </Stack>
                         }
                         secondary={server.desc}
-                        secondaryTypographyProps={{
-                          variant: "caption",
-                          sx: {
-                            color: server.warn ? colors.secondary : undefined,
+                        slotProps={{
+                          secondary: {
+                            variant: "caption",
+                            sx: {
+                              color: server.warn ? colors.secondary : undefined,
+                            },
                           },
                         }}
                       />
