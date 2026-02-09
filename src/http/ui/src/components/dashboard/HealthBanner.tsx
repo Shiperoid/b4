@@ -33,21 +33,19 @@ function deriveHealth(metrics: Metrics, connected: boolean): HealthLevel {
   )
     return "degraded";
   const activeWorkers = metrics.worker_status.filter(
-    (w) => w.status === "active"
+    (w) => w.status === "active",
   ).length;
-  if (activeWorkers === 0 && metrics.worker_status.length > 0) return "critical";
+  if (activeWorkers === 0 && metrics.worker_status.length > 0)
+    return "critical";
   if (activeWorkers < metrics.worker_status.length) return "degraded";
   return "healthy";
 }
 
-const healthConfig: Record<
-  HealthLevel,
-  { color: string; label: string }
-> = {
-  healthy: { color: "#4caf50", label: "Running" },
-  degraded: { color: "#ff9800", label: "Degraded" },
-  critical: { color: "#f44336", label: "Critical" },
-};
+const healthConfig = new Map<HealthLevel, { color: string; label: string }>([
+  ["healthy", { color: "#4caf50", label: "Running" }],
+  ["degraded", { color: "#ff9800", label: "Degraded" }],
+  ["critical", { color: "#f44336", label: "Critical" }],
+]);
 
 export const HealthBanner = ({
   metrics,
@@ -55,13 +53,19 @@ export const HealthBanner = ({
   version,
 }: HealthBannerProps) => {
   const [restartOpen, setRestartOpen] = useState(false);
-  const { restart, waitForReconnection, loading: restarting } =
-    useSystemRestart();
+  const {
+    restart,
+    waitForReconnection,
+    loading: restarting,
+  } = useSystemRestart();
 
   const health = deriveHealth(metrics, connected);
-  const config = healthConfig[health];
+  const config = healthConfig.get(health) ?? {
+    color: "#f44336",
+    label: "Critical",
+  };
   const activeWorkers = metrics.worker_status.filter(
-    (w) => w.status === "active"
+    (w) => w.status === "active",
   ).length;
   const totalWorkers = metrics.worker_status.length;
 
@@ -90,7 +94,13 @@ export const HealthBanner = ({
           gap: 1,
         }}
       >
-        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          spacing={2}
+          alignItems="center"
+          flexWrap="wrap"
+          useFlexGap
+        >
           <Stack direction="row" spacing={0.5} alignItems="center">
             <CircleIcon sx={{ fontSize: 10, color: config.color }} />
             <Typography
@@ -152,7 +162,9 @@ export const HealthBanner = ({
           <span>
             <IconButton
               size="small"
-              onClick={() => setRestartOpen(true)}
+              onClick={() => {
+                setRestartOpen(true);
+              }}
               disabled={restarting}
               sx={{ color: colors.text.secondary }}
             >
@@ -168,17 +180,25 @@ export const HealthBanner = ({
         title="Restart b4"
         actions={
           <Stack direction="row" spacing={1}>
-            <Button onClick={() => setRestartOpen(false)} sx={{ color: colors.text.secondary }}>
+            <Button
+              onClick={() => setRestartOpen(false)}
+              sx={{ color: colors.text.secondary }}
+            >
               Cancel
             </Button>
-            <Button onClick={handleRestart} variant="contained" color="error">
+            <Button
+              onClick={() => void handleRestart()}
+              variant="contained"
+              color="error"
+            >
               Restart
             </Button>
           </Stack>
         }
       >
         <Typography sx={{ color: colors.text.primary, mt: 1 }}>
-          Are you sure you want to restart the b4 service? Active connections will be interrupted.
+          Are you sure you want to restart the b4 service? Active connections
+          will be interrupted.
         </Typography>
       </B4Dialog>
     </>

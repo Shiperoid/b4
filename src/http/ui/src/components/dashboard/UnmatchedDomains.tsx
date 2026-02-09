@@ -139,7 +139,7 @@ const UnmatchedRow = ({ domain, count, sets, onAdded }: UnmatchedRowProps) => {
       <Tooltip title="Add to set">
         <IconButton
           size="small"
-          onClick={(e) => setAnchorEl(e.currentTarget)}
+          onClick={(e) => { setAnchorEl(e.currentTarget); }}
           disabled={adding}
           sx={{ color: colors.secondary, ml: 0.5, p: 0.25 }}
         >
@@ -149,7 +149,7 @@ const UnmatchedRow = ({ domain, count, sets, onAdded }: UnmatchedRowProps) => {
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
-        onClose={() => setAnchorEl(null)}
+        onClose={() => { setAnchorEl(null); }}
         slotProps={{
           paper: {
             sx: {
@@ -164,7 +164,7 @@ const UnmatchedRow = ({ domain, count, sets, onAdded }: UnmatchedRowProps) => {
           .map((set) => (
             <MenuItem
               key={set.id}
-              onClick={() => handleAdd(set.id)}
+              onClick={() => void handleAdd(set.id)}
               sx={{ color: colors.text.primary, fontSize: "0.8rem" }}
             >
               {set.name}

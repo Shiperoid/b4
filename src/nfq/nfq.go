@@ -23,6 +23,8 @@ import (
 	"github.com/florianl/go-nfqueue"
 )
 
+const connKeyFormat = "%s:%d->%s:%d"
+
 func (w *Worker) Start() error {
 	cfg := w.getConfig()
 	mark := cfg.Queue.Mark
@@ -265,7 +267,7 @@ func (w *Worker) Start() error {
 						log.Tracef("TLS record: type=%x ver=%x%x len=%d", payload[0], payload[1], payload[2],
 							int(payload[3])<<8|int(payload[4]))
 					}
-					connKey := fmt.Sprintf("%s:%d->%s:%d", srcStr, sport, dstStr, dport)
+					connKey := fmt.Sprintf(connKeyFormat, srcStr, sport, dstStr, dport)
 
 					host, _ = sni.ParseTLSClientHelloSNI(payload)
 
@@ -306,7 +308,7 @@ func (w *Worker) Start() error {
 
 				if matched {
 					if set.TCP.Incoming.Mode != config.ConfigOff {
-						connKey := fmt.Sprintf("%s:%d->%s:%d", srcStr, sport, dstStr, dport)
+						connKey := fmt.Sprintf(connKeyFormat, srcStr, sport, dstStr, dport)
 						connState.RegisterOutgoing(connKey, set)
 					}
 
@@ -360,7 +362,7 @@ func (w *Worker) Start() error {
 				payload := udp[8:]
 				sport := binary.BigEndian.Uint16(udp[0:2])
 				dport := binary.BigEndian.Uint16(udp[2:4])
-				connKey := fmt.Sprintf("%s:%d->%s:%d", srcStr, sport, dstStr, dport)
+				connKey := fmt.Sprintf(connKeyFormat, srcStr, sport, dstStr, dport)
 
 				if sport == 53 || dport == 53 {
 					return w.processDnsPacket(v, sport, dport, payload, raw, ihl, id)

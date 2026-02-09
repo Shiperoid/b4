@@ -356,7 +356,7 @@ const DomainRow = ({
               .map((set) => (
                 <MenuItem
                   key={set.id}
-                  onClick={() => handleAdd(set.id)}
+                  onClick={() => void handleAdd(set.id)}
                   sx={{ color: colors.text.primary, fontSize: "0.8rem" }}
                 >
                   {set.name}
