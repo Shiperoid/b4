@@ -98,7 +98,6 @@ const SortableCardWrapper = ({ id, children }: SortableCardWrapperProps) => {
         zIndex: isDragging ? 1 : 0,
       }}
     >
-      {/* Pass drag handle props to child */}
       {typeof children === "function"
         ? children({ ...attributes, ...listeners })
         : children}
@@ -109,12 +108,7 @@ const SortableCardWrapper = ({ id, children }: SortableCardWrapperProps) => {
 export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
   const { showSuccess, showError } = useSnackbar();
   const navigate = useNavigate();
-  const {
-    deleteSet,
-    duplicateSet,
-    reorderSets,
-    updateSet,
-  } = useSets();
+  const { deleteSet, duplicateSet, reorderSets, updateSet } = useSets();
 
   const [filterText, setFilterText] = useState("");
   const [deleteDialog, setDeleteDialog] = useState<{
@@ -135,21 +129,20 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
   const setsData = config.sets || [];
   const sets = setsData.map((s) => ("set" in s ? s.set : s)) as B4SetConfig[];
   const setsStats = setsData.map((s) =>
-    "stats" in s ? s.stats : null
+    "stats" in s ? s.stats : null,
   ) as (SetStats | null)[];
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
-    })
+    }),
   );
 
-  // Summary stats
   const summaryStats = useMemo(() => {
     const enabledCount = sets.filter((s) => s.enabled).length;
     const totalDomains = setsStats.reduce(
       (acc, s) => acc + (s?.total_domains || 0),
-      0
+      0,
     );
     const totalIps = setsStats.reduce((acc, s) => acc + (s?.total_ips || 0), 0);
     return {
@@ -171,7 +164,7 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
         return true;
       if (
         set.targets?.geosite_categories?.some((c) =>
-          c.toLowerCase().includes(lower)
+          c.toLowerCase().includes(lower),
         )
       )
         return true;
@@ -259,7 +252,6 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
         description="Manage bypass configurations for different domains and scenarios"
         icon={<SetsIcon />}
       >
-        {/* Summary Stats Bar */}
         <Paper
           elevation={0}
           sx={{
@@ -298,21 +290,22 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
               />
             </Stack>
 
-            {/* Search & Add */}
             <Stack direction="row" spacing={2}>
               <TextField
                 size="small"
                 placeholder="Search sets..."
                 value={filterText}
                 onChange={(e) => setFilterText(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchOutlinedIcon
-                        sx={{ fontSize: 20, color: colors.text.secondary }}
-                      />
-                    </InputAdornment>
-                  ),
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchOutlinedIcon
+                          sx={{ fontSize: 20, color: colors.text.secondary }}
+                        />
+                      </InputAdornment>
+                    ),
+                  },
                 }}
                 sx={{
                   width: 200,
@@ -332,7 +325,6 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
           </Stack>
         </Paper>
 
-        {/* Cards Grid */}
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
@@ -352,7 +344,7 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
                   <Grid key={set.id} size={{ xs: 12, sm: 6, lg: 4, xl: 3 }}>
                     <SortableCardWrapper id={set.id}>
                       {(
-                        dragHandleProps: React.HTMLAttributes<HTMLDivElement>
+                        dragHandleProps: React.HTMLAttributes<HTMLDivElement>,
                       ) => (
                         <SetCard
                           set={set}
@@ -406,7 +398,6 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
           </DragOverlay>
         </DndContext>
 
-        {/* Empty state */}
         {filteredSets.length === 0 && filterText && (
           <Paper
             elevation={0}
@@ -424,7 +415,6 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
         )}
       </B4Section>
 
-      {/* Delete Confirmation */}
       <B4Dialog
         open={deleteDialog.open}
         title="Delete Configuration Set"
@@ -447,12 +437,11 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
       >
         <Typography>
           Are you sure you want to delete{" "}
-          <strong>{sets.find((s) => s.id === deleteDialog.setId)?.name}</strong>
+          <strong>{sets.find((s) => s.id === deleteDialog.setId)?.name}</strong>{" "}
           ?
         </Typography>
       </B4Dialog>
 
-      {/* Compare Selection Dialog */}
       <B4Dialog
         open={compareDialog.open && !compareDialog.setB}
         onClose={() =>
