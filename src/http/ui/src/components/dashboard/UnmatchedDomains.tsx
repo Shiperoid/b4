@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Box,
   Paper,
@@ -17,22 +17,12 @@ import { setsApi } from "@b4.sets";
 
 interface UnmatchedDomainsProps {
   topDomains: Record<string, number>;
+  sets: B4SetConfig[];
+  targetedDomains: Set<string>;
+  onRefreshSets: () => void;
 }
 
-export const UnmatchedDomains = ({ topDomains }: UnmatchedDomainsProps) => {
-  const [sets, setSets] = useState<B4SetConfig[]>([]);
-  const [targetedDomains, setTargetedDomains] = useState<Set<string>>(new Set());
-
-  const refresh = () => {
-    setsApi.getSets().then(setSets).catch(console.error);
-    setsApi.getTargetedDomains().then((domains) => {
-      setTargetedDomains(new Set(domains));
-    }).catch(console.error);
-  };
-
-  useEffect(() => {
-    refresh();
-  }, []);
+export const UnmatchedDomains = ({ topDomains, sets, targetedDomains, onRefreshSets }: UnmatchedDomainsProps) => {
 
   const isDomainTargeted = (domain: string): boolean => {
     if (targetedDomains.has(domain)) return true;
@@ -81,7 +71,7 @@ export const UnmatchedDomains = ({ topDomains }: UnmatchedDomainsProps) => {
             domain={domain}
             count={count}
             sets={sets}
-            onAdded={refresh}
+            onAdded={onRefreshSets}
           />
         ))}
       </Stack>

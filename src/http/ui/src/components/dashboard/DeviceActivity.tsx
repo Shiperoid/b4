@@ -32,20 +32,19 @@ interface DeviceInfo {
 
 interface DeviceActivityProps {
   deviceDomains: Record<string, Record<string, number>>;
+  sets: B4SetConfig[];
+  targetedDomains: Set<string>;
+  onRefreshSets: () => void;
 }
 
-export const DeviceActivity = ({ deviceDomains }: DeviceActivityProps) => {
+export const DeviceActivity = ({
+  deviceDomains,
+  sets,
+  targetedDomains,
+  onRefreshSets,
+}: DeviceActivityProps) => {
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
-  const [sets, setSets] = useState<B4SetConfig[]>([]);
-  const [targetedDomains, setTargetedDomains] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-
-  const refreshSets = () => {
-    setsApi.getSets().then(setSets).catch(console.error);
-    setsApi.getTargetedDomains().then((domains) => {
-      setTargetedDomains(new Set(domains));
-    }).catch(console.error);
-  };
 
   useEffect(() => {
     fetch("/api/devices")
@@ -54,7 +53,6 @@ export const DeviceActivity = ({ deviceDomains }: DeviceActivityProps) => {
         if (data?.devices) setDevices(data.devices);
       })
       .catch(() => {});
-    refreshSets();
   }, []);
 
   const isDomainTargeted = (domain: string): boolean => {
@@ -99,7 +97,8 @@ export const DeviceActivity = ({ deviceDomains }: DeviceActivityProps) => {
     const dev = deviceMap[mac];
     if (dev?.alias) return dev.alias;
     if (dev?.hostname) return dev.hostname;
-    if (dev?.vendor && dev.vendor !== "Private") return `${dev.vendor} (${mac})`;
+    if (dev?.vendor && dev.vendor !== "Private")
+      return `${dev.vendor} (${mac})`;
     return mac;
   };
 
@@ -132,7 +131,7 @@ export const DeviceActivity = ({ deviceDomains }: DeviceActivityProps) => {
         {sortedDevices.map(({ mac, domains, total, domainCount }) => {
           const isExpanded = expanded.has(mac);
           const sortedDomains = Object.entries(domains).sort(
-            (a, b) => b[1] - a[1]
+            (a, b) => b[1] - a[1],
           );
 
           return (
@@ -158,7 +157,12 @@ export const DeviceActivity = ({ deviceDomains }: DeviceActivityProps) => {
                 }}
                 onClick={() => toggleExpand(mac)}
               >
-                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ minWidth: 0 }}>
+                <Stack
+                  direction="row"
+                  spacing={1.5}
+                  alignItems="center"
+                  sx={{ minWidth: 0 }}
+                >
                   <Typography
                     variant="body2"
                     sx={{
@@ -178,7 +182,12 @@ export const DeviceActivity = ({ deviceDomains }: DeviceActivityProps) => {
                     {getDeviceSubtitle(mac)}
                   </Typography>
                 </Stack>
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  alignItems="center"
+                  sx={{ flexShrink: 0 }}
+                >
                   <Chip
                     label={`${domainCount} domains`}
                     size="small"
@@ -200,9 +209,13 @@ export const DeviceActivity = ({ deviceDomains }: DeviceActivityProps) => {
                     }}
                   />
                   {isExpanded ? (
-                    <ExpandLessIcon sx={{ color: colors.text.secondary, fontSize: 20 }} />
+                    <ExpandLessIcon
+                      sx={{ color: colors.text.secondary, fontSize: 20 }}
+                    />
                   ) : (
-                    <ExpandMoreIcon sx={{ color: colors.text.secondary, fontSize: 20 }} />
+                    <ExpandMoreIcon
+                      sx={{ color: colors.text.secondary, fontSize: 20 }}
+                    />
                   )}
                 </Stack>
               </Box>
@@ -218,7 +231,7 @@ export const DeviceActivity = ({ deviceDomains }: DeviceActivityProps) => {
                         count={count}
                         isTargeted={isDomainTargeted(domain)}
                         sets={sets}
-                        onAdded={refreshSets}
+                        onAdded={onRefreshSets}
                       />
                     ))}
                   </Stack>
@@ -240,7 +253,13 @@ interface DomainRowProps {
   onAdded: () => void;
 }
 
-const DomainRow = ({ domain, count, isTargeted, sets, onAdded }: DomainRowProps) => {
+const DomainRow = ({
+  domain,
+  count,
+  isTargeted,
+  sets,
+  onAdded,
+}: DomainRowProps) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [adding, setAdding] = useState(false);
 
@@ -269,7 +288,12 @@ const DomainRow = ({ domain, count, isTargeted, sets, onAdded }: DomainRowProps)
         "&:hover": { bgcolor: `${colors.primary}06` },
       }}
     >
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0, flex: 1 }}>
+      <Stack
+        direction="row"
+        spacing={1}
+        alignItems="center"
+        sx={{ minWidth: 0, flex: 1 }}
+      >
         <Typography
           variant="caption"
           sx={{
@@ -284,7 +308,11 @@ const DomainRow = ({ domain, count, isTargeted, sets, onAdded }: DomainRowProps)
         </Typography>
         <Typography
           variant="caption"
-          sx={{ color: colors.text.disabled, fontSize: "0.65rem", flexShrink: 0 }}
+          sx={{
+            color: colors.text.disabled,
+            fontSize: "0.65rem",
+            flexShrink: 0,
+          }}
         >
           {formatNumber(count)}
         </Typography>
@@ -299,7 +327,9 @@ const DomainRow = ({ domain, count, isTargeted, sets, onAdded }: DomainRowProps)
           <Tooltip title="Add to set">
             <IconButton
               size="small"
-              onClick={(e) => setAnchorEl(e.currentTarget)}
+              onClick={(e) => {
+                setAnchorEl(e.currentTarget);
+              }}
               disabled={adding}
               sx={{ color: colors.secondary, ml: 0.5, p: 0.25 }}
             >
@@ -309,7 +339,9 @@ const DomainRow = ({ domain, count, isTargeted, sets, onAdded }: DomainRowProps)
           <Menu
             anchorEl={anchorEl}
             open={Boolean(anchorEl)}
-            onClose={() => setAnchorEl(null)}
+            onClose={() => {
+              setAnchorEl(null);
+            }}
             slotProps={{
               paper: {
                 sx: {

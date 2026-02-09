@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Box, Typography, Stack, Chip } from "@mui/material";
 import {
   Circle as CircleIcon,
@@ -7,15 +6,13 @@ import {
 import { useNavigate } from "react-router-dom";
 import { colors } from "@design";
 import { B4SetConfig } from "@models/config";
-import { setsApi } from "@b4.sets";
 
-export const ActiveSets = () => {
-  const [sets, setSets] = useState<B4SetConfig[]>([]);
+interface ActiveSetsProps {
+  sets: B4SetConfig[];
+}
+
+export const ActiveSets = ({ sets }: ActiveSetsProps) => {
   const navigate = useNavigate();
-
-  useEffect(() => {
-    setsApi.getSets().then(setSets).catch(console.error);
-  }, []);
 
   if (sets.length === 0) return null;
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Routes, Route, useNavigate, useParams } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
 import {
   Container,
   Box,
@@ -8,106 +8,13 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { v4 as uuidv4 } from "uuid";
 import { useSnackbar } from "@context/SnackbarProvider";
 import { SetsManager, SetStats, SetWithStats } from "./Manager";
 import { SetEditorPage } from "./Editor";
 import { B4Config, B4SetConfig } from "@models/config";
+import { createDefaultSet } from "@models/defaults";
 import { useSets } from "@hooks/useSets";
 import { colors } from "@design";
-
-function createDefaultSet(setCount: number): B4SetConfig {
-  return {
-    id: uuidv4(),
-    name: `Set ${setCount + 1}`,
-    enabled: true,
-    tcp: {
-      conn_bytes_limit: 19,
-      seg2delay: 0,
-      seg2delay_max: 0,
-      syn_fake: false,
-      syn_fake_len: 0,
-      syn_ttl: 3,
-      drop_sack: false,
-      win: { mode: "off", values: [0, 1460, 8192, 65535] },
-      desync: { mode: "off", ttl: 3, count: 3, post_desync: false },
-      incoming: {
-        mode: "off",
-        min: 14,
-        max: 14,
-        fake_ttl: 3,
-        fake_count: 3,
-        strategy: "badsum",
-      },
-    } as B4SetConfig["tcp"],
-    udp: {
-      mode: "fake",
-      fake_seq_length: 6,
-      fake_len: 64,
-      faking_strategy: "none",
-      dport_filter: "",
-      filter_quic: "disabled",
-      filter_stun: true,
-      conn_bytes_limit: 8,
-      seg2delay: 0,
-      seg2delay_max: 0,
-    } as B4SetConfig["udp"],
-    dns: {
-      enabled: false,
-      target_dns: "",
-      fragment_query: false,
-    } as B4SetConfig["dns"],
-    fragmentation: {
-      strategy: "tcp",
-      reverse_order: true,
-      middle_sni: true,
-      sni_position: 1,
-      oob_position: 0,
-      oob_char: 120,
-      tlsrec_pos: 0,
-      seq_overlap: 0,
-      seq_overlap_pattern: [],
-      combo: {
-        extension_split: true,
-        first_byte_split: true,
-        shuffle_mode: "middle",
-        first_delay_ms: 100,
-        jitter_max_us: 2000,
-        decoy_enabled: false,
-        decoy_snis: ["ya.ru", "vk.com", "mail.ru"],
-      },
-      disorder: {
-        shuffle_mode: "full",
-        min_jitter_us: 1000,
-        max_jitter_us: 3000,
-      },
-    } as B4SetConfig["fragmentation"],
-    faking: {
-      sni: true,
-      ttl: 8,
-      strategy: "pastseq",
-      seq_offset: 10000,
-      sni_seq_length: 1,
-      sni_type: 2,
-      custom_payload: "",
-      payload_file: "",
-      tls_mod: [] as string[],
-      sni_mutation: {
-        mode: "off",
-        grease_count: 3,
-        padding_size: 2048,
-        fake_ext_count: 5,
-        fake_snis: ["ya.ru", "vk.com", "max.ru"],
-      },
-    } as B4SetConfig["faking"],
-    targets: {
-      sni_domains: [],
-      ip: [],
-      geosite_categories: [],
-      geoip_categories: [],
-    } as B4SetConfig["targets"],
-  };
-}
 
 interface SetEditorRouteProps {
   config: B4Config & { sets?: SetWithStats[] };
@@ -138,8 +45,9 @@ function SetEditorRoute({ config, onRefresh }: Readonly<SetEditorRouteProps>) {
 
   const handleSave = (editedSet: B4SetConfig) => {
     void (async () => {
+      const { id: _, ...setWithoutId } = editedSet;
       const result = isNew
-        ? await createSet(editedSet)
+        ? await createSet(setWithoutId)
         : await updateSet(editedSet);
 
       if (result.success) {
@@ -153,8 +61,7 @@ function SetEditorRoute({ config, onRefresh }: Readonly<SetEditorRouteProps>) {
   };
 
   if (!set) {
-    navigate("/sets", { replace: true });
-    return null;
+    return <Navigate to="/sets" replace />;
   }
 
   return (

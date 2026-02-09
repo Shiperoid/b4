@@ -7,6 +7,7 @@ import { DeviceActivity } from "./DeviceActivity";
 import { UnmatchedDomains } from "./UnmatchedDomains";
 import { SimpleLineChart } from "./SimpleLineChart";
 import { colors } from "@design";
+import { useDashboardSets } from "@hooks/useDashboardSets";
 
 export interface Metrics {
   total_connections: number;
@@ -236,6 +237,7 @@ export function DashboardPage() {
   const [connected, setConnected] = useState(false);
   const [version, setVersion] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const { sets, targetedDomains, refresh: refreshSets } = useDashboardSets();
 
   useEffect(() => {
     fetch("/api/version")
@@ -310,11 +312,21 @@ export function DashboardPage() {
         <MetricsCards metrics={metrics} />
       </Box>
 
-      <ActiveSets />
+      <ActiveSets sets={sets} />
 
-      <DeviceActivity deviceDomains={metrics.device_domains} />
+      <DeviceActivity
+        deviceDomains={metrics.device_domains}
+        sets={sets}
+        targetedDomains={targetedDomains}
+        onRefreshSets={refreshSets}
+      />
 
-      <UnmatchedDomains topDomains={metrics.top_domains} />
+      <UnmatchedDomains
+        topDomains={metrics.top_domains}
+        sets={sets}
+        targetedDomains={targetedDomains}
+        onRefreshSets={refreshSets}
+      />
 
       {metrics.connection_rate.length > 0 && (
         <Paper

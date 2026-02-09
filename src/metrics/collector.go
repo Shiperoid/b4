@@ -208,7 +208,7 @@ func (m *MetricsCollector) RecordConnection(protocol, domain, source, destinatio
 	if sourceMac != "" && domain != "" {
 		if m.DeviceDomains[sourceMac] == nil {
 			if len(m.DeviceDomains) >= 50 {
-				// Prune oldest device (smallest total)
+				// Prune least-active device (smallest total count)
 				var minMac string
 				var minTotal uint64 = ^uint64(0)
 				for mac, domains := range m.DeviceDomains {
