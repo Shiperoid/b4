@@ -1,6 +1,6 @@
 import {
   createContext,
-  useContext,
+  use,
   useEffect,
   useState,
   useCallback,
@@ -217,7 +217,7 @@ export const WebSocketProvider = ({
   }, []);
 
   return (
-    <WebSocketContext.Provider
+    (<WebSocketContext
       value={{
         logs,
         domains,
@@ -234,12 +234,12 @@ export const WebSocketProvider = ({
       }}
     >
       {children}
-    </WebSocketContext.Provider>
+    </WebSocketContext>)
   );
 };
 
 export const useWebSocket = () => {
-  const ctx = useContext(WebSocketContext);
+  const ctx = use(WebSocketContext);
   if (!ctx)
     throw new Error("useWebSocket must be used within WebSocketProvider");
   return ctx;

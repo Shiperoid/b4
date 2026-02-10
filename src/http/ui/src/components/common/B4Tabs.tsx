@@ -25,7 +25,7 @@ export const B4Tabs = ({ sx, ...props }: TabsProps) => (
 );
 
 interface B4TabProps extends Omit<TabProps, "label" | "icon"> {
-  icon?: React.ReactElement;
+  icon?: React.ReactElement<any>;
   label: string;
   inline?: boolean;
   hasChanges?: boolean;

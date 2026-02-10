@@ -1,7 +1,7 @@
 // src/http/ui/src/context/SnackbarContext.tsx
 import {
   createContext,
-  useContext,
+  use,
   useState,
   useCallback,
   ReactNode,
@@ -53,7 +53,7 @@ export function SnackbarProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <SnackbarContext.Provider value={{ showSnackbar, showError, showSuccess }}>
+    (<SnackbarContext value={{ showSnackbar, showError, showSuccess }}>
       {children}
       <Snackbar
         open={state.open}
@@ -65,12 +65,12 @@ export function SnackbarProvider({ children }: { children: ReactNode }) {
           {state.message}
         </B4Alert>
       </Snackbar>
-    </SnackbarContext.Provider>
+    </SnackbarContext>)
   );
 }
 
 export function useSnackbar(): SnackbarContextType {
-  const context = useContext(SnackbarContext);
+  const context = use(SnackbarContext);
   if (!context) {
     throw new Error("useSnackbar must be used within SnackbarProvider");
   }

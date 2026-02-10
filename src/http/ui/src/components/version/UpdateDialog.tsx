@@ -29,7 +29,6 @@ import { useSystemUpdate } from "@hooks/useSystemUpdate";
 import { colors } from "@design";
 import { B4Dialog } from "@common/B4Dialog";
 import { GitHubRelease, compareVersions } from "@hooks/useGitHubRelease";
-import React from "react";
 
 interface UpdateModalProps {
   open: boolean;
