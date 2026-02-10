@@ -1,19 +1,19 @@
-import { useEffect, useState } from "react";
-import { Grid, Box, Stack, Typography } from "@mui/material";
-import { SecurityIcon } from "@b4.icons";
-import { Link } from "react-router-dom";
+import { useCaptures } from "@b4.capture";
 import {
+  B4Alert,
+  B4ChipList,
+  B4FormHeader,
+  B4PlusButton,
   B4Section,
-  B4Switch,
   B4Select,
   B4Slider,
+  B4Switch,
   B4TextField,
-  B4FormHeader,
-  B4ChipList,
-  B4PlusButton,
-  B4Alert,
 } from "@b4.elements";
-import { useCaptures } from "@b4.capture";
+import { SecurityIcon } from "@b4.icons";
+import { Box, Grid, Stack, Typography } from "@mui/material";
+import { useEffect, useState } from "react";
+import { Link } from "react-router";
 
 import { B4SetConfig, FakingPayloadType, MutationMode } from "@models/config";
 
@@ -181,9 +181,9 @@ export const FakingSettings = ({ config, onChange }: FakingSettingsProps) => {
                       onChange("faking.payload_file", e.target.value as string)
                     }
                     helperText={
-                      captures.length === 0
-                        ? "No payloads available. Generate one in Settings first."
-                        : "Select a generated/uploaded TLS ClientHello (SNI-first)"
+                      captures.length === 0 ?
+                        "No payloads available. Generate one in Settings first."
+                      : "Select a generated/uploaded TLS ClientHello (SNI-first)"
                     }
                     disabled={!config.faking.sni || captures.length === 0}
                   />
@@ -274,8 +274,9 @@ export const FakingSettings = ({ config, onChange }: FakingSettingsProps) => {
                   checked={(config.faking.tls_mod || []).includes("rnd")}
                   onChange={(checked: boolean) => {
                     const current = config.faking.tls_mod || [];
-                    const next = checked
-                      ? [...current.filter((m) => m !== "rnd"), "rnd"]
+                    const next =
+                      checked ?
+                        [...current.filter((m) => m !== "rnd"), "rnd"]
                       : current.filter((m) => m !== "rnd");
                     onChange("faking.tls_mod", next);
                   }}
@@ -287,8 +288,9 @@ export const FakingSettings = ({ config, onChange }: FakingSettingsProps) => {
                   checked={(config.faking.tls_mod || []).includes("dupsid")}
                   onChange={(checked: boolean) => {
                     const current = config.faking.tls_mod || [];
-                    const next = checked
-                      ? [...current.filter((m) => m !== "dupsid"), "dupsid"]
+                    const next =
+                      checked ?
+                        [...current.filter((m) => m !== "dupsid"), "dupsid"]
                       : current.filter((m) => m !== "dupsid");
                     onChange("faking.tls_mod", next);
                   }}

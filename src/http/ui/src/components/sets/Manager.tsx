@@ -1,38 +1,38 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Box,
-  Grid,
-  Stack,
   Button,
-  Typography,
+  Grid,
+  InputAdornment,
   List,
   ListItem,
   ListItemText,
   Paper,
+  Stack,
   TextField,
-  InputAdornment,
+  Typography,
 } from "@mui/material";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 
 import {
   AddIcon,
-  SetsIcon,
-  DomainIcon,
-  WarningIcon,
-  CompareIcon,
   CheckIcon,
+  CompareIcon,
+  DomainIcon,
+  SetsIcon,
+  WarningIcon,
 } from "@b4.icons";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 
 import {
   DndContext,
-  closestCenter,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
   PointerSensor,
+  closestCenter,
   useSensor,
   useSensors,
-  DragEndEvent,
-  DragStartEvent,
-  DragOverlay,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -41,15 +41,15 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import { B4Section, B4Dialog } from "@b4.elements";
+import { B4Dialog, B4Section } from "@b4.elements";
 import { useSnackbar } from "@context/SnackbarProvider";
 
-import { SetCard } from "./SetCard";
 import { SetCompare } from "./Compare";
+import { SetCard } from "./SetCard";
 
 import { colors, radius } from "@design";
-import { B4Config, B4SetConfig } from "@models/config";
 import { useSets } from "@hooks/useSets";
+import { B4Config, B4SetConfig } from "@models/config";
 
 export interface SetStats {
   manual_domains: number;
@@ -98,9 +98,9 @@ const SortableCardWrapper = ({ id, children }: SortableCardWrapperProps) => {
         zIndex: isDragging ? 1 : 0,
       }}
     >
-      {typeof children === "function"
-        ? children({ ...attributes, ...listeners })
-        : children}
+      {typeof children === "function" ?
+        children({ ...attributes, ...listeners })
+      : children}
     </Box>
   );
 };
@@ -376,7 +376,7 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
           </SortableContext>
 
           <DragOverlay>
-            {activeSet ? (
+            {activeSet ?
               <Box
                 sx={{
                   p: 3,
@@ -394,7 +394,7 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
                   {activeSet.fragmentation.strategy.toUpperCase()}
                 </Typography>
               </Box>
-            ) : null}
+            : null}
           </DragOverlay>
         </DndContext>
 

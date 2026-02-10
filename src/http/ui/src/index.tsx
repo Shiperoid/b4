@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
-import { WebSocketProvider } from "./context/B4WsProvider";
+import { BrowserRouter } from "react-router";
 import App from "./App";
+import { WebSocketProvider } from "./context/B4WsProvider";
 
 const root = createRoot(document.getElementById("root")!);
 root.render(
@@ -9,5 +9,5 @@ root.render(
     <WebSocketProvider>
       <App />
     </WebSocketProvider>
-  </BrowserRouter>
+  </BrowserRouter>,
 );

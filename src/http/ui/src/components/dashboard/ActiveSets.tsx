@@ -1,11 +1,11 @@
-import { Box, Typography, Stack, Chip } from "@mui/material";
+import { colors } from "@design";
+import { B4SetConfig } from "@models/config";
 import {
   Circle as CircleIcon,
   FolderOpen as FolderIcon,
 } from "@mui/icons-material";
-import { useNavigate } from "react-router-dom";
-import { colors } from "@design";
-import { B4SetConfig } from "@models/config";
+import { Box, Chip, Stack, Typography } from "@mui/material";
+import { useNavigate } from "react-router";
 
 interface ActiveSetsProps {
   sets: B4SetConfig[];
@@ -52,24 +52,22 @@ export const ActiveSets = ({ sets }: ActiveSetsProps) => {
             <Chip
               key={set.id}
               icon={
-                set.enabled ? (
+                set.enabled ?
                   <CircleIcon sx={{ fontSize: "8px !important" }} />
-                ) : (
-                  <FolderIcon sx={{ fontSize: "14px !important" }} />
-                )
+                : <FolderIcon sx={{ fontSize: "14px !important" }} />
               }
               label={`${set.name}: ${totalTargets} targets`}
               size="small"
               onClick={() => navigate(`/sets/${set.id}`)}
               sx={{
-                bgcolor: set.enabled
-                  ? `${colors.secondary}15`
+                bgcolor:
+                  set.enabled ?
+                    `${colors.secondary}15`
                   : `${colors.text.disabled}10`,
-                color: set.enabled
-                  ? colors.text.primary
-                  : colors.text.disabled,
-                borderColor: set.enabled
-                  ? `${colors.secondary}40`
+                color: set.enabled ? colors.text.primary : colors.text.disabled,
+                borderColor:
+                  set.enabled ?
+                    `${colors.secondary}40`
                   : `${colors.text.disabled}20`,
                 cursor: "pointer",
                 fontWeight: 500,
@@ -77,8 +75,9 @@ export const ActiveSets = ({ sets }: ActiveSetsProps) => {
                   color: set.enabled ? "#4caf50" : colors.text.disabled,
                 },
                 "&:hover": {
-                  bgcolor: set.enabled
-                    ? `${colors.secondary}25`
+                  bgcolor:
+                    set.enabled ?
+                      `${colors.secondary}25`
                     : `${colors.text.disabled}20`,
                 },
               }}

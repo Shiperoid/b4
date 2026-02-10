@@ -1,46 +1,46 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Container,
-  Box,
-  Stack,
-  Button,
-  CircularProgress,
-  Typography,
-  Paper,
-  Chip,
-  Fade,
   Backdrop,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Container,
   DialogContent,
   DialogContentText,
+  Fade,
   Grid,
+  Paper,
+  Stack,
+  Typography,
 } from "@mui/material";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 
 import {
-  CoreIcon,
-  DomainIcon,
   ApiIcon,
   CaptureIcon,
-  SaveIcon,
-  RefreshIcon,
+  CoreIcon,
   DiscoveryIcon,
+  DomainIcon,
+  RefreshIcon,
+  SaveIcon,
   WarningIcon,
 } from "@b4.icons";
 import { useSnackbar } from "@context/SnackbarProvider";
+import { ApiSettings } from "./Api";
 import { CaptureSettings } from "./Capture";
-import { NetworkSettings } from "./Network";
-import { LoggingSettings } from "./Logging";
-import { FeatureSettings } from "./Feature";
-import { CheckerSettings } from "./Discovery";
 import { ControlSettings } from "./Control";
 import { DevicesSettings } from "./Devices";
+import { CheckerSettings } from "./Discovery";
+import { FeatureSettings } from "./Feature";
 import { GeoSettings } from "./Geo";
-import { ApiSettings } from "./Api";
+import { LoggingSettings } from "./Logging";
+import { NetworkSettings } from "./Network";
 
-import { B4Config, B4SetConfig } from "@models/config";
-import { colors, spacing } from "@design";
 import { B4Alert, B4Dialog, B4Tab, B4Tabs } from "@b4.elements";
 import { configApi } from "@b4.settings";
+import { colors, spacing } from "@design";
+import { B4Config, B4SetConfig } from "@models/config";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -141,7 +141,7 @@ export function SettingsPage() {
   // Handle tab change
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     const category = SETTING_CATEGORIES.find(
-      (cat) => cat.id === (newValue as TABS)
+      (cat) => cat.id === (newValue as TABS),
     );
     if (category) {
       navigate(`/settings/${category.path}`);
@@ -229,9 +229,9 @@ export function SettingsPage() {
 
       const requiresRestart = categoryHasChanges[0];
       showSuccess(
-        requiresRestart
-          ? "Configuration saved! Please restart B4 for core settings to take effect."
-          : "Configuration saved successfully!"
+        requiresRestart ?
+          "Configuration saved! Please restart B4 for core settings to take effect."
+        : "Configuration saved successfully!",
       );
     } catch (error) {
       showError(error instanceof Error ? error.message : "Failed to save");
@@ -258,7 +258,7 @@ export function SettingsPage() {
       | string[]
       | B4SetConfig[]
       | null
-      | undefined
+      | undefined,
   ) => {
     if (!config) return;
 

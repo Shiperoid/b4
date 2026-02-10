@@ -1,15 +1,9 @@
-import { useState } from "react";
-import {
-  Routes,
-  Route,
-  Navigate,
-  useNavigate,
-  useLocation,
-} from "react-router-dom";
 import {
   AppBar,
+  Badge,
   Box,
   CssBaseline,
+  Divider,
   Drawer,
   IconButton,
   List,
@@ -17,35 +11,41 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  ThemeProvider,
   Toolbar,
   Typography,
-  ThemeProvider,
-  Divider,
-  Badge,
 } from "@mui/material";
+import { useState } from "react";
+import {
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router";
 
 import {
-  MenuIcon,
-  DiscoveryIcon,
-  SetsIcon,
-  DashboardIcon,
-  LogsIcon,
-  CoreIcon,
   ConnectionIcon,
+  CoreIcon,
+  DashboardIcon,
+  DiscoveryIcon,
+  LogsIcon,
+  MenuIcon,
+  SetsIcon,
 } from "@b4.icons";
-import { theme, colors } from "@design";
+import { colors, theme } from "@design";
 
 import { Logo } from "@common/Logo";
 import Version from "@components/version/Version";
 
 import { useWebSocket } from "./context/B4WsProvider";
 
-import { SetsPage } from "@b4.sets";
-import { DiscoveryPage } from "@b4.discovery";
 import { ConnectionsPage } from "@b4.connections";
-import { SettingsPage } from "@b4.settings";
-import { LogsPage } from "@b4.logs";
 import { DashboardPage } from "@b4.dashboard";
+import { DiscoveryPage } from "@b4.discovery";
+import { LogsPage } from "@b4.logs";
+import { SetsPage } from "@b4.sets";
+import { SettingsPage } from "@b4.settings";
 import { SnackbarProvider } from "@context/SnackbarProvider";
 
 const DRAWER_WIDTH = 240;
@@ -137,7 +137,7 @@ export default function App() {
                       }}
                     >
                       <ListItemIcon sx={{ color: "inherit" }}>
-                        {targetCount > 0 ? (
+                        {targetCount > 0 ?
                           <Badge
                             badgeContent={targetCount}
                             color="secondary"
@@ -145,9 +145,7 @@ export default function App() {
                           >
                             {item.icon}
                           </Badge>
-                        ) : (
-                          item.icon
-                        )}
+                        : item.icon}
                       </ListItemIcon>
                       <ListItemText primary={item.label} />
                     </ListItemButton>
