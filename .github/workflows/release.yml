@@ -190,11 +190,9 @@ jobs:
 
       - name: Determine tags
         id: tags
-        env:
-          PRERELEASE: ${{ inputs.prerelease }}
         run: |
-          TAGS="lavrushin/b4:$VERSION"
-          if [ "$PRERELEASE" != "true" ]; then
+          TAGS="lavrushin/b4:${{ env.VERSION }}"
+          if [ "${{ inputs.prerelease }}" != "true" ]; then
             TAGS="${TAGS},lavrushin/b4:latest"
           fi
           echo "tags=${TAGS}" >> $GITHUB_OUTPUT
