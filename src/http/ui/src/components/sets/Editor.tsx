@@ -148,7 +148,7 @@ export const SetEditorPage = ({
   };
 
   const handleBack = () => {
-    navigate("/sets");
+    navigate("/sets")?.catch(() => {});
   };
 
   if (!editedSet) return null;

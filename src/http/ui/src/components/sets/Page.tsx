@@ -37,21 +37,21 @@ function SetEditorRoute({ config, onRefresh }: Readonly<SetEditorRouteProps>) {
   const existingSet = isNew ? null : sets.find((s) => s.id === id);
   const set = isNew ? createDefaultSet(sets.length) : existingSet;
 
-  const stats =
-    existingSet ?
-      setsStats[sets.findIndex((s) => s.id === existingSet.id)] || undefined
+  const stats = existingSet
+    ? (setsStats[sets.findIndex((s) => s.id === existingSet.id)] ?? undefined)
     : undefined;
 
   const handleSave = (editedSet: B4SetConfig) => {
     void (async () => {
       const { id: _, ...setWithoutId } = editedSet;
-      const result =
-        isNew ? await createSet(setWithoutId) : await updateSet(editedSet);
+      const result = isNew
+        ? await createSet(setWithoutId)
+        : await updateSet(editedSet);
 
       if (result.success) {
         showSuccess(isNew ? "Set created" : "Set updated");
         onRefresh();
-        navigate("/sets");
+        await navigate("/sets");
       } else {
         showError(result.error || "Failed to save");
       }
@@ -99,7 +99,7 @@ export function SetsPage() {
   }, [showError, setLoading]);
 
   useEffect(() => {
-    void loadConfig();
+    loadConfig().catch(() => {});
   }, [loadConfig]);
 
   if (loading || !config) {
@@ -133,7 +133,9 @@ export function SetsPage() {
             element={
               <SetsManager
                 config={config}
-                onRefresh={() => void loadConfig()}
+                onRefresh={() => {
+                  loadConfig().catch(() => {});
+                }}
               />
             }
           />
@@ -142,7 +144,9 @@ export function SetsPage() {
             element={
               <SetEditorRoute
                 config={config}
-                onRefresh={() => void loadConfig()}
+                onRefresh={() => {
+                  loadConfig().catch(() => {});
+                }}
               />
             }
           />

@@ -99,10 +99,10 @@ export function useCaptures() {
     )}`;
     const link = document.createElement("a");
     link.href = url;
-    link.download = `tls_${capture.domain.replace(/\./g, "_")}.bin`;
+    link.download = `tls_${capture.domain.replaceAll(".", "_")}.bin`;
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    link.remove();
   }, []);
 
   return {

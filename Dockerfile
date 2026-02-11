@@ -18,7 +18,9 @@ FROM golang:1.25-alpine AS go-builder
 WORKDIR /app
 
 COPY src/go.mod src/go.sum ./src/
-RUN cd src && go mod download
+
+WORKDIR /app/src
+RUN go mod download
 
 COPY src/ ./src/
 COPY --from=ui-builder /app/src/http/ui/dist ./src/http/ui/dist

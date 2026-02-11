@@ -75,7 +75,7 @@ interface SortableCardWrapperProps {
   id: string;
   children:
     | React.ReactNode
-    | ((props: React.HTMLAttributes<HTMLDivElement>) => JSX.Element);
+    | ((props: React.HTMLAttributes<HTMLDivElement>) => React.JSX.Element);
 }
 
 const SortableCardWrapper = ({ id, children }: SortableCardWrapperProps) => {
@@ -98,9 +98,9 @@ const SortableCardWrapper = ({ id, children }: SortableCardWrapperProps) => {
         zIndex: isDragging ? 1 : 0,
       }}
     >
-      {typeof children === "function" ?
-        children({ ...attributes, ...listeners })
-      : children}
+      {typeof children === "function"
+        ? children({ ...attributes, ...listeners })
+        : children}
     </Box>
   );
 };
@@ -200,17 +200,18 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
   const activeSet = activeId ? sets.find((s) => s.id === activeId) : null;
 
   const handleAddSet = () => {
-    navigate("/sets/new");
+    navigate("/sets/new")?.catch(() => {});
   };
 
   const handleEditSet = (set: B4SetConfig) => {
-    navigate(`/sets/${set.id}`);
+    navigate(`/sets/${set.id}`)?.catch(() => {});
   };
 
   const handleDeleteSet = () => {
-    if (!deleteDialog.setId) return;
+    const { setId } = deleteDialog;
+    if (!setId) return;
     void (async () => {
-      const result = await deleteSet(deleteDialog.setId!);
+      const result = await deleteSet(setId);
       if (result.success) {
         showSuccess("Set deleted");
         setDeleteDialog({ open: false, setId: null });
@@ -376,7 +377,7 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
           </SortableContext>
 
           <DragOverlay>
-            {activeSet ?
+            {activeSet ? (
               <Box
                 sx={{
                   p: 3,
@@ -394,7 +395,7 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
                   {activeSet.fragmentation.strategy.toUpperCase()}
                 </Typography>
               </Box>
-            : null}
+            ) : null}
           </DragOverlay>
         </DndContext>
 

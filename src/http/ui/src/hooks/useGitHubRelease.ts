@@ -69,20 +69,18 @@ export const useGitHubRelease = (): UseGitHubReleaseResult => {
   const [allReleases, setAllReleases] = useState<GitHubRelease[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [includePrerelease, setIncludePrereleaseState] = useState<boolean>(
-    () => {
-      try {
-        return localStorage.getItem(INCLUDE_PRERELEASE_KEY) === "true";
-      } catch {
-        return false;
-      }
+  const [includePrerelease, setIncludePrerelease] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(INCLUDE_PRERELEASE_KEY) === "true";
+    } catch {
+      return false;
     }
-  );
+  });
 
   const currentVersion = import.meta.env.VITE_APP_VERSION || "dev";
 
-  const setIncludePrerelease = useCallback((include: boolean) => {
-    setIncludePrereleaseState(include);
+  const togglePrerelease = useCallback((include: boolean) => {
+    setIncludePrerelease(include);
     try {
       localStorage.setItem(INCLUDE_PRERELEASE_KEY, String(include));
     } catch {
@@ -142,6 +140,6 @@ export const useGitHubRelease = (): UseGitHubReleaseResult => {
     error,
     currentVersion,
     includePrerelease,
-    setIncludePrerelease,
+    setIncludePrerelease: togglePrerelease,
   };
 };

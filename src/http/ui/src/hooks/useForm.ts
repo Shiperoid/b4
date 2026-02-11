@@ -19,7 +19,7 @@ export function useForm<T extends object>(initialData: T | null = null) {
         current[keys[i]] = { ...(current[keys[i]] as object) };
         current = current[keys[i]] as Record<string, unknown>;
       }
-      current[keys[keys.length - 1]] = value;
+      current[keys.at(-1)!] = value;
       return newData;
     });
     setIsDirty(true);

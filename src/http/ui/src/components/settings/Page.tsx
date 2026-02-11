@@ -144,7 +144,7 @@ export function SettingsPage() {
       (cat) => cat.id === (newValue as TABS),
     );
     if (category) {
-      navigate(`/settings/${category.path}`);
+      navigate(`/settings/${category.path}`)?.catch(() => {});
     }
   };
 
@@ -154,7 +154,7 @@ export function SettingsPage() {
       location.pathname === "/settings" ||
       location.pathname === "/settings/"
     ) {
-      navigate("/settings/general", { replace: true });
+      navigate("/settings/general", { replace: true })?.catch(() => {});
     }
   }, [location.pathname, navigate]);
 
@@ -216,7 +216,7 @@ export function SettingsPage() {
   }, [showError]);
 
   useEffect(() => {
-    void loadConfig();
+    loadConfig().catch(() => {});
   }, [loadConfig]);
 
   const saveConfig = async () => {
@@ -229,9 +229,9 @@ export function SettingsPage() {
 
       const requiresRestart = categoryHasChanges[0];
       showSuccess(
-        requiresRestart ?
-          "Configuration saved! Please restart B4 for core settings to take effect."
-        : "Configuration saved successfully!",
+        requiresRestart
+          ? "Configuration saved! Please restart B4 for core settings to take effect."
+          : "Configuration saved successfully!",
       );
     } catch (error) {
       showError(error instanceof Error ? error.message : "Failed to save");
@@ -275,7 +275,7 @@ export function SettingsPage() {
         current = current[keys[i]] as Record<string, unknown>;
       }
 
-      current[keys[keys.length - 1]] = value;
+      current[keys.at(-1)!] = value;
       setConfig(newConfig);
     }
   };
@@ -360,7 +360,7 @@ export function SettingsPage() {
                 variant="outlined"
                 startIcon={<RefreshIcon />}
                 onClick={() => {
-                  void loadConfig();
+                  loadConfig().catch(() => {});
                 }}
                 disabled={saving}
               >
@@ -385,7 +385,7 @@ export function SettingsPage() {
 
           {/* Tabs */}
           <B4Tabs value={validTab} onChange={handleTabChange}>
-            {SETTING_CATEGORIES.sort((a, b) => a.id - b.id).map((cat) => (
+            {[...SETTING_CATEGORIES].sort((a, b) => a.id - b.id).map((cat) => (
               <B4Tab
                 key={cat.id}
                 icon={cat.icon}
@@ -407,7 +407,7 @@ export function SettingsPage() {
 
             <Grid size={{ xs: 12, md: 6 }} sx={{ display: "flex" }}>
               <Box sx={{ width: "100%" }}>
-                <ControlSettings loadConfig={() => void loadConfig()} />
+                <ControlSettings loadConfig={() => { loadConfig().catch(() => {}); }} />
               </Box>
             </Grid>
             <Grid size={{ xs: 12, md: 6 }} sx={{ display: "flex" }}>
@@ -431,7 +431,7 @@ export function SettingsPage() {
             config={config}
             onChange={handleChange}
             loadConfig={() => {
-              void loadConfig();
+              loadConfig().catch(() => {});
             }}
           />
         </TabPanel>

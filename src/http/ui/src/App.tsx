@@ -125,7 +125,7 @@ export default function App() {
                         if (item.path === "/connections") {
                           resetDomainsBadge();
                         }
-                        navigate(item.path);
+                        navigate(item.path)?.catch(() => {});
                       }}
                       sx={{
                         "&.Mui-selected": {
@@ -137,7 +137,7 @@ export default function App() {
                       }}
                     >
                       <ListItemIcon sx={{ color: "inherit" }}>
-                        {targetCount > 0 ?
+                        {targetCount > 0 ? (
                           <Badge
                             badgeContent={targetCount}
                             color="secondary"
@@ -145,7 +145,9 @@ export default function App() {
                           >
                             {item.icon}
                           </Badge>
-                        : item.icon}
+                        ) : (
+                          item.icon
+                        )}
                       </ListItemIcon>
                       <ListItemText primary={item.label} />
                     </ListItemButton>

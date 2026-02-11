@@ -2,6 +2,7 @@ import {
   createContext,
   use,
   useEffect,
+  useMemo,
   useState,
   useCallback,
   useRef,
@@ -30,7 +31,7 @@ const WebSocketContext = createContext<WebSocketContextType | null>(null);
 // Simple ring buffer class for efficient fixed-size storage
 class RingBuffer {
   private buffer: string[] = [];
-  private maxSize: number;
+  private readonly maxSize: number;
 
   constructor(maxSize: number) {
     this.maxSize = maxSize;
@@ -89,7 +90,7 @@ export const WebSocketProvider = ({
   const logsBufferRef = useRef(new RingBuffer(MAX_BUFFER_SIZE));
   const domainsBufferRef = useRef(new RingBuffer(MAX_BUFFER_SIZE));
   const pendingLinesRef = useRef<string[]>([]);
-  const batchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const batchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const unseenCountRef = useRef(0);
 
   // Keep refs in sync
@@ -152,7 +153,7 @@ export const WebSocketProvider = ({
       "/api/ws/logs";
 
     let ws: WebSocket | null = null;
-    let reconnectTimeout: NodeJS.Timeout | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
     let isCleaningUp = false;
 
     const connect = () => {
@@ -216,25 +217,38 @@ export const WebSocketProvider = ({
     setUnseenDomainsCount(0);
   }, []);
 
+  const contextValue = useMemo(
+    () => ({
+      logs,
+      domains,
+      pauseLogs,
+      pauseDomains,
+      unseenDomainsCount,
+      showAll,
+      setShowAll,
+      setPauseLogs,
+      setPauseDomains,
+      clearLogs,
+      clearDomains,
+      resetDomainsBadge,
+    }),
+    [
+      logs,
+      domains,
+      pauseLogs,
+      pauseDomains,
+      unseenDomainsCount,
+      showAll,
+      clearLogs,
+      clearDomains,
+      resetDomainsBadge,
+    ],
+  );
+
   return (
-    (<WebSocketContext
-      value={{
-        logs,
-        domains,
-        pauseLogs,
-        pauseDomains,
-        unseenDomainsCount,
-        showAll,
-        setShowAll,
-        setPauseLogs,
-        setPauseDomains,
-        clearLogs,
-        clearDomains,
-        resetDomainsBadge,
-      }}
-    >
+    <WebSocketContext value={contextValue}>
       {children}
-    </WebSocketContext>)
+    </WebSocketContext>
   );
 };
 

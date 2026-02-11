@@ -24,7 +24,7 @@ interface TcpSettingsProps {
   main: B4SetConfig;
   onChange: (
     field: string,
-    value: string | number | boolean | number[]
+    value: string | number | boolean | number[],
   ) => void;
 }
 
@@ -102,11 +102,16 @@ export const TcpSettings = ({ config, main, onChange }: TcpSettingsProps) => {
   const isDesyncEnabled = config.tcp.desync.mode !== "off";
 
   const handleAddWinValue = () => {
-    const val = parseInt(newWinValue, 10);
-    if (!isNaN(val) && val >= 0 && val <= 65535 && !winValues.includes(val)) {
+    const val = Number.parseInt(newWinValue, 10);
+    if (
+      !Number.isNaN(val) &&
+      val >= 0 &&
+      val <= 65535 &&
+      !winValues.includes(val)
+    ) {
       onChange(
         "tcp.win_values",
-        [...winValues, val].sort((a, b) => a - b)
+        [...winValues, val].sort((a, b) => a - b),
       );
       setNewWinValue("");
     }
@@ -115,7 +120,7 @@ export const TcpSettings = ({ config, main, onChange }: TcpSettingsProps) => {
   const handleRemoveWinValue = (val: number) => {
     onChange(
       "tcp.win_values",
-      winValues.filter((v) => v !== val)
+      winValues.filter((v) => v !== val),
     );
   };
 
@@ -147,7 +152,10 @@ export const TcpSettings = ({ config, main, onChange }: TcpSettingsProps) => {
         <Grid size={{ xs: 12, md: 6 }}>
           <B4RangeSlider
             label="Segment 2 Delay"
-            value={[config.tcp.seg2delay, config.tcp.seg2delay_max || config.tcp.seg2delay]}
+            value={[
+              config.tcp.seg2delay,
+              config.tcp.seg2delay_max || config.tcp.seg2delay,
+            ]}
             onChange={(value: [number, number]) => {
               onChange("tcp.seg2delay", value[0]);
               onChange("tcp.seg2delay_max", value[1]);
@@ -523,8 +531,8 @@ export const TcpSettings = ({ config, main, onChange }: TcpSettingsProps) => {
               config.tcp.incoming?.mode === "fake"
                 ? "Not used in fake mode"
                 : config.tcp.incoming?.min === config.tcp.incoming?.max
-                ? "Fixed threshold (min = max)"
-                : "Threshold randomized between min-max per connection"
+                  ? "Fixed threshold (min = max)"
+                  : "Threshold randomized between min-max per connection"
             }
           />
         </Grid>

@@ -67,7 +67,7 @@ export const FakingSettings = ({ config, onChange }: FakingSettingsProps) => {
   const { captures, loadCaptures } = useCaptures();
 
   useEffect(() => {
-    void loadCaptures();
+    loadCaptures().catch(() => {});
   }, [loadCaptures]);
 
   const mutation = config.faking.sni_mutation || {
@@ -181,9 +181,9 @@ export const FakingSettings = ({ config, onChange }: FakingSettingsProps) => {
                       onChange("faking.payload_file", e.target.value as string)
                     }
                     helperText={
-                      captures.length === 0 ?
-                        "No payloads available. Generate one in Settings first."
-                      : "Select a generated/uploaded TLS ClientHello (SNI-first)"
+                      captures.length === 0
+                        ? "No payloads available. Generate one in Settings first."
+                        : "Select a generated/uploaded TLS ClientHello (SNI-first)"
                     }
                     disabled={!config.faking.sni || captures.length === 0}
                   />
@@ -274,9 +274,8 @@ export const FakingSettings = ({ config, onChange }: FakingSettingsProps) => {
                   checked={(config.faking.tls_mod || []).includes("rnd")}
                   onChange={(checked: boolean) => {
                     const current = config.faking.tls_mod || [];
-                    const next =
-                      checked ?
-                        [...current.filter((m) => m !== "rnd"), "rnd"]
+                    const next = checked
+                      ? [...current.filter((m) => m !== "rnd"), "rnd"]
                       : current.filter((m) => m !== "rnd");
                     onChange("faking.tls_mod", next);
                   }}
@@ -288,9 +287,8 @@ export const FakingSettings = ({ config, onChange }: FakingSettingsProps) => {
                   checked={(config.faking.tls_mod || []).includes("dupsid")}
                   onChange={(checked: boolean) => {
                     const current = config.faking.tls_mod || [];
-                    const next =
-                      checked ?
-                        [...current.filter((m) => m !== "dupsid"), "dupsid"]
+                    const next = checked
+                      ? [...current.filter((m) => m !== "dupsid"), "dupsid"]
                       : current.filter((m) => m !== "dupsid");
                     onChange("faking.tls_mod", next);
                   }}

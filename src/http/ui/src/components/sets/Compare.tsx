@@ -45,7 +45,7 @@ const IGNORE_KEYS = new Set([
 
 const flattenObject = (
   obj: Record<string, unknown>,
-  prefix = ""
+  prefix = "",
 ): Record<string, unknown> => {
   const result: Record<string, unknown> = {};
   for (const key of Object.keys(obj)) {
@@ -55,7 +55,7 @@ const flattenObject = (
     if (value && typeof value === "object" && !Array.isArray(value)) {
       Object.assign(
         result,
-        flattenObject(value as Record<string, unknown>, path)
+        flattenObject(value as Record<string, unknown>, path),
       );
     } else {
       result[path] = value;
@@ -77,7 +77,7 @@ const formatValue = (val: unknown): string => {
 const pathToLabel = (path: string): string => {
   return path
     .split(".")
-    .map((p) => p.replace(/_/g, " "))
+    .map((p) => p.replaceAll("_", " "))
     .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
     .join(" → ");
 };
@@ -246,14 +246,14 @@ export const SetCompare = ({ open, setA, setB, onClose }: SetCompareProps) => {
                               diff.type === "added"
                                 ? `${colors.tertiary}22`
                                 : diff.type === "removed"
-                                ? `${colors.quaternary}22`
-                                : `${colors.secondary}22`,
+                                  ? `${colors.quaternary}22`
+                                  : `${colors.secondary}22`,
                             color:
                               diff.type === "added"
                                 ? colors.tertiary
                                 : diff.type === "removed"
-                                ? colors.quaternary
-                                : colors.secondary,
+                                  ? colors.quaternary
+                                  : colors.secondary,
                           }}
                         />
                       </Grid>

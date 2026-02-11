@@ -58,7 +58,7 @@ export const ActiveSets = ({ sets }: ActiveSetsProps) => {
               }
               label={`${set.name}: ${totalTargets} targets`}
               size="small"
-              onClick={() => navigate(`/sets/${set.id}`)}
+              onClick={() => { navigate(`/sets/${set.id}`)?.catch(() => {}); }}
               sx={{
                 bgcolor:
                   set.enabled ?

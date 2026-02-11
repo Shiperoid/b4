@@ -34,8 +34,8 @@ interface DomainModalState {
 
 // Simple LRU Cache for parsed logs
 class ParseCache {
-  private cache = new Map<string, ParsedLog | null>();
-  private maxSize = 5000;
+  private readonly cache = new Map<string, ParsedLog | null>();
+  private readonly maxSize = 5000;
 
   get(key: string): ParsedLog | null | undefined {
     const value = this.cache.get(key);
@@ -189,7 +189,7 @@ export function useDomainActions() {
         showError(`Failed to add domain: ${String(error)}`);
       }
     },
-    [modalState.selected, closeModal, showError, showSuccess]
+    [modalState.selected, closeModal, showError, showSuccess],
   );
 
   return {
@@ -268,14 +268,14 @@ export function useParsedLogs(lines: string[], showAll: boolean): ParsedLog[] {
 // Enrich logs with device names
 export function useEnrichedLogs(
   parsedLogs: ParsedLog[],
-  deviceMap: Record<string, string>
+  deviceMap: Record<string, string>,
 ): ParsedLog[] {
   return useMemo(() => {
     if (Object.keys(deviceMap).length === 0) return parsedLogs;
 
     return parsedLogs.map((log) => {
       const normalized =
-        log.sourceAlias?.toUpperCase().replace(/-/g, ":") || "";
+        log.sourceAlias?.toUpperCase().replaceAll("-", ":") || "";
       const deviceName = deviceMap[normalized] || "";
       if (deviceName === log.deviceName) return log;
       return { ...log, deviceName };
@@ -286,7 +286,7 @@ export function useEnrichedLogs(
 // Optimized filtering with memoization
 export function useFilteredLogs(
   parsedLogs: ParsedLog[],
-  filter: string
+  filter: string,
 ): ParsedLog[] {
   return useMemo(() => {
     const f = filter.trim().toLowerCase();
@@ -318,12 +318,10 @@ export function useFilteredLogs(
           if (!fieldFilters[field]) fieldFilters[field] = [];
           fieldFilters[field].push(value);
         }
+      } else if (isExclude) {
+        globalExcludes.push(term);
       } else {
-        if (isExclude) {
-          globalExcludes.push(term);
-        } else {
-          globalFilters.push(term);
-        }
+        globalFilters.push(term);
       }
     }
 
@@ -362,14 +360,14 @@ export function useFilteredLogs(
 
       for (const filterTerm of globalFilters) {
         const matches = getSearchableValues(log).some((value) =>
-          value?.toLowerCase().includes(filterTerm)
+          value?.toLowerCase().includes(filterTerm),
         );
         if (!matches) return false;
       }
 
       for (const excludeTerm of globalExcludes) {
         const matches = getSearchableValues(log).some((value) =>
-          value?.toLowerCase().includes(excludeTerm)
+          value?.toLowerCase().includes(excludeTerm),
         );
         if (matches) return false;
       }
@@ -383,7 +381,7 @@ export function useFilteredLogs(
 export function useSortedLogs(
   filteredLogs: ParsedLog[],
   sortColumn: SortColumn | null,
-  sortDirection: SortDirection
+  sortDirection: SortDirection,
 ): ParsedLog[] {
   return useMemo(() => {
     if (!sortColumn || !sortDirection) {

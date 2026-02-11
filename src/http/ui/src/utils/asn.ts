@@ -10,8 +10,8 @@ const ASN_STORAGE_KEY = "b4_asn_cache";
 
 class AsnStorage {
   private cache: Record<string, AsnInfo> | null = null;
-  private lookupCache = new Map<string, AsnInfo | null>();
-  private cacheTimeout: NodeJS.Timeout | null = null;
+  private readonly lookupCache = new Map<string, AsnInfo | null>();
+  private cacheTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly MAX_CACHE_SIZE = 10000;
 
   private loadCache(): Record<string, AsnInfo> {
@@ -43,7 +43,7 @@ class AsnStorage {
   }
 
   findAsnForIp(ip: string): AsnInfo | null {
-    const cleanIp = ip.split(":")[0].replace(/[[\]]/g, "");
+    const cleanIp = ip.split(":")[0].replaceAll(/[[\]]/g, "");
 
     const cached = this.lookupCache.get(cleanIp);
     if (cached !== undefined) {

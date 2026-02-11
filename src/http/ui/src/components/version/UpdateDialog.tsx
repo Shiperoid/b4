@@ -105,7 +105,7 @@ export const UpdateModal = ({
     setUpdateMessage("Initiating update...");
 
     const result = await performUpdate(selectedVersion);
-    if (!result || !result.success) {
+    if (!result?.success) {
       setUpdateStatus("error");
       setUpdateMessage(result?.message || "Failed to initiate update.");
       return;
@@ -123,7 +123,7 @@ export const UpdateModal = ({
     } else {
       setUpdateStatus("error");
       setUpdateMessage(
-        "Update may have completed but service did not restart. Please check manually."
+        "Update may have completed but service did not restart. Please check manually.",
       );
     }
   };
