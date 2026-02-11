@@ -1,19 +1,19 @@
-import { useEffect, useState } from "react";
-import { Grid, Box, Stack, Typography } from "@mui/material";
-import { SecurityIcon } from "@b4.icons";
-import { Link } from "react-router-dom";
+import { useCaptures } from "@b4.capture";
 import {
+  B4Alert,
+  B4ChipList,
+  B4FormHeader,
+  B4PlusButton,
   B4Section,
-  B4Switch,
   B4Select,
   B4Slider,
+  B4Switch,
   B4TextField,
-  B4FormHeader,
-  B4ChipList,
-  B4PlusButton,
-  B4Alert,
 } from "@b4.elements";
-import { useCaptures } from "@b4.capture";
+import { SecurityIcon } from "@b4.icons";
+import { Box, Grid, Stack, Typography } from "@mui/material";
+import { useEffect, useState } from "react";
+import { Link } from "react-router";
 
 import { B4SetConfig, FakingPayloadType, MutationMode } from "@models/config";
 
@@ -67,7 +67,7 @@ export const FakingSettings = ({ config, onChange }: FakingSettingsProps) => {
   const { captures, loadCaptures } = useCaptures();
 
   useEffect(() => {
-    void loadCaptures();
+    loadCaptures().catch(() => {});
   }, [loadCaptures]);
 
   const mutation = config.faking.sni_mutation || {

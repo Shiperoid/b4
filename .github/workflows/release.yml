@@ -51,7 +51,7 @@ jobs:
         working-directory: src/http/ui
         run: |
           pnpm install --frozen-lockfile
-          VITE_APP_VERSION=${{ env.VERSION }} pnpm build
+          VITE_APP_VERSION="$VERSION" pnpm build
 
       - name: Upload UI artifacts
         uses: actions/upload-artifact@v4
@@ -105,7 +105,7 @@ jobs:
 
       - name: Build using Makefile
         run: |
-          make linux-${{ matrix.arch }} VERSION=${{ env.VERSION }}
+          make linux-${{ matrix.arch }} VERSION="$VERSION"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

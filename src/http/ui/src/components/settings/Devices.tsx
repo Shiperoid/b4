@@ -113,7 +113,7 @@ export const DevicesSettings = ({ config, onChange }: DevicesSettingsProps) => {
   } = useDevices();
 
   useEffect(() => {
-    void loadDevices();
+    loadDevices().catch(() => {});
   }, [loadDevices]);
 
   const handleMacToggle = (mac: string) => {
@@ -168,11 +168,7 @@ export const DevicesSettings = ({ config, onChange }: DevicesSettingsProps) => {
                 : "Whitelist mode: Only selected devices will use DPI bypass"}
             </B4Alert>
 
-            {!available ? (
-              <B4Alert severity="warning">
-                DHCP lease source not detected. Device discovery unavailable.
-              </B4Alert>
-            ) : (
+            {available ? (
               <Grid size={{ xs: 12 }}>
                 <Box
                   sx={{
@@ -201,7 +197,9 @@ export const DevicesSettings = ({ config, onChange }: DevicesSettingsProps) => {
                     icon={
                       loading ? <CircularProgress size={18} /> : <RefreshIcon />
                     }
-                    onClick={() => void loadDevices()}
+                    onClick={() => {
+                      loadDevices().catch(() => {});
+                    }}
                   />
                 </Box>
 
@@ -229,7 +227,7 @@ export const DevicesSettings = ({ config, onChange }: DevicesSettingsProps) => {
                                 "queue.devices.mac",
                                 e.target.checked
                                   ? devices.map((d) => d.mac)
-                                  : []
+                                  : [],
                               )
                             }
                           />
@@ -295,7 +293,7 @@ export const DevicesSettings = ({ config, onChange }: DevicesSettingsProps) => {
                                 onSaveAlias={async (alias) => {
                                   const result = await setAlias(
                                     device.mac,
-                                    alias
+                                    alias,
                                   );
                                   if (result.success) setEditingMac(null);
                                 }}
@@ -313,6 +311,10 @@ export const DevicesSettings = ({ config, onChange }: DevicesSettingsProps) => {
                   </Table>
                 </TableContainer>
               </Grid>
+            ) : (
+              <B4Alert severity="warning">
+                DHCP lease source not detected. Device discovery unavailable.
+              </B4Alert>
             )}
           </>
         )}

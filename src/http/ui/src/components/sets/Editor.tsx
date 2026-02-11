@@ -1,24 +1,24 @@
-import { type ReactNode, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Box,
-  Stack,
   Button,
-  Paper,
   CircularProgress,
-  Typography,
   Fade,
+  Paper,
+  Stack,
+  Typography,
 } from "@mui/material";
+import { useEffect, useState, type ReactNode } from "react";
+import { useNavigate } from "react-router";
 
 import {
-  DomainIcon,
-  TcpIcon,
-  UdpIcon,
   DnsIcon,
-  FragIcon,
+  DomainIcon,
   FakingIcon,
+  FragIcon,
   ImportExportIcon,
   SaveIcon,
+  TcpIcon,
+  UdpIcon,
 } from "@b4.icons";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
@@ -32,14 +32,14 @@ import {
   SystemConfig,
 } from "@models/config";
 
+import { DnsSettings } from "./Dns";
+import { FakingSettings } from "./Faking";
+import { FragmentationSettings } from "./Fragmentation";
+import { ImportExportSettings } from "./ImportExport";
+import { SetStats } from "./Manager";
 import { TargetSettings } from "./Target";
 import { TcpSettings } from "./Tcp";
 import { UdpSettings } from "./Udp";
-import { FragmentationSettings } from "./Fragmentation";
-import { ImportExportSettings } from "./ImportExport";
-import { DnsSettings } from "./Dns";
-import { FakingSettings } from "./Faking";
-import { SetStats } from "./Manager";
 
 interface TabPanelProps {
   children?: ReactNode;
@@ -112,7 +112,7 @@ export const SetEditorPage = ({
 
   const handleChange = (
     field: string,
-    value: string | number | boolean | string[] | number[] | null | undefined
+    value: string | number | boolean | string[] | number[] | null | undefined,
   ) => {
     setEditedSet((prev) => {
       if (!prev) return prev;
@@ -148,7 +148,7 @@ export const SetEditorPage = ({
   };
 
   const handleBack = () => {
-    navigate("/sets");
+    navigate("/sets")?.catch(() => {});
   };
 
   if (!editedSet) return null;

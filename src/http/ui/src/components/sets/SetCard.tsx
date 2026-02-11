@@ -305,7 +305,7 @@ export const SetCard = ({
                       0,
                       2 -
                         set.targets.geosite_categories.length -
-                        set.targets.sni_domains.length
+                        set.targets.sni_domains.length,
                     )
                     .map((cat) => (
                       <TargetBadge key={cat} label={cat} type="geoip" />
@@ -322,7 +322,7 @@ export const SetCard = ({
                       2 -
                         set.targets.geosite_categories.length -
                         set.targets.sni_domains.length -
-                        set.targets.geoip_categories.length
+                        set.targets.geoip_categories.length,
                     )
                     .map((ip) => <TargetBadge key={ip} label={ip} type="ip" />)}
 
@@ -373,12 +373,6 @@ export const SetCard = ({
                 variant="outlined"
                 color="secondary"
               />
-            )}
-            {set.tcp.desync_mode !== "off" && (
-              <B4Badge label="DESYNC" size="small" variant="outlined" />
-            )}
-            {set.tcp.win_mode !== "off" && (
-              <B4Badge label="WIN" size="small" variant="outlined" />
             )}
             {set.fragmentation.reverse_order && (
               <B4Badge label="REV" size="small" variant="outlined" />

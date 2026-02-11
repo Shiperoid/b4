@@ -26,7 +26,7 @@ export function B4ChipList<T>({
   gridSize,
   maxHeight,
   showEmpty = false,
-}: B4ChipListProps<T>) {
+}: Readonly<B4ChipListProps<T>>) {
   if (items.length === 0 && !showEmpty) return null;
 
   const content = (

@@ -1,7 +1,6 @@
-import { apiGet, apiPost, apiDelete, apiFetch } from "./apiClient";
+import { apiGet, apiPost, apiFetch } from "./apiClient";
 import { B4Config } from "@models/config";
 import {
-  Capture,
   GeoFileInfo,
   GeodatDownloadResult,
   GeodatSource,
@@ -21,18 +20,6 @@ export const configApi = {
       body: JSON.stringify(config),
     }),
   reset: () => apiPost<ResetResponse>("/api/config/reset"),
-};
-
-// Capture API
-export const captureApi = {
-  list: () => apiGet<Capture[]>("/api/capture/list"),
-  probe: (domain: string, protocol: string) =>
-    apiPost<void>("/api/capture/probe", { domain, protocol }),
-  delete: (protocol: string, domain: string) =>
-    apiDelete(`/api/capture/delete?protocol=${protocol}&domain=${domain}`),
-  clear: () => apiPost<void>("/api/capture/clear"),
-  downloadUrl: (filepath: string) =>
-    `/api/capture/download?file=${encodeURIComponent(filepath)}`,
 };
 
 // Geodat API

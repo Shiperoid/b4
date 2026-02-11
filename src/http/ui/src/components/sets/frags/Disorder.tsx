@@ -43,7 +43,7 @@ interface DisorderSettingsProps {
   config: B4SetConfig;
   onChange: (
     field: string,
-    value: string | boolean | number | string[]
+    value: string | boolean | number | string[],
   ) => void;
 }
 
@@ -73,7 +73,7 @@ export const DisorderSettings = ({
         p.value !== "none" &&
         p.value !== "custom" &&
         p.pattern.length === seqPattern.length &&
-        p.pattern.every((b, i) => b === seqPattern[i])
+        p.pattern.every((b, i) => b === seqPattern[i]),
     );
     return match?.value || "custom";
   };
@@ -115,7 +115,7 @@ export const DisorderSettings = ({
   const handleRemoveByte = (index: number) => {
     onChange(
       "fragmentation.seq_overlap_pattern",
-      seqPattern.filter((_, i) => i !== index)
+      seqPattern.filter((_, i) => i !== index),
     );
   };
 
@@ -147,7 +147,7 @@ export const DisorderSettings = ({
           onChange={(e) =>
             onChange(
               "fragmentation.disorder.shuffle_mode",
-              e.target.value as string
+              e.target.value as string,
             )
           }
           helperText="How to reorder segments"
@@ -174,9 +174,9 @@ export const DisorderSettings = ({
           </Typography>
           <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
             <Box sx={{ display: "flex", gap: 0.5, fontFamily: "monospace" }}>
-              {["①", "②", "③", "④"].map((n, i) => (
+              {["①", "②", "③", "④"].map((n) => (
                 <Box
-                  key={i}
+                  key={n}
                   sx={{
                     p: 1,
                     bgcolor: colors.accent.primary,
@@ -194,9 +194,9 @@ export const DisorderSettings = ({
               {(disorder.shuffle_mode === "reverse"
                 ? ["④", "③", "②", "①"]
                 : ["③", "①", "④", "②"]
-              ).map((n, i) => (
+              ).map((n) => (
                 <Box
-                  key={i}
+                  key={n}
                   sx={{
                     p: 1,
                     bgcolor: colors.tertiary,
@@ -349,9 +349,7 @@ export const DisorderSettings = ({
                 label="Add Byte (hex)"
                 value={newByte}
                 onChange={(e) => setNewByte(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && (e.preventDefault(), handleAddByte())
-                }
+                onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
                 placeholder="e.g., 16 or 0x16"
                 size="small"
               />

@@ -1,20 +1,20 @@
-import { useCallback, useEffect, useState } from "react";
-import { Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
+import { useSnackbar } from "@context/SnackbarProvider";
+import { colors } from "@design";
+import { useSets } from "@hooks/useSets";
+import { B4Config, B4SetConfig } from "@models/config";
+import { createDefaultSet } from "@models/defaults";
 import {
-  Container,
-  Box,
   Backdrop,
+  Box,
   CircularProgress,
+  Container,
   Stack,
   Typography,
 } from "@mui/material";
-import { useSnackbar } from "@context/SnackbarProvider";
-import { SetsManager, SetStats, SetWithStats } from "./Manager";
+import { useCallback, useEffect, useState } from "react";
+import { Navigate, Route, Routes, useNavigate, useParams } from "react-router";
 import { SetEditorPage } from "./Editor";
-import { B4Config, B4SetConfig } from "@models/config";
-import { createDefaultSet } from "@models/defaults";
-import { useSets } from "@hooks/useSets";
-import { colors } from "@design";
+import { SetStats, SetWithStats, SetsManager } from "./Manager";
 
 interface SetEditorRouteProps {
   config: B4Config & { sets?: SetWithStats[] };
@@ -29,18 +29,16 @@ function SetEditorRoute({ config, onRefresh }: Readonly<SetEditorRouteProps>) {
 
   const isNew = id === "new";
   const setsData = config.sets || [];
-  const sets = setsData.map((s) =>
-    "set" in s ? s.set : s
-  ) as B4SetConfig[];
+  const sets = setsData.map((s) => ("set" in s ? s.set : s)) as B4SetConfig[];
   const setsStats = setsData.map((s) =>
-    "stats" in s ? s.stats : null
+    "stats" in s ? s.stats : null,
   ) as (SetStats | null)[];
 
   const existingSet = isNew ? null : sets.find((s) => s.id === id);
   const set = isNew ? createDefaultSet(sets.length) : existingSet;
 
   const stats = existingSet
-    ? setsStats[sets.findIndex((s) => s.id === existingSet.id)] || undefined
+    ? (setsStats[sets.findIndex((s) => s.id === existingSet.id)] ?? undefined)
     : undefined;
 
   const handleSave = (editedSet: B4SetConfig) => {
@@ -53,7 +51,7 @@ function SetEditorRoute({ config, onRefresh }: Readonly<SetEditorRouteProps>) {
       if (result.success) {
         showSuccess(isNew ? "Set created" : "Set updated");
         onRefresh();
-        navigate("/sets");
+        await navigate("/sets");
       } else {
         showError(result.error || "Failed to save");
       }
@@ -101,7 +99,7 @@ export function SetsPage() {
   }, [showError, setLoading]);
 
   useEffect(() => {
-    void loadConfig();
+    loadConfig().catch(() => {});
   }, [loadConfig]);
 
   if (loading || !config) {
@@ -133,7 +131,12 @@ export function SetsPage() {
           <Route
             index
             element={
-              <SetsManager config={config} onRefresh={() => void loadConfig()} />
+              <SetsManager
+                config={config}
+                onRefresh={() => {
+                  loadConfig().catch(() => {});
+                }}
+              />
             }
           />
           <Route
@@ -141,7 +144,9 @@ export function SetsPage() {
             element={
               <SetEditorRoute
                 config={config}
-                onRefresh={() => void loadConfig()}
+                onRefresh={() => {
+                  loadConfig().catch(() => {});
+                }}
               />
             }
           />

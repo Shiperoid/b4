@@ -1,46 +1,46 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Container,
-  Box,
-  Stack,
-  Button,
-  CircularProgress,
-  Typography,
-  Paper,
-  Chip,
-  Fade,
   Backdrop,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Container,
   DialogContent,
   DialogContentText,
+  Fade,
   Grid,
+  Paper,
+  Stack,
+  Typography,
 } from "@mui/material";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 
 import {
-  CoreIcon,
-  DomainIcon,
   ApiIcon,
   CaptureIcon,
-  SaveIcon,
-  RefreshIcon,
+  CoreIcon,
   DiscoveryIcon,
+  DomainIcon,
+  RefreshIcon,
+  SaveIcon,
   WarningIcon,
 } from "@b4.icons";
 import { useSnackbar } from "@context/SnackbarProvider";
+import { ApiSettings } from "./Api";
 import { CaptureSettings } from "./Capture";
-import { NetworkSettings } from "./Network";
-import { LoggingSettings } from "./Logging";
-import { FeatureSettings } from "./Feature";
-import { CheckerSettings } from "./Discovery";
 import { ControlSettings } from "./Control";
 import { DevicesSettings } from "./Devices";
+import { CheckerSettings } from "./Discovery";
+import { FeatureSettings } from "./Feature";
 import { GeoSettings } from "./Geo";
-import { ApiSettings } from "./Api";
+import { LoggingSettings } from "./Logging";
+import { NetworkSettings } from "./Network";
 
-import { B4Config, B4SetConfig } from "@models/config";
-import { colors, spacing } from "@design";
 import { B4Alert, B4Dialog, B4Tab, B4Tabs } from "@b4.elements";
 import { configApi } from "@b4.settings";
+import { colors, spacing } from "@design";
+import { B4Config, B4SetConfig } from "@models/config";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -141,10 +141,10 @@ export function SettingsPage() {
   // Handle tab change
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     const category = SETTING_CATEGORIES.find(
-      (cat) => cat.id === (newValue as TABS)
+      (cat) => cat.id === (newValue as TABS),
     );
     if (category) {
-      navigate(`/settings/${category.path}`);
+      navigate(`/settings/${category.path}`)?.catch(() => {});
     }
   };
 
@@ -154,7 +154,7 @@ export function SettingsPage() {
       location.pathname === "/settings" ||
       location.pathname === "/settings/"
     ) {
-      navigate("/settings/general", { replace: true });
+      navigate("/settings/general", { replace: true })?.catch(() => {});
     }
   }, [location.pathname, navigate]);
 
@@ -216,7 +216,7 @@ export function SettingsPage() {
   }, [showError]);
 
   useEffect(() => {
-    void loadConfig();
+    loadConfig().catch(() => {});
   }, [loadConfig]);
 
   const saveConfig = async () => {
@@ -231,7 +231,7 @@ export function SettingsPage() {
       showSuccess(
         requiresRestart
           ? "Configuration saved! Please restart B4 for core settings to take effect."
-          : "Configuration saved successfully!"
+          : "Configuration saved successfully!",
       );
     } catch (error) {
       showError(error instanceof Error ? error.message : "Failed to save");
@@ -258,7 +258,7 @@ export function SettingsPage() {
       | string[]
       | B4SetConfig[]
       | null
-      | undefined
+      | undefined,
   ) => {
     if (!config) return;
 
@@ -275,7 +275,7 @@ export function SettingsPage() {
         current = current[keys[i]] as Record<string, unknown>;
       }
 
-      current[keys[keys.length - 1]] = value;
+      current[keys.at(-1)!] = value;
       setConfig(newConfig);
     }
   };
@@ -360,7 +360,7 @@ export function SettingsPage() {
                 variant="outlined"
                 startIcon={<RefreshIcon />}
                 onClick={() => {
-                  void loadConfig();
+                  loadConfig().catch(() => {});
                 }}
                 disabled={saving}
               >
@@ -385,7 +385,7 @@ export function SettingsPage() {
 
           {/* Tabs */}
           <B4Tabs value={validTab} onChange={handleTabChange}>
-            {SETTING_CATEGORIES.sort((a, b) => a.id - b.id).map((cat) => (
+            {[...SETTING_CATEGORIES].sort((a, b) => a.id - b.id).map((cat) => (
               <B4Tab
                 key={cat.id}
                 icon={cat.icon}
@@ -407,7 +407,7 @@ export function SettingsPage() {
 
             <Grid size={{ xs: 12, md: 6 }} sx={{ display: "flex" }}>
               <Box sx={{ width: "100%" }}>
-                <ControlSettings loadConfig={() => void loadConfig()} />
+                <ControlSettings loadConfig={() => { loadConfig().catch(() => {}); }} />
               </Box>
             </Grid>
             <Grid size={{ xs: 12, md: 6 }} sx={{ display: "flex" }}>
@@ -431,7 +431,7 @@ export function SettingsPage() {
             config={config}
             onChange={handleChange}
             loadConfig={() => {
-              void loadConfig();
+              loadConfig().catch(() => {});
             }}
           />
         </TabPanel>

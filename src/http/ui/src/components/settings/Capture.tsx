@@ -44,7 +44,7 @@ export const CaptureSettings = () => {
   } = useCaptures();
 
   useEffect(() => {
-    void loadCaptures();
+    loadCaptures().catch(() => {});
   }, [loadCaptures]);
 
   useEffect(() => {
@@ -180,7 +180,9 @@ export const CaptureSettings = () => {
                   startIcon={
                     loading ? <CircularProgress size={16} /> : <UploadIcon />
                   }
-                  onClick={() => void uploadCapture()}
+                  onClick={() => {
+                    uploadCapture().catch(() => {});
+                  }}
                   disabled={loading || !uploadForm.file || !uploadForm.domain}
                 >
                   {loading ? "Uploading..." : "Upload"}
@@ -226,7 +228,9 @@ export const CaptureSettings = () => {
                 </Button>
                 <Tooltip title="Refresh list">
                   <IconButton
-                    onClick={() => void loadCaptures()}
+                    onClick={() => {
+                      loadCaptures().catch(() => {});
+                    }}
                     disabled={loading}
                   >
                     <RefreshIcon />
@@ -254,7 +258,7 @@ export const CaptureSettings = () => {
         <B4Section
           title="Generated Payloads"
           description={`${captures.length} optimized payload${
-            captures.length !== 1 ? "s" : ""
+            captures.length === 1 ? "" : "s"
           } ready for use (SNI-first for DPI bypass)`}
           icon={<DownloadIcon />}
         >

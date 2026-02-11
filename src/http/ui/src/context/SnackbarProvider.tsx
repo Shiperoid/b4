@@ -1,11 +1,5 @@
 // src/http/ui/src/context/SnackbarContext.tsx
-import {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  ReactNode,
-} from "react";
+import { createContext, use, useMemo, useState, useCallback, ReactNode } from "react";
 import { Snackbar } from "@mui/material";
 import { B4Alert } from "@b4.elements";
 
@@ -25,7 +19,9 @@ interface SnackbarContextType {
 
 const SnackbarContext = createContext<SnackbarContextType | null>(null);
 
-export function SnackbarProvider({ children }: { children: ReactNode }) {
+export function SnackbarProvider({
+  children,
+}: Readonly<{ children: ReactNode }>) {
   const [state, setState] = useState<SnackbarState>({
     open: false,
     message: "",
@@ -36,16 +32,16 @@ export function SnackbarProvider({ children }: { children: ReactNode }) {
     (message: string, severity: Severity = "info") => {
       setState({ open: true, message, severity });
     },
-    []
+    [],
   );
 
   const showError = useCallback(
     (message: string) => showSnackbar(message, "error"),
-    [showSnackbar]
+    [showSnackbar],
   );
   const showSuccess = useCallback(
     (message: string) => showSnackbar(message, "success"),
-    [showSnackbar]
+    [showSnackbar],
   );
 
   const handleClose = useCallback(() => {
@@ -53,7 +49,7 @@ export function SnackbarProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <SnackbarContext.Provider value={{ showSnackbar, showError, showSuccess }}>
+    <SnackbarContext value={useMemo(() => ({ showSnackbar, showError, showSuccess }), [showSnackbar, showError, showSuccess])}>
       {children}
       <Snackbar
         open={state.open}
@@ -65,12 +61,12 @@ export function SnackbarProvider({ children }: { children: ReactNode }) {
           {state.message}
         </B4Alert>
       </Snackbar>
-    </SnackbarContext.Provider>
+    </SnackbarContext>
   );
 }
 
 export function useSnackbar(): SnackbarContextType {
-  const context = useContext(SnackbarContext);
+  const context = use(SnackbarContext);
   if (!context) {
     throw new Error("useSnackbar must be used within SnackbarProvider");
   }

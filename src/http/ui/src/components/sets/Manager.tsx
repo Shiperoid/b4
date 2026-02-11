@@ -1,38 +1,38 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Box,
-  Grid,
-  Stack,
   Button,
-  Typography,
+  Grid,
+  InputAdornment,
   List,
   ListItem,
   ListItemText,
   Paper,
+  Stack,
   TextField,
-  InputAdornment,
+  Typography,
 } from "@mui/material";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
 
 import {
   AddIcon,
-  SetsIcon,
-  DomainIcon,
-  WarningIcon,
-  CompareIcon,
   CheckIcon,
+  CompareIcon,
+  DomainIcon,
+  SetsIcon,
+  WarningIcon,
 } from "@b4.icons";
 import SearchOutlinedIcon from "@mui/icons-material/SearchOutlined";
 
 import {
   DndContext,
-  closestCenter,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
   PointerSensor,
+  closestCenter,
   useSensor,
   useSensors,
-  DragEndEvent,
-  DragStartEvent,
-  DragOverlay,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -41,15 +41,15 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-import { B4Section, B4Dialog } from "@b4.elements";
+import { B4Dialog, B4Section } from "@b4.elements";
 import { useSnackbar } from "@context/SnackbarProvider";
 
-import { SetCard } from "./SetCard";
 import { SetCompare } from "./Compare";
+import { SetCard } from "./SetCard";
 
 import { colors, radius } from "@design";
-import { B4Config, B4SetConfig } from "@models/config";
 import { useSets } from "@hooks/useSets";
+import { B4Config, B4SetConfig } from "@models/config";
 
 export interface SetStats {
   manual_domains: number;
@@ -75,7 +75,7 @@ interface SortableCardWrapperProps {
   id: string;
   children:
     | React.ReactNode
-    | ((props: React.HTMLAttributes<HTMLDivElement>) => JSX.Element);
+    | ((props: React.HTMLAttributes<HTMLDivElement>) => React.JSX.Element);
 }
 
 const SortableCardWrapper = ({ id, children }: SortableCardWrapperProps) => {
@@ -200,17 +200,18 @@ export const SetsManager = ({ config, onRefresh }: SetsManagerProps) => {
   const activeSet = activeId ? sets.find((s) => s.id === activeId) : null;
 
   const handleAddSet = () => {
-    navigate("/sets/new");
+    navigate("/sets/new")?.catch(() => {});
   };
 
   const handleEditSet = (set: B4SetConfig) => {
-    navigate(`/sets/${set.id}`);
+    navigate(`/sets/${set.id}`)?.catch(() => {});
   };
 
   const handleDeleteSet = () => {
-    if (!deleteDialog.setId) return;
+    const { setId } = deleteDialog;
+    if (!setId) return;
     void (async () => {
-      const result = await deleteSet(deleteDialog.setId!);
+      const result = await deleteSet(setId);
       if (result.success) {
         showSuccess("Set deleted");
         setDeleteDialog({ open: false, setId: null });
