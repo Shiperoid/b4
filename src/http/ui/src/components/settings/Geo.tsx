@@ -182,7 +182,11 @@ const GeoFileCard = ({
               )
             }
             onClick={onDownload}
-            disabled={downloading || (!selectedSource && !customURL)}
+            disabled={
+              downloading ||
+              (selectedSource === CUSTOM_SOURCE && !customURL) ||
+              !selectedSource
+            }
           >
             {downloading ? "Downloading..." : "Download"}
           </Button>
@@ -206,7 +210,6 @@ const GeoFileCard = ({
 
 export interface GeoSettingsProps {
   config: B4Config;
-  onChange?: (field: string, value: boolean | string | number) => void;
   loadConfig: () => void;
 }
 
@@ -369,7 +372,7 @@ export const GeoSettings = ({ config, loadConfig }: GeoSettingsProps) => {
     setGeoipStatus("Downloading geoip.dat...");
 
     try {
-      await geodatApi.download(destPath, "", url);
+      await geodatApi.download(destPath, undefined, url);
       setGeoipStatus("Downloaded successfully");
       loadConfig();
       void checkFileStatus();

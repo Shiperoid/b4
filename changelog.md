@@ -1,6 +1,6 @@
 # B4 - Bye Bye Big Bro
 
-## [1.35.0] - 2026-02-xx
+## [1.35.0] - 2026-02-15
 
 - IMPROVED: **Geo Settings** - `GeoSite` and `GeoIP` databases can now be downloaded independently from different sources. You no longer need both files — pick only what you need. Added [b4geoip](https://github.com/DanielLavrushin/b4geoip) as a built-in source option.
 - ADDED: **Packet Duplication** - bypass ISP throttling that works by randomly dropping packets to specific IP ranges (e.g. Telegram subnets). When enabled, B4 sends multiple copies of each outgoing packet so your connection survives even when the ISP drops some of them. Create a separate set with the target IPs, go to TCP settings, and enable Packet Duplication. Set the copy count (2-5 is usually enough). Note: this replaces all other DPI bypass for that set and uses extra bandwidth.
