@@ -221,7 +221,7 @@ func (w *Worker) Start() error {
 					m.RecordPacket(uint64(len(raw)))
 
 					if !log.IsDiscoveryActive() {
-						log.Infof(",TCP-DUP,,%s:%d,%s,%s:%d,%s", srcStr, sport, set.Name, dstStr, dport, srcMac)
+						log.Infof(",TCP-DUP,,,%s:%d,%s,%s:%d,%s", srcStr, sport, set.Name, dstStr, dport, srcMac)
 					}
 
 					if err := q.SetVerdict(id, nfqueue.NfDrop); err != nil {
