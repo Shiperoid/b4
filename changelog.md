@@ -1,5 +1,9 @@
 # B4 - Bye Bye Big Bro
 
+## [1.35.1] - 2026-02-16
+
+- FIXED: **Packet Duplication** connections showing incorrect data in the connections table.
+
 ## [1.35.0] - 2026-02-15
 
 - IMPROVED: **Geo Settings** - `GeoSite` and `GeoIP` databases can now be downloaded independently from different sources. You no longer need both files — pick only what you need. Added [b4geoip](https://github.com/DanielLavrushin/b4geoip) as a built-in source option.
@@ -187,7 +191,6 @@
 
 - FIXED: Slow set save operations - improve performance.
 - ADDED: New `FRAG` strategies designed for modern DPI (TSPU):
-
   - `Combo` (recommended) - multi-technique: first-byte delay + extension split + SNI split + disorder
   - `Disorder` - sends real segments out-of-order with timing jitter, no fake packets
   - `Overlap` - overlapping TCP segments where second overwrites first (RFC 793 behavior)
