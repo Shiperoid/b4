@@ -1,4 +1,5 @@
 export * from "./fields";
+export * from "@common/B4Accordion";
 export * from "@common/B4Dialog";
 export * from "@common/B4Section";
 export * from "@common/B4TooltipButton";

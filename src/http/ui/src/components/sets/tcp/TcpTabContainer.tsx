@@ -2,11 +2,10 @@ import { Box, Fade } from "@mui/material";
 import { useState, type ReactNode } from "react";
 import { B4SetConfig } from "@models/config";
 import { B4Tabs, B4Tab, B4Section } from "@b4.elements";
-import { TcpIcon, FragIcon, FakingIcon, ConnectionIcon } from "@b4.icons";
-import { TcpConnection } from "./TcpConnection";
+import { TcpIcon, FragIcon, FakingIcon, CoreIcon } from "@b4.icons";
+import { TcpGeneral } from "./TcpGeneral";
 import { TcpSplitting } from "./TcpSplitting";
 import { TcpFaking } from "./TcpFaking";
-import { TcpIncoming } from "./TcpIncoming";
 
 interface TcpTabContainerProps {
   config: B4SetConfig;
@@ -41,10 +40,9 @@ function TabPanel({ children, value, index }: Readonly<TabPanelProps>) {
 }
 
 enum TCP_TABS {
-  CONNECTION = 0,
+  GENERAL = 0,
   SPLITTING,
   FAKING,
-  INCOMING,
 }
 
 export const TcpTabContainer = ({
@@ -52,7 +50,7 @@ export const TcpTabContainer = ({
   main,
   onChange,
 }: TcpTabContainerProps) => {
-  const [activeTab, setActiveTab] = useState<TCP_TABS>(TCP_TABS.CONNECTION);
+  const [activeTab, setActiveTab] = useState<TCP_TABS>(TCP_TABS.GENERAL);
 
   return (
     <B4Section
@@ -66,14 +64,13 @@ export const TcpTabContainer = ({
           setActiveTab(v);
         }}
       >
-        <B4Tab icon={<ConnectionIcon />} label="Connection" inline />
+        <B4Tab icon={<CoreIcon />} label="General" inline />
         <B4Tab icon={<FragIcon />} label="Splitting" inline />
         <B4Tab icon={<FakingIcon />} label="Faking" inline />
-        <B4Tab icon={<TcpIcon />} label="Incoming" inline />
       </B4Tabs>
 
-      <TabPanel value={activeTab} index={TCP_TABS.CONNECTION}>
-        <TcpConnection config={config} main={main} onChange={onChange} />
+      <TabPanel value={activeTab} index={TCP_TABS.GENERAL}>
+        <TcpGeneral config={config} main={main} onChange={onChange} />
       </TabPanel>
 
       <TabPanel value={activeTab} index={TCP_TABS.SPLITTING}>
@@ -82,10 +79,6 @@ export const TcpTabContainer = ({
 
       <TabPanel value={activeTab} index={TCP_TABS.FAKING}>
         <TcpFaking config={config} onChange={onChange} />
-      </TabPanel>
-
-      <TabPanel value={activeTab} index={TCP_TABS.INCOMING}>
-        <TcpIncoming config={config} onChange={onChange} />
       </TabPanel>
     </B4Section>
   );
