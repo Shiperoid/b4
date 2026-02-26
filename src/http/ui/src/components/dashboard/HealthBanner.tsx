@@ -1,20 +1,11 @@
 import { useState } from "react";
-import {
-  Box,
-  Stack,
-  Typography,
-  Chip,
-  IconButton,
-  Tooltip,
-  Button,
-} from "@mui/material";
+import { Box, Stack, Typography, Chip, Button } from "@mui/material";
 import {
   Circle as CircleIcon,
-  RestartAlt as RestartIcon,
+  DeleteForever as ClearIcon,
 } from "@mui/icons-material";
 import { colors } from "@design";
 import { B4Dialog } from "@common/B4Dialog";
-import { useSystemRestart } from "@hooks/useSystemRestart";
 import type { Metrics } from "./Page";
 
 interface HealthBannerProps {
@@ -52,12 +43,8 @@ export const HealthBanner = ({
   connected,
   version,
 }: HealthBannerProps) => {
-  const [restartOpen, setRestartOpen] = useState(false);
-  const {
-    restart,
-    waitForReconnection,
-    loading: restarting,
-  } = useSystemRestart();
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   const health = deriveHealth(metrics, connected);
   const config = healthConfig.get(health) ?? {
@@ -69,11 +56,15 @@ export const HealthBanner = ({
   ).length;
   const totalWorkers = metrics.worker_status.length;
 
-  const handleRestart = async () => {
-    setRestartOpen(false);
-    const result = await restart();
-    if (result?.success) {
-      await waitForReconnection();
+  const handleReset = async () => {
+    setResetOpen(false);
+    setResetting(true);
+    try {
+      await fetch("/api/metrics/reset", { method: "POST" });
+    } catch {
+      // ignore — metrics will refresh via websocket
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -158,47 +149,42 @@ export const HealthBanner = ({
           )}
         </Stack>
 
-        <Tooltip title={restarting ? "Restarting..." : "Restart b4"}>
-          <span>
-            <IconButton
-              size="small"
-              onClick={() => {
-                setRestartOpen(true);
-              }}
-              disabled={restarting}
-              sx={{ color: colors.text.secondary }}
-            >
-              <RestartIcon fontSize="small" />
-            </IconButton>
-          </span>
-        </Tooltip>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<ClearIcon />}
+          onClick={() => setResetOpen(true)}
+          disabled={resetting}
+        >
+          {resetting ? "Resetting..." : "Reset Stats"}
+        </Button>
       </Box>
 
       <B4Dialog
-        open={restartOpen}
-        onClose={() => setRestartOpen(false)}
-        title="Restart b4"
+        open={resetOpen}
+        onClose={() => setResetOpen(false)}
+        title="Reset Statistics"
         actions={
           <Stack direction="row" spacing={1}>
             <Button
-              onClick={() => setRestartOpen(false)}
+              onClick={() => setResetOpen(false)}
               sx={{ color: colors.text.secondary }}
             >
               Cancel
             </Button>
             <Button
-              onClick={() => void handleRestart()}
+              onClick={() => void handleReset()}
               variant="contained"
-              color="error"
+              color="warning"
             >
-              Restart
+              Reset
             </Button>
           </Stack>
         }
       >
         <Typography sx={{ color: colors.text.primary, mt: 1 }}>
-          Are you sure you want to restart the b4 service? Active connections
-          will be interrupted.
+          Reset all statistics? This will clear all connection counters, device
+          activity, and domain statistics. The service will continue running.
         </Typography>
       </B4Dialog>
     </>
